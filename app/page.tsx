@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { BackgroundPaths } from "@/components/background-paths";
 import { ArrowIcon, CheckIcon, LockIcon } from "@/components/icons";
@@ -41,7 +42,7 @@ export default function HomePage() {
             <h1>
               해외 진출,
               <br />
-              <em>준비된 만큼</em> 멀리 갑니다.
+              <em>준비된 만큼</em> <span className="nowrap">멀리 갑니다.</span>
             </h1>
             <p>
               준비도를 객관적으로 진단하고, 지금 필요한 액션과 전문가를
@@ -79,7 +80,14 @@ export default function HomePage() {
                 <div className="chart">
                   {[64, 72, 56, 42, 78, 61].map((value, index) => (
                     <div className="chart__column" key={value}>
-                      <span style={{ height: `${value}%` }} />
+                      <span
+                        style={
+                          {
+                            height: `${value}%`,
+                            "--delay": `${index * 0.12}s`
+                          } as CSSProperties
+                        }
+                      />
                       <small>{["시장", "리더십", "선정", "현지화", "조직", "GTM"][index]}</small>
                     </div>
                   ))}

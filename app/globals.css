@@ -261,9 +261,14 @@ svg {
 
 .hero h1 {
   margin: 22px 0 24px;
-  font-size: clamp(48px, 5.2vw, 76px);
-  line-height: 1.08;
-  letter-spacing: -0.065em;
+  font-size: clamp(40px, 4.6vw, 64px);
+  line-height: 1.12;
+  letter-spacing: -0.05em;
+  word-break: keep-all;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 .hero h1 em {
@@ -478,6 +483,35 @@ svg {
   min-height: 12px;
   border-radius: 8px 8px 2px 2px;
   background: linear-gradient(var(--mint), var(--green));
+  transform-origin: bottom;
+  animation:
+    bar-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--delay, 0s) both,
+    bar-sway 3.6s ease-in-out calc(var(--delay, 0s) + 1.1s) infinite;
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes bar-sway {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.92);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart__column span {
+    animation: none;
+  }
 }
 
 .chart__column small {
