@@ -84,21 +84,6 @@ svg {
 .background-paths path {
   fill: none;
   stroke: currentColor;
-  stroke-dasharray: 0.34 0.66;
-  animation: path-flow 24s linear infinite;
-}
-
-@keyframes path-flow {
-  0%,
-  100% {
-    opacity: 0.35;
-    stroke-dashoffset: 0;
-  }
-
-  50% {
-    opacity: 0.9;
-    stroke-dashoffset: -1;
-  }
 }
 
 .site-header {
