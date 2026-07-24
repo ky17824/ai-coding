@@ -39,9 +39,9 @@ export default function HomePage() {
               Global GTM Journey
             </span>
             <h1>
-              해외 진출,
-              <br />
-              <em>준비된 만큼</em> <span className="nowrap">멀리 갑니다.</span>
+              <span>해외 진출,</span>
+              <span>준비된 만큼</span>
+              <span>성공 할 수 있습니다</span>
             </h1>
             <p>
               준비도를 객관적으로 진단하고, 지금 필요한 액션과 전문가를

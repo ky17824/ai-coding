@@ -261,25 +261,40 @@ svg {
 
 .hero h1 {
   margin: 22px 0 24px;
-  font-size: clamp(40px, 4.6vw, 64px);
-  line-height: 1.12;
+  font-size: clamp(36px, 4.2vw, 58px);
+  line-height: 1.16;
   letter-spacing: -0.05em;
   word-break: keep-all;
 }
 
-.nowrap {
-  white-space: nowrap;
+.hero h1 span {
+  display: block;
+  animation: line-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.hero h1 em {
-  position: relative;
-  color: var(--green);
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 500;
+.hero h1 span:nth-child(1) {
+  font-size: 0.62em;
+  animation-delay: 0.15s;
 }
 
-.landing-shell .hero h1 em {
-  color: var(--mint);
+.hero h1 span:nth-child(2) {
+  font-size: 0.8em;
+  animation-delay: 0.55s;
+}
+
+.hero h1 span:nth-child(3) {
+  animation-delay: 0.95s;
+}
+
+@keyframes line-rise {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .hero__copy > p {
@@ -509,7 +524,8 @@ svg {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chart__column span {
+  .chart__column span,
+  .hero h1 span {
     animation: none;
   }
 }
