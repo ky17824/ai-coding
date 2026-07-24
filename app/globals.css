@@ -60,15 +60,17 @@ svg {
   position: relative;
   min-height: 720px;
   overflow: hidden;
+  color: #f5fbf8;
   background:
-    radial-gradient(circle at 79% 25%, rgba(191, 243, 209, 0.5), transparent 30%),
-    linear-gradient(135deg, #fbfcfa 0%, #edf5ef 100%);
+    radial-gradient(circle at 78% 24%, rgba(29, 123, 76, 0.38), transparent 31%),
+    linear-gradient(135deg, #050b12 0%, #0a1b18 52%, #092a20 100%);
 }
 
 .background-paths {
   position: absolute;
   inset: 0;
-  color: var(--green-dark);
+  color: #79ddb2;
+  opacity: 0.64;
   pointer-events: none;
 }
 
@@ -147,6 +149,30 @@ svg {
   color: #45554e;
   font-size: 14px;
   font-weight: 650;
+}
+
+.landing-shell .main-nav {
+  color: rgba(245, 251, 248, 0.72);
+}
+
+.landing-shell .main-nav a:hover,
+.landing-shell .main-nav a:focus-visible,
+.landing-shell .eyebrow,
+.landing-shell .preview-title small,
+.landing-shell .preview-score {
+  color: #79ddb2;
+}
+
+.landing-shell .button--dark {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5fbf8;
+  backdrop-filter: blur(12px);
+}
+
+.landing-shell .brand-mark {
+  background: var(--mint);
+  color: var(--green-dark);
 }
 
 .main-nav a:hover,
@@ -262,32 +288,16 @@ svg {
   font-weight: 500;
 }
 
+.landing-shell .hero h1 em {
+  color: var(--mint);
+}
+
 .hero__copy > p {
   max-width: 560px;
   color: var(--muted);
   font-size: 17px;
   line-height: 1.75;
   word-break: keep-all;
-}
-
-.hero__copy {
-  animation: hero-rise 700ms ease-out both;
-}
-
-.hero__visual {
-  animation: hero-rise 850ms 100ms ease-out both;
-}
-
-@keyframes hero-rise {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .hero__actions {
@@ -298,12 +308,63 @@ svg {
 }
 
 .hero__actions .button--primary {
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: rgba(29, 123, 76, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: var(--mint);
+  color: var(--green-dark);
   backdrop-filter: blur(12px);
   box-shadow:
-    0 16px 34px rgba(29, 123, 76, 0.24),
-    inset 0 1px rgba(255, 255, 255, 0.2);
+    0 16px 34px rgba(0, 0, 0, 0.28),
+    inset 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.landing-shell .hero__copy > p,
+.landing-shell .privacy-note {
+  color: rgba(232, 244, 238, 0.72);
+}
+
+.landing-shell .text-link {
+  color: #f5fbf8;
+}
+
+.landing-shell .preview-window {
+  border-color: rgba(191, 243, 209, 0.16);
+  background: rgba(5, 18, 15, 0.78);
+  color: #f5fbf8;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(18px);
+}
+
+.landing-shell .preview-window__bar,
+.landing-shell .preview-action {
+  border-color: rgba(191, 243, 209, 0.14);
+}
+
+.landing-shell .preview-window__bar > span {
+  background: rgba(191, 243, 209, 0.3);
+}
+
+.landing-shell .preview-window__bar small,
+.landing-shell .preview-action small,
+.landing-shell .floating-card small {
+  color: rgba(232, 244, 238, 0.58);
+}
+
+.landing-shell .chart {
+  background:
+    linear-gradient(rgba(191, 243, 209, 0.1) 1px, transparent 1px) 0 0 / 100% 33.3%,
+    rgba(255, 255, 255, 0.035);
+}
+
+.landing-shell .chart__column small {
+  color: rgba(232, 244, 238, 0.66);
+}
+
+.landing-shell .floating-card {
+  border-color: rgba(191, 243, 209, 0.15);
+  background: rgba(8, 28, 23, 0.9);
+  color: #f5fbf8;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(14px);
 }
 
 .text-link {
