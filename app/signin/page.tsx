@@ -15,8 +15,8 @@ export default function SignInPage() {
         <span className="page-kicker">PRIVATE BETA</span>
         <h1>글로벌 진출 여정을 이어가세요.</h1>
         <p>
-          초대받은 스타트업과 승인된 전문가만 참여할 수 있습니다. 비밀번호
-          없이 안전한 이메일 링크로 로그인합니다.
+          이메일 주소만으로 베타 테스트에 참여할 수 있습니다. 비밀번호 없이
+          안전한 이메일 링크로 로그인합니다.
         </p>
         <SignInForm />
       </section>

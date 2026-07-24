@@ -55,7 +55,7 @@ export default function HomePage() {
               </Link>
             </div>
             <p className="privacy-note">
-              <LockIcon /> 초대받은 스타트업만 참여하는 비공개 베타입니다.
+              <LockIcon /> 이메일로 참여하는 비공개 베타입니다.
             </p>
           </div>
           <div className="hero__visual" aria-label="준비도 대시보드 미리보기">

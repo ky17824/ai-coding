@@ -23,16 +23,6 @@ export function SignInForm() {
           required
         />
       </label>
-      <label>
-        <span>초대 코드</span>
-        <input
-          name="inviteCode"
-          type="text"
-          autoComplete="one-time-code"
-          placeholder="GTM-BETA-XXXX"
-          required
-        />
-      </label>
       <button
         className="button button--primary button--full"
         type="submit"
