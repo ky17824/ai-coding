@@ -57,13 +57,51 @@ svg {
 }
 
 .landing-shell {
+  position: relative;
   min-height: 720px;
+  overflow: hidden;
   background:
-    radial-gradient(circle at 79% 25%, rgba(191, 243, 209, 0.65), transparent 28%),
-    linear-gradient(135deg, #f7f8f4 0%, #eef6ef 100%);
+    radial-gradient(circle at 79% 25%, rgba(191, 243, 209, 0.5), transparent 30%),
+    linear-gradient(135deg, #fbfcfa 0%, #edf5ef 100%);
+}
+
+.background-paths {
+  position: absolute;
+  inset: 0;
+  color: var(--green-dark);
+  pointer-events: none;
+}
+
+.background-paths svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.background-paths path {
+  fill: none;
+  stroke: currentColor;
+  stroke-dasharray: 0.34 0.66;
+  animation: path-flow 24s linear infinite;
+}
+
+@keyframes path-flow {
+  0%,
+  100% {
+    opacity: 0.35;
+    stroke-dashoffset: 0;
+  }
+
+  50% {
+    opacity: 0.9;
+    stroke-dashoffset: -1;
+  }
 }
 
 .site-header {
+  position: relative;
+  z-index: 2;
   width: min(1180px, calc(100% - 48px));
   height: 88px;
   margin: 0 auto;
@@ -182,6 +220,8 @@ svg {
 }
 
 .hero {
+  position: relative;
+  z-index: 1;
   width: min(1180px, calc(100% - 48px));
   min-height: 630px;
   margin: 0 auto;
@@ -230,11 +270,40 @@ svg {
   word-break: keep-all;
 }
 
+.hero__copy {
+  animation: hero-rise 700ms ease-out both;
+}
+
+.hero__visual {
+  animation: hero-rise 850ms 100ms ease-out both;
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .hero__actions {
   display: flex;
   align-items: center;
   gap: 22px;
   margin-top: 34px;
+}
+
+.hero__actions .button--primary {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(29, 123, 76, 0.92);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 16px 34px rgba(29, 123, 76, 0.24),
+    inset 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .text-link {
@@ -2201,6 +2270,7 @@ svg {
   *,
   *::before,
   *::after {
+    animation: none !important;
     scroll-behavior: auto !important;
     transition: none !important;
   }

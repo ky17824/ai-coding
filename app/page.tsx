@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackgroundPaths } from "@/components/background-paths";
 import { ArrowIcon, CheckIcon, LockIcon } from "@/components/icons";
 import { ServiceCard } from "@/components/service-card";
 import { SiteHeader } from "@/components/site-header";
@@ -29,6 +30,7 @@ export default function HomePage() {
   return (
     <main>
       <div className="landing-shell">
+        <BackgroundPaths />
         <SiteHeader />
         <section className="hero">
           <div className="hero__copy">
