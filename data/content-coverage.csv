@@ -1,0 +1,7 @@
+domain_id,domain_label,pre_entry,initial_entry,scale,owner,review_cycle
+market_finance,시장 검증·재무,covered,covered,covered,콘텐츠 운영,quarterly
+leadership,리더십·자원,covered,covered,partial,콘텐츠 운영,quarterly
+market_selection,시장 선정,covered,covered,partial,시장 리서치,quarterly
+localization,현지화·컴플라이언스,covered,partial,partial,법무·보안 검토,monthly
+organization,팀·조직,covered,covered,covered,조직 전문가,quarterly
+gtm_funding,GTM·자금,covered,covered,covered,지원사업 운영,monthly

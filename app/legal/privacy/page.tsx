@@ -1,0 +1,34 @@
+import type { Metadata } from "next";
+import { LegalPage } from "@/components/legal-page";
+
+export const metadata: Metadata = { title: "개인정보처리방침 초안" };
+
+export default function PrivacyPage() {
+  return (
+    <LegalPage kicker="BETA DRAFT" title="개인정보처리방침">
+      <section>
+        <h2>수집하는 정보</h2>
+        <p>
+          로그인 이메일, 조직명, 진단 응답, 사용자가 제출한 증빙, 주문·결제
+          상태, 전문가 경력과 정산 식별정보를 서비스 제공에 필요한 범위에서
+          처리합니다. 카드정보는 플랫폼이 저장하지 않습니다.
+        </p>
+      </section>
+      <section>
+        <h2>이용 목적과 접근</h2>
+        <p>
+          조직별 대시보드, 전문가 승인, 거래 이행, 환불·분쟁 처리에
+          사용합니다. 증빙은 비공개 저장소에 보관하고 소유자와 승인된
+          운영자만 만료 링크로 접근합니다.
+        </p>
+      </section>
+      <section>
+        <h2>AI 설명</h2>
+        <p>
+          AI에는 회사명, 계산된 점수, 선택된 액션과 승인된 근거만
+          전달합니다. 증빙 원문, 연락처, 결제·정산 정보는 전달하지 않습니다.
+        </p>
+      </section>
+    </LegalPage>
+  );
+}
