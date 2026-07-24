@@ -16,6 +16,6 @@ export async function GET(request: Request) {
     })) ?? { error: new Error("Supabase is not configured") };
 
   return NextResponse.redirect(
-    new URL(error ? "/signin?error=confirmation" : "/admin", url.origin)
+    new URL(error ? "/signin?error=confirmation" : "/auth/callback", url.origin)
   );
 }

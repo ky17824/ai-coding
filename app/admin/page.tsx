@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { approveProvider } from "@/app/provider/actions";
 import {
@@ -18,6 +19,8 @@ export default async function AdminPage() {
       ? await supabase.from("profiles").select("role").eq("id", user.id).single()
       : { data: null };
   const isDemo = !supabase && process.env.NODE_ENV === "development";
+  if (profile?.role !== "admin" && !isDemo) redirect("/dashboard");
+
   const { data: providers } =
     (profile?.role === "admin" || isDemo) && admin
       ? await admin
@@ -26,17 +29,6 @@ export default async function AdminPage() {
           .eq("approval_status", "pending")
           .order("created_at")
       : { data: [] };
-
-  if (profile?.role !== "admin" && !isDemo) {
-    return (
-      <main className="app-page">
-        <SiteHeader compact />
-        <div className="app-container">
-          <h1>관리자 권한이 필요합니다.</h1>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="app-page">
