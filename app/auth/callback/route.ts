@@ -4,6 +4,7 @@ import {
   createSupabaseAdminClient,
   createSupabaseServerClient
 } from "@/lib/supabase/server";
+import { findAllowedInviteCode } from "@/lib/invites";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -23,12 +24,18 @@ export async function GET(request: Request) {
   }
 
   const cookieStore = await cookies();
-  const inviteCode = cookieStore.get("gtm-invite")?.value;
   const allowedCodes = (process.env.INVITE_CODES ?? "")
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-  if (!inviteCode || !allowedCodes.includes(inviteCode)) {
+  const inviteCode = findAllowedInviteCode(
+    [
+      data.user.user_metadata.invite_code,
+      cookieStore.get("gtm-invite")?.value
+    ],
+    allowedCodes
+  );
+  if (!inviteCode) {
     await supabase?.auth.signOut();
     return NextResponse.redirect(
       new URL("/signin?error=invite", url.origin)
