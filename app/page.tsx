@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { BackgroundPaths } from "@/components/background-paths";
+import { CountUp } from "@/components/count-up";
 import { ArrowIcon, CheckIcon, LockIcon } from "@/components/icons";
 import { ServiceCard } from "@/components/service-card";
 import { SiteHeader } from "@/components/site-header";
@@ -75,7 +76,9 @@ export default function HomePage() {
                     <small>GLOBAL READINESS</small>
                     <strong>진출 준비도</strong>
                   </span>
-                  <span className="preview-score">68</span>
+                  <span className="preview-score">
+                    <CountUp to={68} />
+                  </span>
                 </div>
                 <div className="chart">
                   {[64, 72, 56, 42, 78, 61].map((value, index) => (
