@@ -3,9 +3,7 @@ import Link from "next/link";
 import { BackgroundPaths } from "@/components/background-paths";
 import { CountUp } from "@/components/count-up";
 import { ArrowIcon, CheckIcon, LockIcon } from "@/components/icons";
-import { ServiceCard } from "@/components/service-card";
 import { SiteHeader } from "@/components/site-header";
-import { SAMPLE_SERVICES } from "@/lib/service-data";
 
 const steps = [
   {
@@ -142,23 +140,6 @@ export default function HomePage() {
               <h3>{step.title}</h3>
               <p>{step.description}</p>
             </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="section section--services">
-        <div className="section-heading section-heading--row">
-          <span>
-            <span className="eyebrow">EXPERT SERVICES</span>
-            <h2>지금 필요한 전문가와<br />바로 실행하세요</h2>
-          </span>
-          <Link href="/services" className="text-link">
-            전체 서비스 보기 <ArrowIcon />
-          </Link>
-        </div>
-        <div className="service-grid">
-          {SAMPLE_SERVICES.slice(0, 3).map((service) => (
-            <ServiceCard key={service.id} service={service} />
           ))}
         </div>
       </section>
