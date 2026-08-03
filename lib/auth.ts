@@ -3,8 +3,8 @@ export function dashboardPathForRole(role?: string | null) {
 }
 
 export function appOrigin() {
-  if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
+  if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_BRANCH_URL) {
+    return `https://${process.env.VERCEL_BRANCH_URL}`;
   }
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
