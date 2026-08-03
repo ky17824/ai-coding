@@ -5,12 +5,7 @@ import { createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
 
 const answerSchema = z.object({
   questionId: z.string().min(1).max(80),
-  level: z.union([
-    z.literal(0),
-    z.literal(1),
-    z.literal(2),
-    z.literal(3)
-  ]),
+  level: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   evidence: z
     .object({
       kind: z.enum(["note", "url", "file"]),
@@ -19,21 +14,21 @@ const answerSchema = z.object({
     .optional()
 });
 const requestSchema = z.object({
-  answers: z.array(answerSchema).length(15)
+  answers: z.array(answerSchema).length(55)
 });
 
 export async function POST(request: Request) {
   const parsed = requestSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { message: "15개 진단 응답을 확인해 주세요." },
+      { message: "55개 진단 응답을 확인해 주세요." },
       { status: 400 }
     );
   }
   const validation = validateAssessmentAnswers(parsed.data.answers);
   if (!validation.valid) {
     return NextResponse.json(
-      { message: "완료 응답의 증빙을 확인해 주세요.", errors: validation.errors },
+      { message: "응답 값을 확인해 주세요.", errors: validation.errors },
       { status: 400 }
     );
   }

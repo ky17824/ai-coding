@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
-import { DOMAINS, JOURNEY_PHASES, READINESS_QUESTIONS } from "@/lib/readiness-data";
+import { JOURNEY_PHASES } from "@/lib/readiness-data";
+import { INTAKE_ITEMS, INTAKE_QUESTIONS } from "@/lib/intake-questions";
 import { calculateReadiness } from "@/lib/readiness";
 import { recommendServices } from "@/lib/service-data";
 import { ServiceCard } from "@/components/service-card";
@@ -9,28 +10,14 @@ import type { ReadinessAnswer, ReadinessLevel } from "@/lib/types";
 
 export const metadata: Metadata = { title: "GTM 여정 대시보드" };
 
-const demoLevels: Record<string, ReadinessLevel> = {
-  pmf: 2,
-  "unit-economics": 2,
-  "leadership-resources": 2,
-  "local-autonomy": 1,
-  "bottom-up-tam": 2,
-  "organic-signal": 1,
-  discovery: 1,
-  bmlc: 1,
-  "security-compliance": 0,
-  "localization-premium": 1,
-  interpreneur: 1,
-  "universal-values": 2,
-  "feedback-loops": 1,
-  "gtm-motion": 2,
-  "funding-programs": 1
-};
-
-const demoAnswers: ReadinessAnswer[] = READINESS_QUESTIONS.map((question) => ({
-  questionId: question.id,
-  level: demoLevels[question.id] ?? 0
-}));
+// 극초기는 통과하고 준비중에서 막힌 조직을 보여준다.
+const demoAnswers: ReadinessAnswer[] = INTAKE_QUESTIONS.map((question, index) => {
+  const item = INTAKE_ITEMS.find((entry) => entry.id === question.itemId)!;
+  if (item.stageId === "early") return { questionId: question.id, level: 3 as ReadinessLevel };
+  if (item.stageId === "preparing")
+    return { questionId: question.id, level: (index % 3 === 0 ? 3 : 2) as ReadinessLevel };
+  return { questionId: question.id, level: 1 as ReadinessLevel };
+});
 const result = calculateReadiness(demoAnswers);
 const services = recommendServices(
   result.actions.map((action) => action.serviceTag)
@@ -61,22 +48,24 @@ export default function DashboardPage() {
             <div className="summary-title">
               <span>
                 <small>GLOBAL READINESS</small>
-                <h2>진출 준비도</h2>
+                <h2>단계별 준비도</h2>
               </span>
               <span className="summary-score">
                 <strong>{result.overallScore}</strong>
-                <small>{result.status}</small>
+                <small>{result.status} 단계</small>
               </span>
             </div>
             <div className="domain-bars">
-              {DOMAINS.map((domain) => (
-                <div key={domain.id}>
+              {result.stages.map((stage) => (
+                <div key={stage.stageId}>
                   <span>
-                    <small>{domain.shortLabel}</small>
-                    <strong>{result.domainScores[domain.id]}</strong>
+                    <small>
+                      {stage.label} {stage.passed ? "✓" : ""}
+                    </small>
+                    <strong>{result.domainScores[stage.stageId]}%</strong>
                   </span>
                   <div className="meter">
-                    <span style={{ width: `${result.domainScores[domain.id]}%` }} />
+                    <span style={{ width: `${result.domainScores[stage.stageId]}%` }} />
                   </div>
                 </div>
               ))}
@@ -101,7 +90,7 @@ export default function DashboardPage() {
           <div className="dashboard-section__heading">
             <span>
               <span className="page-kicker">PRIORITY ACTIONS</span>
-              <h2>지금 가장 중요한 액션</h2>
+              <h2>{result.status} 단계를 열기 위한 액션</h2>
             </span>
             <Link href="/journey" className="text-link">
               전체 여정 보기 →

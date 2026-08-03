@@ -1,12 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DOMAINS, READINESS_QUESTIONS } from "@/lib/readiness-data";
+import Link from "next/link";
 import {
+  INTAKE_ITEMS,
+  INTAKE_QUESTIONS,
+  POSITIVE_LEVEL
+} from "@/lib/intake-questions";
+import {
+  GATE_THRESHOLD,
+  STAGES,
   calculateReadiness,
+  questionsOfStage,
   validateAssessmentAnswers
 } from "@/lib/readiness";
-import Link from "next/link";
 import { recommendServices, SAMPLE_SERVICES } from "@/lib/service-data";
 import type {
   EvidenceInput,
@@ -16,38 +23,32 @@ import type {
 } from "@/lib/types";
 import { ServiceCard } from "@/components/service-card";
 
-const LEVELS: { value: ReadinessLevel; label: string; description: string }[] = [
-  { value: 0, label: "미착수", description: "아직 시작하지 않음" },
-  { value: 1, label: "계획", description: "담당자·일정 논의 중" },
-  { value: 2, label: "진행", description: "실행 중이나 완료 전" },
-  { value: 3, label: "완료", description: "증거로 확인 가능" }
-];
+const LEVELS: ReadinessLevel[] = [1, 2, 3, 4];
+const GATE_PERCENT = Math.round(GATE_THRESHOLD * 100);
 
 export function AssessmentForm() {
   const [answers, setAnswers] = useState<Record<string, ReadinessLevel>>({});
   const [evidence, setEvidence] = useState<Record<string, EvidenceInput>>({});
-  const [activeDomain, setActiveDomain] = useState(0);
+  const [activeStage, setActiveStage] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ReadinessResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const domain = DOMAINS[activeDomain];
-  const questions = READINESS_QUESTIONS.filter(
-    (question) => question.domainId === domain.id
-  );
+  const stage = STAGES[activeStage];
+  const stageItems = INTAKE_ITEMS.filter((item) => item.stageId === stage.id);
   const answeredCount = Object.keys(answers).length;
-  const progress = Math.round(
-    (answeredCount / READINESS_QUESTIONS.length) * 100
-  );
+  const progress = Math.round((answeredCount / INTAKE_QUESTIONS.length) * 100);
 
   const submittedAnswers = useMemo<ReadinessAnswer[]>(
     () =>
-      READINESS_QUESTIONS.map((question) => ({
-        questionId: question.id,
-        level: answers[question.id] ?? 0,
-        evidence: evidence[question.id]
-      })),
+      INTAKE_QUESTIONS.filter((question) => answers[question.id] !== undefined).map(
+        (question) => ({
+          questionId: question.id,
+          level: answers[question.id],
+          evidence: evidence[question.id]
+        })
+      ),
     [answers, evidence]
   );
 
@@ -58,7 +59,7 @@ export function AssessmentForm() {
       delete next[questionId];
       return next;
     });
-    if (level !== 3) {
+    if (level < POSITIVE_LEVEL) {
       setEvidence((current) => {
         const next = { ...current };
         delete next[questionId];
@@ -67,60 +68,46 @@ export function AssessmentForm() {
     }
   }
 
+  function firstUnanswered(pool: typeof INTAKE_QUESTIONS) {
+    return pool.find((question) => answers[question.id] === undefined);
+  }
+
   function goNext() {
-    const unanswered = questions.find(
-      (question) => answers[question.id] === undefined
-    );
-    if (unanswered) {
+    const missing = firstUnanswered(questionsOfStage(stage.id));
+    if (missing) {
       setErrors((current) => ({
         ...current,
-        [unanswered.id]: "현재 영역의 모든 문항에 답해주세요."
+        [missing.id]: "이 단계의 모든 문항에 답해주세요."
       }));
       document
-        .getElementById(`question-${unanswered.id}`)
+        .getElementById(`question-${missing.id}`)
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    setActiveDomain((current) => Math.min(current + 1, DOMAINS.length - 1));
+    setActiveStage((current) => Math.min(current + 1, STAGES.length - 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function submit() {
-    if (answeredCount < READINESS_QUESTIONS.length) {
-      const firstMissing = READINESS_QUESTIONS.find(
-        (question) => answers[question.id] === undefined
-      );
-      if (firstMissing) {
-        const index = DOMAINS.findIndex(
-          (item) => item.id === firstMissing.domainId
-        );
-        setActiveDomain(index);
-        setErrors((current) => ({
-          ...current,
-          [firstMissing.id]: "모든 문항에 답해야 결과를 확인할 수 있습니다."
-        }));
-      }
+    const missing = firstUnanswered(INTAKE_QUESTIONS);
+    if (missing) {
+      const item = INTAKE_ITEMS.find((entry) => entry.id === missing.itemId)!;
+      setActiveStage(STAGES.findIndex((entry) => entry.id === item.stageId));
+      setErrors((current) => ({
+        ...current,
+        [missing.id]: "모든 문항에 답해야 결과를 확인할 수 있습니다."
+      }));
       return;
     }
     const validation = validateAssessmentAnswers(submittedAnswers);
     if (!validation.valid) {
       setErrors(validation.errors);
-      const firstError = READINESS_QUESTIONS.find(
-        (question) => validation.errors[question.id]
-      );
-      if (firstError) {
-        setActiveDomain(
-          DOMAINS.findIndex((item) => item.id === firstError.domainId)
-        );
-      }
       return;
     }
 
-    const calculated = calculateReadiness(submittedAnswers);
-    setResult(calculated);
+    setResult(calculateReadiness(submittedAnswers));
     setSaving(true);
     setSaved(false);
-
     try {
       const response = await fetch("/api/assessments", {
         method: "POST",
@@ -144,17 +131,26 @@ export function AssessmentForm() {
       matched.length > 0
         ? matched
         : SAMPLE_SERVICES.filter((service) => service.approved).slice(0, 3);
+    const current = result.stages.find(
+      (entry) => entry.stageId === result.currentStageId
+    );
+
     return (
       <div className="assessment-result">
         <div className="result-hero panel">
           <div>
             <span className="page-kicker">READINESS RESULT</span>
             <h1>
-              현재 준비도는 <em>{result.status}</em> 단계입니다.
+              지금은 <em>{result.status}</em> 단계입니다.
             </h1>
             <p>
-              점수보다 중요한 것은 가장 큰 준비도 격차부터 실행하는
-              것입니다. 아래 5개 액션을 여정에 추가해 보세요.
+              {result.achievedStageId
+                ? `${
+                    result.stages.find(
+                      (entry) => entry.stageId === result.achievedStageId
+                    )!.label
+                  } 단계를 통과했습니다. 다음 단계는 각 단계 배점의 ${GATE_PERCENT}% 이상을 «해봤다» 이상으로 채우면 열립니다.`
+                : `각 단계 배점의 ${GATE_PERCENT}% 이상을 «해봤다» 이상으로 채우면 다음 단계가 열립니다. 앞 단계를 통과해야 다음 단계로 넘어갑니다.`}
             </p>
             <div className="save-state" role="status">
               {saving
@@ -173,8 +169,10 @@ export function AssessmentForm() {
         {result.isOnHold && (
           <section className="hold-banner" aria-labelledby="hold-title">
             <div>
-              <span>GO / NO-GO GATE</span>
-              <h2 id="hold-title">지금은 진출 보류가 권장됩니다.</h2>
+              <span>GATE {current?.gate}</span>
+              <h2 id="hold-title">
+                {current?.label} 단계를 아직 통과하지 못했습니다.
+              </h2>
             </div>
             <ul>
               {result.gateMessages.map((message) => (
@@ -187,8 +185,8 @@ export function AssessmentForm() {
         <section className="result-section">
           <div className="section-heading section-heading--row">
             <span>
-              <span className="page-kicker">DOMAIN SCORES</span>
-              <h2>영역별 준비도</h2>
+              <span className="page-kicker">PHASE GATES</span>
+              <h2>단계별 통과 현황</h2>
             </span>
             <button
               className="button button--ghost"
@@ -199,40 +197,76 @@ export function AssessmentForm() {
             </button>
           </div>
           <div className="domain-score-grid">
-            {DOMAINS.map((item) => (
-              <div className="domain-score panel" key={item.id}>
-                <span>{item.label}</span>
-                <strong>{result.domainScores[item.id]}</strong>
+            {result.stages.map((entry) => (
+              <div className="domain-score panel" key={entry.stageId}>
+                <span>
+                  {entry.label} · Gate {entry.gate}
+                </span>
+                <strong>{result.domainScores[entry.stageId]}%</strong>
                 <div className="meter">
-                  <span style={{ width: `${result.domainScores[item.id]}%` }} />
+                  <span style={{ width: `${result.domainScores[entry.stageId]}%` }} />
                 </div>
+                <small>
+                  {entry.passed
+                    ? `통과 — ${entry.unlocks}`
+                    : entry.blockers.length > 0
+                      ? `필수 선결조건 ${entry.blockers.length}건 미해소`
+                      : `${entry.positiveScore}/${entry.totalScore}점 · ${entry.scoreToPass}점 부족`}
+                </small>
               </div>
             ))}
           </div>
         </section>
 
+        {result.actions.length > 0 && (
+          <section className="result-section">
+            <span className="page-kicker">NEXT ACTIONS</span>
+            <h2>{current?.label} 단계를 열기 위해 먼저 할 일</h2>
+            <div className="action-list">
+              {result.actions.map((action, index) => (
+                <article className="action-row panel" key={action.questionId}>
+                  <span className="action-index">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className={`priority priority--${action.urgency}`}>
+                    {action.urgency}
+                  </span>
+                  <div>
+                    <h3>{action.title}</h3>
+                    <p>
+                      담당: {action.owner} · 완료 확인: {action.completionEvidence}
+                    </p>
+                  </div>
+                  <button
+                    className="button button--small button--dark"
+                    type="button"
+                  >
+                    여정에 추가
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="result-section">
-          <span className="page-kicker">TOP ACTIONS</span>
-          <h2>가장 먼저 실행할 5가지</h2>
-          <div className="action-list">
-            {result.actions.map((action, index) => (
-              <article className="action-row panel" key={action.questionId}>
-                <span className="action-index">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span className={`priority priority--${action.urgency}`}>
-                  {action.urgency}
+          <span className="page-kicker">ROADMAP</span>
+          <h2>전체 준비 순서</h2>
+          <div className="journey-overview panel">
+            {result.stages.map((entry, index) => (
+              <div className="journey-phase" key={entry.stageId}>
+                <span
+                  className={entry.stageId === result.currentStageId ? "active" : ""}
+                >
+                  {entry.passed ? "✓" : index + 1}
                 </span>
                 <div>
-                  <h3>{action.title}</h3>
-                  <p>
-                    담당: {action.owner} · 완료 증거: {action.completionEvidence}
-                  </p>
+                  <small>Gate {entry.gate} · 배점 {entry.totalScore}점</small>
+                  <h3>{entry.label}</h3>
+                  <p>{entry.unlocks}</p>
                 </div>
-                <button className="button button--small button--dark" type="button">
-                  여정에 추가
-                </button>
-              </article>
+                <strong>{result.domainScores[entry.stageId]}%</strong>
+              </div>
             ))}
           </div>
         </section>
@@ -266,10 +300,13 @@ export function AssessmentForm() {
       <aside className="assessment-sidebar panel">
         <span className="page-kicker">GLOBAL READINESS</span>
         <h1>해외 진출 준비도 진단</h1>
-        <p>15개 질문에 답하면 6개 영역의 현재 위치를 확인할 수 있습니다.</p>
+        <p>
+          {INTAKE_QUESTIONS.length}개 문항으로 극초기·준비중·준비완료 세 단계를
+          평가합니다. 아직 하지 않은 것을 골라도 불이익은 없습니다.
+        </p>
         <div className="progress-block">
           <span>
-            <strong>{answeredCount}</strong> / {READINESS_QUESTIONS.length}
+            <strong>{answeredCount}</strong> / {INTAKE_QUESTIONS.length}
           </span>
           <div className="meter">
             <span style={{ width: `${progress}%` }} />
@@ -277,22 +314,19 @@ export function AssessmentForm() {
           <small>{progress}% 완료</small>
         </div>
         <ol className="domain-nav">
-          {DOMAINS.map((item, index) => {
-            const domainQuestions = READINESS_QUESTIONS.filter(
-              (question) => question.domainId === item.id
-            );
-            const complete = domainQuestions.every(
+          {STAGES.map((entry, index) => {
+            const complete = questionsOfStage(entry.id).every(
               (question) => answers[question.id] !== undefined
             );
             return (
-              <li key={item.id}>
+              <li key={entry.id}>
                 <button
                   type="button"
-                  className={index === activeDomain ? "active" : ""}
-                  onClick={() => setActiveDomain(index)}
+                  className={index === activeStage ? "active" : ""}
+                  onClick={() => setActiveStage(index)}
                 >
                   <span>{index + 1}</span>
-                  {item.shortLabel}
+                  {entry.label}
                   {complete && <small aria-label="완료">✓</small>}
                 </button>
               </li>
@@ -304,92 +338,101 @@ export function AssessmentForm() {
       <section className="assessment-questions">
         <div className="question-heading">
           <span>
-            영역 {activeDomain + 1} / {DOMAINS.length}
+            단계 {activeStage + 1} / {STAGES.length} · Gate {stage.gate}
           </span>
-          <h2>{domain.label}</h2>
+          <h2>{stage.label}</h2>
+          <p>{stage.intro}</p>
         </div>
-        {questions.map((question, index) => (
-          <article
-            className="question-card panel"
-            id={`question-${question.id}`}
-            key={question.id}
-          >
-            <span className="question-number">
-              Q{String(index + 1).padStart(2, "0")}
-            </span>
-            <h3>{question.title}</h3>
-            <p>{question.help}</p>
-            <fieldset>
-              <legend className="sr-only">{question.title}</legend>
-              <div className="answer-grid">
-                {LEVELS.map((level) => (
-                  <label
-                    className={`answer-option ${
-                      answers[question.id] === level.value ? "selected" : ""
-                    }`}
-                    key={level.value}
-                  >
-                    <input
-                      type="radio"
-                      name={question.id}
-                      value={level.value}
-                      checked={answers[question.id] === level.value}
-                      onChange={() => changeLevel(question.id, level.value)}
-                    />
-                    <strong>{level.label}</strong>
-                    <small>{level.description}</small>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            {answers[question.id] === 3 && (
-              <label className="evidence-field">
-                <span>완료 증빙</span>
-                <textarea
-                  rows={2}
-                  placeholder="관련 문서 링크 또는 확인 가능한 근거를 입력하세요."
-                  value={evidence[question.id]?.value ?? ""}
-                  onChange={(event) =>
-                    setEvidence((current) => ({
-                      ...current,
-                      [question.id]: {
-                        kind: event.target.value.startsWith("http")
-                          ? "url"
-                          : "note",
-                        value: event.target.value
-                      }
-                    }))
-                  }
-                />
-                <small>
-                  민감한 원문은 입력하지 마세요. 로그인 후 PDF·PNG·JPG 파일을
-                  비공개로 첨부할 수 있습니다.
-                </small>
-              </label>
-            )}
-            {errors[question.id] && (
-              <p className="field-error" role="alert">
-                {errors[question.id]}
-              </p>
-            )}
-          </article>
+        {stageItems.map((item) => (
+          <div key={item.id}>
+            <h3 className="question-group">{item.label}</h3>
+            {INTAKE_QUESTIONS.filter(
+              (question) => question.itemId === item.id
+            ).map((question) => {
+              const index = INTAKE_QUESTIONS.indexOf(question);
+              return (
+                <article
+                  className="question-card panel"
+                  id={`question-${question.id}`}
+                  key={question.id}
+                >
+                  <span className="question-number">
+                    Q{String(index + 1).padStart(2, "0")}
+                  </span>
+                  <h3>{question.question}</h3>
+                  <fieldset>
+                    <legend className="sr-only">{question.question}</legend>
+                    <div className="answer-grid">
+                      {LEVELS.map((level) => (
+                        <label
+                          className={`answer-option ${
+                            answers[question.id] === level ? "selected" : ""
+                          }`}
+                          key={level}
+                        >
+                          <input
+                            type="radio"
+                            name={question.id}
+                            value={level}
+                            checked={answers[question.id] === level}
+                            onChange={() => changeLevel(question.id, level)}
+                          />
+                          <small>{question.options[level - 1]}</small>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  {(answers[question.id] ?? 0) >= POSITIVE_LEVEL && (
+                    <label className="evidence-field">
+                      <span>{question.followUp}</span>
+                      <textarea
+                        rows={2}
+                        placeholder="선택 사항입니다. 적어주시면 전문가 검토가 정확해집니다."
+                        value={evidence[question.id]?.value ?? ""}
+                        onChange={(event) =>
+                          setEvidence((current) => ({
+                            ...current,
+                            [question.id]: {
+                              kind: event.target.value.startsWith("http")
+                                ? "url"
+                                : "note",
+                              value: event.target.value
+                            }
+                          }))
+                        }
+                      />
+                      <small>
+                        계약서·고객명부 원문은 넣지 마세요. 고객사는 «고객 A»처럼
+                        익명으로 적으셔도 됩니다.
+                      </small>
+                    </label>
+                  )}
+                  {errors[question.id] && (
+                    <p className="field-error" role="alert">
+                      {errors[question.id]}
+                    </p>
+                  )}
+                </article>
+              );
+            })}
+          </div>
         ))}
         <div className="assessment-controls">
           <button
             type="button"
             className="button button--ghost"
-            disabled={activeDomain === 0}
-            onClick={() => setActiveDomain((current) => current - 1)}
+            disabled={activeStage === 0}
+            onClick={() => setActiveStage((current) => current - 1)}
           >
-            이전 영역
+            이전 단계
           </button>
-          {activeDomain < DOMAINS.length - 1 ? (
+          {activeStage < STAGES.length - 1 ? (
             <button
               type="button"
               className="button button--primary"
               onClick={goNext}
             >
-              다음 영역
+              다음 단계
             </button>
           ) : (
             <button

@@ -1918,13 +1918,20 @@ svg {
 
 .answer-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.question-group {
+  margin: 28px 0 10px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .answer-option {
-  min-height: 74px;
-  padding: 13px;
+  padding: 11px 14px;
   display: grid;
   gap: 5px;
   border: 1px solid var(--line);
@@ -2208,10 +2215,6 @@ svg {
 }
 
 @media (max-width: 620px) {
-  .answer-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .domain-nav {
     grid-template-columns: repeat(2, 1fr);
   }
