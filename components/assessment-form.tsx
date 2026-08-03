@@ -377,7 +377,7 @@ export function AssessmentForm() {
                             checked={answers[question.id] === level}
                             onChange={() => changeLevel(question.id, level)}
                           />
-                          <small>{question.options[level - 1]}</small>
+                          <span>{question.options[level - 1]}</span>
                         </label>
                       ))}
                     </div>
