@@ -3,11 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const protectedPrefixes = [
   "/dashboard",
-  "/assessment",
   "/journey",
   "/orders",
   "/provider",
-  "/admin"
+  "/admin",
+  "/account"
 ];
 
 export async function middleware(request: NextRequest) {
@@ -50,10 +50,10 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
-    "/assessment/:path*",
     "/journey/:path*",
     "/orders/:path*",
     "/provider/:path*",
-    "/admin/:path*"
+    "/admin/:path*",
+    "/account/:path*"
   ]
 };

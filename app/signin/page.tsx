@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SignInForm } from "@/components/signin-form";
+import { safeNextPath } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "비공개 베타 로그인" };
+export const metadata: Metadata = { title: "로그인" };
 
-export default function SignInPage() {
+export default async function SignInPage({
+  searchParams
+}: {
+  searchParams: Promise<{ returnTo?: string; next?: string }>;
+}) {
+  const query = await searchParams;
+  const next = safeNextPath(query.returnTo ?? query.next);
   return (
     <main className="signin-page">
       <Link href="/" className="brand">
@@ -12,13 +19,12 @@ export default function SignInPage() {
         <span>Borderless</span>
       </Link>
       <section className="signin-panel panel">
-        <span className="page-kicker">PRIVATE BETA</span>
+        <span className="page-kicker">WELCOME BACK</span>
         <h1>글로벌 진출 여정을 이어가세요.</h1>
         <p>
-          이메일 주소만으로 베타 테스트에 참여할 수 있습니다. 비밀번호 없이
-          안전한 이메일 링크로 로그인합니다.
+          비밀번호, Google 또는 안전한 이메일 링크로 로그인할 수 있습니다.
         </p>
-        <SignInForm />
+        <SignInForm next={next} />
       </section>
     </main>
   );
