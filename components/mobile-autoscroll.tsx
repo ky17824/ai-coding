@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 const MOBILE = "(max-width: 620px)";
-const DURATION = 9000;
+const DURATION = 12000;
 const START_DELAY = 2600;
 const STEP_MS = 40;
 
