@@ -140,7 +140,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mvc-reference-market",
     itemId: "global-mindset",
     weight: 1,
-    question: "해외 고객의 가치를 확인할 기준 시장이 있나요?",
+    question: "해외 고객의 가치를 확인할 초기 타겟 시장이 있나요?",
     options: [
       "아직 어느 시장을 기준으로 볼지 정하지 못했습니다",
       "국내 시장을 기준으로 보지만 아직 검증 중입니다",
@@ -155,7 +155,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "res-tce",
     itemId: "resources",
     weight: 3,
-    question: "이번 진출에 총 얼마가 들지 계산해보셨나요?",
+    question: "이번 해외 진출 계획에 총 얼마가 들지 계산해보셨나요?",
     options: [
       "아직 계산해보지 못했습니다",
       "대략 감은 있지만 항목별로 정리하진 않았습니다",
@@ -232,7 +232,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "pmf-paid-conversion",
     itemId: "home-pmf",
     weight: 3,
-    question: "고객이 돈이나 시간을 실제로 쓴 적이 있나요?",
+    question: "우리 제품이나 서비스에 대한 유료 고객이 있었나요?",
     options: [
       "아직 유료 고객이나 실사용 고객이 없습니다",
       "관심을 보인 고객은 있지만 아직 비용을 지불하진 않았습니다",
@@ -295,7 +295,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mkt-icp-count",
     itemId: "target-market",
     weight: 2,
-    question: "목표 국가에서 살 만한 고객이 몇 곳인지 세어보셨나요?",
+    question: "초기 타겟 국가(시장)에서 고객이 몇 곳이고 얼마나 되는지 확인해 보셨나요?",
     options: [
       "아직 목표 국가를 정하지 못했습니다",
       "국가는 정했지만 고객 수는 시장 규모 자료로만 알고 있습니다",
@@ -355,7 +355,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mkt-bias-check",
     itemId: "target-market",
     weight: 1,
-    question: "인맥이나 지원사업을 빼고 봐도 그 나라가 1순위인가요?",
+    question: "인맥이나 지원사업이 없다고 해도 그 초기 타겟 국가(시장)가 1순위인가요?",
     options: [
       "그렇게 따져본 적이 없습니다",
       "따져보면 순위가 바뀔 것 같습니다",
@@ -673,7 +673,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "plan-hypothesis-kpi",
     itemId: "local-plan",
     weight: 3,
-    question: "지금 확인해야 할 가설과 그것을 볼 지표가 정해져 있나요?",
+    question: "지금 타겟 시장에서 확인해야 할 가설과 가설을 모니터링 할 지표가 정해져 있나요?",
     options: [
       "아직 정하지 못했습니다",
       "무엇을 봐야 할지 고민 중입니다",
@@ -749,7 +749,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "org-continuity",
     itemId: "local-team",
     weight: 1.5,
-    question: "핵심 인력이 자리를 비워도 일이 이어지나요?",
+    question: "해외진출에 대한 핵심 인력이 자리를 비워도 일이 계속 될 것이라 생각하시나요?",
     options: [
       "생각해본 적이 없습니다",
       "그 사람이 없으면 멈출 것 같습니다",
@@ -826,7 +826,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "contract-exit",
     itemId: "partner-contract",
     weight: 2,
-    question: "파트너와 헤어져도 고객을 데려올 수 있나요?",
+    question: "파트너와 헤어져도 고객을 확보 할 수 있나요?",
     options: [
       "생각해본 적이 없습니다",
       "어려울 것 같지만 확인하진 않았습니다",
@@ -841,7 +841,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "contract-switch-cost",
     itemId: "partner-contract",
     weight: 2,
-    question: "그 파트너를 다른 곳으로 바꿀 수 있나요?",
+    question: "그 파트너를 다른 업체나 인력으로 바꿀 수 있나요?",
     options: [
       "생각해본 적이 없습니다",
       "대체가 어렵다고만 알고 있습니다",
@@ -856,7 +856,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "contract-dependency-limit",
     itemId: "partner-contract",
     weight: 1.5,
-    question: "한 파트너에 얼마나 의존해도 되는지 선을 정하셨나요?",
+    question: "한 파트너에 얼마나 의존 할 지 기준을 정하셨나요?",
     options: [
       "생각해본 적이 없습니다",
       "의존이 크다는 건 알지만 기준은 없습니다",
@@ -901,7 +901,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "alloc-conditional-limit",
     itemId: "resource-allocation",
     weight: 1.5,
-    question: "조건부로 계속할 때의 한도를 정해두셨나요?",
+    question: "해외진출 사업에서 조건부로 계속 진행 할 때 그 예산 한도를 정해 두었나요?",
     options: [
       "아직 정하지 않았습니다",
       "필요하다고 보지만 숫자로 정하진 않았습니다",
