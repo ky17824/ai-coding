@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { appOrigin } from "@/lib/auth";
+import { appOrigin, passwordResetErrorMessage } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface PasswordState { ok: boolean; message: string }
@@ -15,9 +15,11 @@ export async function requestPasswordReset(
   const supabase = await createSupabaseServerClient();
   if (!supabase) return { ok: false, message: "인증 환경이 연결되지 않았습니다." };
   const origin = appOrigin();
-  await supabase.auth.resetPasswordForEmail(parsed.data, {
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
     redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/reset-password/update")}`
   });
+  const errorMessage = passwordResetErrorMessage(error);
+  if (errorMessage) return { ok: false, message: errorMessage };
   return { ok: true, message: "가입된 주소라면 비밀번호 재설정 메일을 보냈습니다." };
 }
 

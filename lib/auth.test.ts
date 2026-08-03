@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { appOrigin, dashboardPathForRole, safeNextPath } from "@/lib/auth";
+import {
+  appOrigin,
+  dashboardPathForRole,
+  passwordResetErrorMessage,
+  safeNextPath
+} from "@/lib/auth";
+
+it("reports actionable password reset email failures", () => {
+  expect(passwordResetErrorMessage({ status: 429 })).toContain("한도");
+  expect(passwordResetErrorMessage({ code: "email_address_not_authorized" })).toContain("설정");
+  expect(passwordResetErrorMessage({ code: "unexpected" })).toContain("보내지 못했습니다");
+  expect(passwordResetErrorMessage(null)).toBeNull();
+});
 
 it("uses the current Vercel preview deployment for email callbacks", () => {
   const previousEnv = process.env.VERCEL_ENV;
