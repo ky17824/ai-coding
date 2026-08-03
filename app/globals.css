@@ -269,21 +269,25 @@ svg {
 
 .hero h1 span {
   display: block;
-  animation: line-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: line-rise 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero h1 em {
+  font-size: 1.3em;
+  font-style: normal;
+  letter-spacing: -0.06em;
 }
 
 .hero h1 span:nth-child(1) {
-  font-size: 0.62em;
-  animation-delay: 0.15s;
+  animation-delay: 0.2s;
 }
 
 .hero h1 span:nth-child(2) {
-  font-size: 0.8em;
-  animation-delay: 0.55s;
+  animation-delay: 1s;
 }
 
 .hero h1 span:nth-child(3) {
-  animation-delay: 0.95s;
+  animation-delay: 1.8s;
 }
 
 @keyframes line-rise {
@@ -2315,7 +2319,7 @@ svg {
   }
 
   .hero h1 {
-    font-size: 43px;
+    font-size: 34px;
   }
 
   .hero__actions {

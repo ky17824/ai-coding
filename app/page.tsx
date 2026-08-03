@@ -4,23 +4,24 @@ import { BackgroundPaths } from "@/components/background-paths";
 import { CountUp } from "@/components/count-up";
 import { ArrowIcon, CheckIcon, LockIcon } from "@/components/icons";
 import { SiteHeader } from "@/components/site-header";
+import { MobileAutoScroll } from "@/components/mobile-autoscroll";
 
 const steps = [
   {
     number: "01",
-    title: "준비도를 진단하세요",
+    title: "대표님 회사의 해외진출 준비도를 확인하세요",
     description:
       "55개 문항으로 극초기·준비중·준비완료 중 지금 어느 단계인지 확인합니다."
   },
   {
     number: "02",
-    title: "다음 행동을 받으세요",
+    title: "맞춤형 진단으로 대응방안을 확인하세요",
     description:
       "가장 큰 준비도 격차부터 책임자·기한·완료 기준이 있는 액션으로 바꿉니다."
   },
   {
     number: "03",
-    title: "검증된 전문가와 실행하세요",
+    title: "검증된 전문가가 여러분의 어려움을 해결 할 수 있습니다",
     description:
       "필요한 순간에 승인된 멘토와 컨설팅 패키지를 예약하고 여정 안에서 관리합니다."
   }
@@ -29,6 +30,7 @@ const steps = [
 export default function HomePage() {
   return (
     <main>
+      <MobileAutoScroll />
       <div className="landing-shell">
         <BackgroundPaths />
         <SiteHeader />
@@ -39,9 +41,15 @@ export default function HomePage() {
               Global GTM Journey
             </span>
             <h1>
-              <span>해외 진출,</span>
-              <span>준비된 만큼</span>
-              <span>성공 할 수 있습니다</span>
+              <span>
+                <em>해외 진출</em>,
+              </span>
+              <span>
+                <em>준비</em>된 만큼
+              </span>
+              <span>
+                <em>성공</em> 할 수 있습니다
+              </span>
             </h1>
             <p>
               준비도를 객관적으로 진단하고, 지금 필요한 액션과 전문가를
