@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { dashboardPathForRole, safeNextPath } from "@/lib/auth";
+import { appOrigin, dashboardPathForRole, safeNextPath } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface SignInState {
@@ -29,7 +29,7 @@ export async function requestMagicLink(
     };
   }
 
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = appOrigin();
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {

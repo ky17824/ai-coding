@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { dashboardPathForRole, safeNextPath } from "@/lib/auth";
+import { appOrigin, dashboardPathForRole, safeNextPath } from "@/lib/auth";
+
+it("uses the current Vercel preview deployment for email callbacks", () => {
+  const previousEnv = process.env.VERCEL_ENV;
+  const previousUrl = process.env.VERCEL_URL;
+  process.env.VERCEL_ENV = "preview";
+  process.env.VERCEL_URL = "preview.example.vercel.app";
+  expect(appOrigin()).toBe("https://preview.example.vercel.app");
+  if (previousEnv === undefined) delete process.env.VERCEL_ENV;
+  else process.env.VERCEL_ENV = previousEnv;
+  if (previousUrl === undefined) delete process.env.VERCEL_URL;
+  else process.env.VERCEL_URL = previousUrl;
+});
 
 describe("post-login destination", () => {
   it("sends only administrators to the admin dashboard", () => {

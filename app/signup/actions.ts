@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { safeNextPath } from "@/lib/auth";
+import { appOrigin, safeNextPath } from "@/lib/auth";
 import { encryptPhone, normalizePhone } from "@/lib/pii";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -73,7 +73,7 @@ export async function signUpWithPassword(
   const supabase = await createSupabaseServerClient();
   if (!supabase) return { ok: false, message: "인증 환경이 연결되지 않았습니다." };
   const next = safeNextPath(parsed.data.next);
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = appOrigin();
   const agreedAt = new Date().toISOString();
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
