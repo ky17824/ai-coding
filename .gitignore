@@ -7,3 +7,4 @@ coverage
 .vercel
 .DS_Store
 supabase/.temp
+.claude/settings.local.json
