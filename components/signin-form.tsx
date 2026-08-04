@@ -1,44 +1,52 @@
 "use client";
 
 import { useActionState } from "react";
-import { requestMagicLink, type SignInState } from "@/app/signin/actions";
+import Link from "next/link";
+import {
+  requestMagicLink,
+  signInWithPassword,
+  type SignInState
+} from "@/app/signin/actions";
+import { GoogleButton } from "@/components/google-button";
 
 const initialState: SignInState = { ok: false, message: "" };
 
-export function SignInForm() {
-  const [state, action, pending] = useActionState(
+export function SignInForm({ next }: { next: string }) {
+  const [passwordState, passwordAction, passwordPending] = useActionState(
+    signInWithPassword,
+    initialState
+  );
+  const [magicState, magicAction, magicPending] = useActionState(
     requestMagicLink,
     initialState
   );
 
   return (
-    <form action={action} className="signin-form">
-      <label>
-        <span>업무용 이메일</span>
-        <input
-          name="email"
-          type="email"
-          autoComplete="email"
-          placeholder="founder@company.com"
-          required
-        />
-      </label>
-      <button
-        className="button button--primary button--full"
-        type="submit"
-        disabled={pending}
-      >
-        {pending ? "링크 보내는 중…" : "이메일로 로그인"}
-      </button>
-      {state.message && (
-        <p className={state.ok ? "form-success" : "field-error"} role="status">
-          {state.message}
-        </p>
-      )}
-      <small>
-        로그인 링크를 요청하면 개인정보처리방침과 비공개 베타 이용약관에
-        동의한 것으로 간주합니다.
-      </small>
-    </form>
+    <div className="signin-form">
+      <GoogleButton next={next} />
+      <div className="form-divider"><span>또는</span></div>
+      <form action={passwordAction} className="signin-form">
+        <input type="hidden" name="next" value={next} />
+        <label><span>이메일</span><input name="email" type="email" autoComplete="email" required /></label>
+        <label><span>비밀번호</span><input name="password" type="password" autoComplete="current-password" required /></label>
+        <button className="button button--primary button--full" disabled={passwordPending}>
+          {passwordPending ? "로그인 중…" : "로그인"}
+        </button>
+        {passwordState.message && <p className="field-error" role="status">{passwordState.message}</p>}
+        <Link className="text-link" href="/reset-password">비밀번호 찾기 →</Link>
+      </form>
+      <details className="magic-link-panel">
+        <summary>비밀번호 없이 이메일 링크로 로그인</summary>
+        <form action={magicAction} className="signin-form">
+          <input type="hidden" name="next" value={next} />
+          <label><span>업무용 이메일</span><input name="email" type="email" autoComplete="email" required /></label>
+          <button className="button button--ghost button--full" disabled={magicPending}>
+            {magicPending ? "링크 보내는 중…" : "로그인 링크 받기"}
+          </button>
+          {magicState.message && <p className={magicState.ok ? "form-success" : "field-error"} role="status">{magicState.message}</p>}
+        </form>
+      </details>
+      <p className="auth-switch">계정이 없나요? <Link href={`/signup?next=${encodeURIComponent(next)}`}>가입하기</Link></p>
+    </div>
   );
 }

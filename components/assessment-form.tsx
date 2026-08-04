@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   INTAKE_ITEMS,
@@ -22,11 +22,22 @@ import type {
   ReadinessResult
 } from "@/lib/types";
 import { ServiceCard } from "@/components/service-card";
+import {
+  clearPending,
+  loadPending,
+  savePending
+} from "@/lib/pending-assessment";
 
 const LEVELS: ReadinessLevel[] = [1, 2, 3, 4];
 const GATE_PERCENT = Math.round(GATE_THRESHOLD * 100);
 
-export function AssessmentForm() {
+export function AssessmentForm({
+  isSignedIn,
+  resume = false
+}: {
+  isSignedIn: boolean;
+  resume?: boolean;
+}) {
   const [answers, setAnswers] = useState<Record<string, ReadinessLevel>>({});
   const [evidence, setEvidence] = useState<Record<string, EvidenceInput>>({});
   const [activeStage, setActiveStage] = useState(0);
@@ -34,6 +45,8 @@ export function AssessmentForm() {
   const [result, setResult] = useState<ReadinessResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState("");
+  const restored = useRef(false);
 
   const stage = STAGES[activeStage];
   const stageItems = INTAKE_ITEMS.filter((item) => item.stageId === stage.id);
@@ -88,6 +101,29 @@ export function AssessmentForm() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function submitAnswers(
+    answersToSubmit: ReadinessAnswer[],
+    restoredAnswers = false
+  ) {
+    setResult(calculateReadiness(answersToSubmit));
+    setSaving(true);
+    setSaved(false);
+    try {
+      const response = await fetch("/api/assessments", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ answers: answersToSubmit })
+      });
+      setSaved(response.ok);
+      if (response.ok && restoredAnswers) clearPending();
+    } catch {
+      setSaved(false);
+    } finally {
+      setSaving(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
   async function submit() {
     const missing = firstUnanswered(INTAKE_QUESTIONS);
     if (missing) {
@@ -105,23 +141,39 @@ export function AssessmentForm() {
       return;
     }
 
-    setResult(calculateReadiness(submittedAnswers));
-    setSaving(true);
-    setSaved(false);
-    try {
-      const response = await fetch("/api/assessments", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ answers: submittedAnswers })
-      });
-      setSaved(response.ok);
-    } catch {
-      setSaved(false);
-    } finally {
-      setSaving(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    if (!isSignedIn) {
+      savePending(submittedAnswers);
+      window.location.href = "/signup?next=/assessment%3Fresume%3D1";
+      return;
     }
+
+    await submitAnswers(submittedAnswers);
   }
+
+  useEffect(() => {
+    if (!isSignedIn || restored.current) return;
+    restored.current = true;
+    const pending = loadPending();
+    if (!pending) {
+      if (resume) {
+        setRestoreMessage("보관된 진단 응답을 찾지 못했습니다. 다시 진단해 주세요.");
+      }
+      return;
+    }
+    setAnswers(
+      Object.fromEntries(
+        pending.map((answer) => [answer.questionId, answer.level])
+      )
+    );
+    setEvidence(
+      Object.fromEntries(
+        pending
+          .filter((answer) => answer.evidence)
+          .map((answer) => [answer.questionId, answer.evidence!])
+      )
+    );
+    void submitAnswers(pending, true);
+  }, [isSignedIn, resume]);
 
   if (result) {
     const matched = recommendServices(
@@ -336,6 +388,11 @@ export function AssessmentForm() {
       </aside>
 
       <section className="assessment-questions">
+        {restoreMessage && (
+          <p className="notice-banner" role="alert">
+            {restoreMessage}
+          </p>
+        )}
         <div className="question-heading">
           <span>
             단계 {activeStage + 1} / {STAGES.length} · Gate {stage.gate}

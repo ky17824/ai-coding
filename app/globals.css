@@ -534,6 +534,250 @@ svg {
   }
 }
 
+.header-account,
+.phone-reveal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-account form {
+  margin: 0;
+}
+
+.signup-panel {
+  width: min(620px, 100%);
+}
+
+.form-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.form-divider::before,
+.form-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+  content: "";
+}
+
+.consent-list {
+  display: grid;
+  gap: 9px;
+}
+
+.signin-form .consent-list label,
+.provider-form .consent-list label {
+  display: flex;
+  grid-template-columns: none;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.consent-list input {
+  min-height: auto;
+  margin-top: 2px;
+  accent-color: var(--green);
+}
+
+.notice-banner {
+  margin: 0 0 22px;
+  padding: 14px 16px;
+  border: 1px solid #b9dfc8;
+  border-radius: 12px;
+  background: #edf7f0;
+  color: var(--green-dark);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.magic-link-panel {
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.magic-link-panel summary,
+.auth-switch {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.auth-switch {
+  margin: 0;
+  text-align: center;
+}
+
+.auth-switch a,
+.notice-banner a {
+  color: var(--green);
+  font-weight: 750;
+}
+
+.account-page > .provider-form {
+  margin-top: 22px;
+}
+
+.danger-zone {
+  border-color: #e8b6b1;
+  background: #fff8f7;
+}
+
+.danger-zone p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.admin-section {
+  margin-top: 48px;
+}
+
+.admin-worklist,
+.funnel-row {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-worklist {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.admin-worklist > a,
+.funnel-row > div {
+  padding: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.admin-worklist span,
+.funnel-row span,
+.company-summary span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.funnel-row {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.funnel-row strong {
+  color: var(--green);
+  font-family: Georgia, serif;
+  font-size: 28px;
+}
+
+.admin-filters {
+  margin: 18px 0;
+  display: grid;
+  grid-template-columns: 2fr repeat(3, 1fr) auto;
+  gap: 8px;
+}
+
+.admin-filters input,
+.admin-filters select {
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--white);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.admin-table th {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-table a {
+  color: var(--green);
+  font-weight: 750;
+}
+
+.pagination {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.company-summary {
+  margin-top: 28px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.company-summary > div {
+  display: grid;
+  gap: 8px;
+}
+
+.company-summary small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.answer-audit-list,
+.order-audit-list {
+  display: grid;
+  gap: 9px;
+}
+
+.answer-audit-list details,
+.order-audit-list article {
+  padding: 16px 18px;
+}
+
+.answer-audit-list summary {
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.answer-audit-list p,
+.order-audit-list p,
+.order-audit-list small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+@media (max-width: 800px) {
+  .admin-worklist,
+  .funnel-row,
+  .company-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
 .chart__column small {
   color: var(--muted);
   font-size: 9px;

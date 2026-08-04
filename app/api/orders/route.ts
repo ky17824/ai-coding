@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { SAMPLE_SERVICES } from "@/lib/service-data";
-import { createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient,
+  requireUser
+} from "@/lib/supabase/server";
 import { calculateSettlement } from "@/lib/orders";
 
 const schema = z.object({
@@ -22,8 +26,9 @@ export async function POST(request: Request) {
   }
   const user = await requireUser();
   const supabase = await createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
 
-  if (!user || !supabase) {
+  if (!user || !supabase || !admin) {
     if (process.env.NODE_ENV !== "development") {
       return NextResponse.json({ message: "로그인이 필요합니다." }, { status: 401 });
     }
@@ -46,9 +51,9 @@ export async function POST(request: Request) {
   }
 
   const [{ data: profile }, { data: service }] = await Promise.all([
-    supabase
+    admin
       .from("profiles")
-      .select("organization_id,role")
+      .select("organization_id,role,job_title,phone_enc")
       .eq("id", user.id)
       .single(),
     supabase
@@ -71,6 +76,12 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json(
       { message: "승인된 서비스를 구매할 수 없습니다." },
+      { status: 403 }
+    );
+  }
+  if (!profile.job_title || !profile.phone_enc) {
+    return NextResponse.json(
+      { message: "전문가 서비스 주문 전에 마이페이지에서 회사 정보와 연락처를 완성해 주세요." },
       { status: 403 }
     );
   }

@@ -22,6 +22,18 @@ Supabase 환경값이 없을 때 개발 환경에서는 샘플 데이터로 진�
 3. PortOne V2 웹훅을 `/api/portone/webhook`으로 설정하고 웹훅 시크릿을 발급합니다.
 4. Vercel 배포 URL을 `NEXT_PUBLIC_APP_URL`에 등록합니다.
 5. 관리자 계정의 `profiles.role`을 `admin`으로 지정합니다.
+6. Supabase SQL Editor에서 `002_api_role_grants.sql`, `003_intake_55.sql`, `004_account_pii.sql` 순서로 적용합니다.
+7. Supabase Auth의 Site URL과 Redirect URL에 운영 도메인의 `/auth/callback`을 등록하고 Secure password change를 활성화합니다.
+8. Google 로그인을 쓸 때 Google Provider를 설정한 뒤 `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true`로 바꿉니다.
+9. 운영 인증 메일용 SMTP를 연결합니다.
+
+전화번호 암호화 키는 다음 명령으로 생성해 Vercel의 `PII_ENCRYPTION_KEY`에 등록하고 별도 비밀번호 관리자에도 보관합니다.
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
+```
+
+키를 분실하면 저장된 전화번호는 복구할 수 없습니다.
 
 실제 결제는 PG 입점 승인과 약관·개인정보·환불정책의 국내 전문가 검토가
 완료된 뒤 활성화합니다.
