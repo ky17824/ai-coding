@@ -11,7 +11,7 @@ import { GoogleButton } from "@/components/google-button";
 
 const initialState: SignInState = { ok: false, message: "" };
 
-export function SignInForm({ next }: { next: string }) {
+export function SignInForm({ next, googleEnabled }: { next: string; googleEnabled: boolean }) {
   const [passwordState, passwordAction, passwordPending] = useActionState(
     signInWithPassword,
     initialState
@@ -23,8 +23,12 @@ export function SignInForm({ next }: { next: string }) {
 
   return (
     <div className="signin-form">
-      <GoogleButton next={next} />
-      <div className="form-divider"><span>또는</span></div>
+      {googleEnabled && (
+        <>
+          <GoogleButton next={next} />
+          <div className="form-divider"><span>또는</span></div>
+        </>
+      )}
       <form action={passwordAction} className="signin-form">
         <input type="hidden" name="next" value={next} />
         <label><span>이메일</span><input name="email" type="email" autoComplete="email" required /></label>

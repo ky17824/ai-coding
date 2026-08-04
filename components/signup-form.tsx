@@ -8,7 +8,7 @@ import { loadPending } from "@/lib/pending-assessment";
 
 const initialState: SignUpState = { ok: false, message: "" };
 
-export function SignupForm({ next }: { next: string }) {
+export function SignupForm({ next, googleEnabled }: { next: string; googleEnabled: boolean }) {
   const [state, action, pending] = useActionState(signUpWithPassword, initialState);
   const [hasAssessment, setHasAssessment] = useState(false);
   useEffect(() => setHasAssessment(Boolean(loadPending())), []);
@@ -18,8 +18,12 @@ export function SignupForm({ next }: { next: string }) {
       {hasAssessment && (
         <p className="notice-banner" role="status">진단 응답 55개를 이 탭에 보관 중입니다.</p>
       )}
-      <GoogleButton next={next} />
-      <div className="form-divider"><span>또는</span></div>
+      {googleEnabled && (
+        <>
+          <GoogleButton next={next} />
+          <div className="form-divider"><span>또는</span></div>
+        </>
+      )}
       <form action={action} className="signin-form">
         <input type="hidden" name="next" value={next} />
         {[
