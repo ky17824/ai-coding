@@ -218,6 +218,7 @@ svg {
 .button--ghost {
   border: 1px solid var(--line);
   background: var(--white);
+  color: var(--ink);
 }
 
 .button--full {
