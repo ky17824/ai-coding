@@ -116,7 +116,7 @@ export default async function DashboardPage() {
           <div className="dashboard-section__heading">
             <span>
               <span className="page-kicker">AI GTM PLAN</span>
-              <h2>{plan?.summary || "진단 결과를 30·60·90일 실행 계획으로 바꿔 보세요."}</h2>
+              <h2 className="plan-summary">{plan?.summary || "진단 결과를 30·60·90일 실행 계획으로 바꿔 보세요."}</h2>
             </span>
             <Link href={`/assistant/${assessment.id}`} className="button button--primary">
               {plan ? "AI 계획 이어가기" : "AI 계획 만들기"} →

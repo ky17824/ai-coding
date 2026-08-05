@@ -184,7 +184,7 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
         {items.length > 0 && (
           <section className="assistant-plan">
             <div className="dashboard-section__heading">
-              <span><span className="page-kicker">30 · 60 · 90 DAY PLAN</span><h2>{summary}</h2></span>
+              <span><span className="page-kicker">30 · 60 · 90 DAY PLAN</span><h2 className="plan-summary">{summary}</h2></span>
               {planStatus === "active" ? (
                 <Link className="button button--dark" href="/journey">승인된 여정 보기 →</Link>
               ) : (

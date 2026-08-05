@@ -68,7 +68,7 @@ export default async function JourneyPage() {
         {activePlan && planItems.length > 0 ? (
           <>
             <div className="dashboard-section__heading">
-              <span><span className="page-kicker">APPROVED AI GTM PLAN</span><h2>{activePlan.summary}</h2></span>
+              <span><span className="page-kicker">APPROVED AI GTM PLAN</span><h2 className="plan-summary">{activePlan.summary}</h2></span>
               <Link className="button button--ghost" href={`/assistant/${activePlan.assessment_id}`}>계획 수정</Link>
             </div>
             <div className="journey-board">

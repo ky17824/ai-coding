@@ -2661,14 +2661,15 @@ svg {
   margin-top: 24px;
 }
 
-/* 다른 섹션의 h2 는 짧은 제목이지만 여기는 여러 줄짜리 요약문이다. */
-.assistant-plan .dashboard-section__heading h2 {
+/* 옆 섹션 제목들과 달리 여기 h2 는 여러 줄짜리 요약문이라 제목 크기로는 너무 크다.
+   .hold-banner h2(22px)보다 한 단 작게 잡는다. 대시보드·여정·어시스턴트 공통. */
+h2.plan-summary {
   margin: 8px 0 0;
   max-width: 62ch;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 700;
-  line-height: 1.65;
-  letter-spacing: -0.01em;
+  line-height: 1.55;
+  letter-spacing: -0.02em;
 }
 
 .assistant-plan-item {
