@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { applyOffering } from "@/lib/intake-questions";
 import { calculateReadiness, validateAssessmentAnswers } from "@/lib/readiness";
 import { createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
 
@@ -14,7 +15,8 @@ const answerSchema = z.object({
     .optional()
 });
 const requestSchema = z.object({
-  answers: z.array(answerSchema).length(55)
+  answers: z.array(answerSchema).length(55),
+  offering: z.enum(["both", "product", "service"]).default("both")
 });
 
 export async function POST(request: Request) {
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
       organization_id: profile.organization_id,
       assessment_id: assessment.id,
       question_id: action.questionId,
-      title: action.title,
+      title: applyOffering(action.title, parsed.data.offering),
       owner_label: action.owner,
       completion_evidence: action.completionEvidence,
       phase: action.phase,

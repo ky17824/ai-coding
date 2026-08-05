@@ -2121,6 +2121,58 @@ svg {
   line-height: 1.65;
 }
 
+.offering-picker {
+  margin: 20px 0 4px;
+  display: grid;
+  gap: 8px;
+}
+
+.offering-picker > span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.offering-picker > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.offering-picker label {
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.offering-picker label:hover {
+  border-color: var(--green);
+}
+
+.offering-picker label.selected {
+  border-color: var(--green);
+  background: var(--green);
+  color: var(--white);
+}
+
+.offering-picker input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.offering-picker small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .progress-block {
   margin: 28px 0;
   padding-bottom: 24px;

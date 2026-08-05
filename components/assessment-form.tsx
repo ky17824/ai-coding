@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  applyOffering,
   INTAKE_ITEMS,
   INTAKE_QUESTIONS,
-  POSITIVE_LEVEL
+  POSITIVE_LEVEL,
+  type OfferingType
 } from "@/lib/intake-questions";
 import {
   GATE_THRESHOLD,
@@ -39,6 +41,10 @@ export function AssessmentForm({
   resume?: boolean;
 }) {
   const [answers, setAnswers] = useState<Record<string, ReadinessLevel>>({});
+  // 대표님이 파는 것이 정해지기 전까지 문항은 «제품/서비스»로 묻는다.
+  // ponytail: 이 선택은 진단 한 번에만 남는다. 회사마다 기억시키려면
+  // organizations 에 칸을 하나 늘린다.
+  const [offering, setOffering] = useState<OfferingType>("both");
   const [evidence, setEvidence] = useState<Record<string, EvidenceInput>>({});
   const [activeStage, setActiveStage] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -113,7 +119,7 @@ export function AssessmentForm({
       const response = await fetch("/api/assessments", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ answers: answersToSubmit })
+        body: JSON.stringify({ answers: answersToSubmit, offering })
       });
       const payload = (await response.json()) as { assessmentId?: string };
       setSaved(response.ok);
@@ -361,6 +367,30 @@ export function AssessmentForm({
           {INTAKE_QUESTIONS.length}개 문항으로 극초기·준비중·준비완료 세 단계를
           진단합니다. 아직 하지 않은 항목을 고르셔도 불이익은 없습니다.
         </p>
+        <div className="offering-picker">
+          <span>대표님이 파시는 것은</span>
+          <div>
+            {(
+              [
+                ["both", "아직 정하기 어려움"],
+                ["product", "제품"],
+                ["service", "서비스"]
+              ] as const
+            ).map(([value, label]) => (
+              <label className={offering === value ? "selected" : ""} key={value}>
+                <input
+                  type="radio"
+                  name="offering"
+                  checked={offering === value}
+                  onChange={() => setOffering(value)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <small>고르시면 문항이 그 표현으로 바뀝니다.</small>
+        </div>
+
         <div className="progress-block">
           <span>
             <strong>{answeredCount}</strong> / {INTAKE_QUESTIONS.length}
@@ -421,9 +451,11 @@ export function AssessmentForm({
                   <span className="question-number">
                     Q{String(index + 1).padStart(2, "0")}
                   </span>
-                  <h3>{question.question}</h3>
+                  <h3>{applyOffering(question.question, offering)}</h3>
                   <fieldset>
-                    <legend className="sr-only">{question.question}</legend>
+                    <legend className="sr-only">
+                      {applyOffering(question.question, offering)}
+                    </legend>
                     <div className="answer-grid">
                       {LEVELS.map((level) => (
                         <label
@@ -439,14 +471,14 @@ export function AssessmentForm({
                             checked={answers[question.id] === level}
                             onChange={() => changeLevel(question.id, level)}
                           />
-                          <span>{question.options[level - 1]}</span>
+                          <span>{applyOffering(question.options[level - 1], offering)}</span>
                         </label>
                       ))}
                     </div>
                   </fieldset>
                   {(answers[question.id] ?? 0) >= POSITIVE_LEVEL && (
                     <label className="evidence-field">
-                      <span>{question.followUp}</span>
+                      <span>{applyOffering(question.followUp, offering)}</span>
                       <textarea
                         rows={2}
                         placeholder="선택 사항입니다. 적어 주시면 전문가 검토가 더 정확해집니다."
