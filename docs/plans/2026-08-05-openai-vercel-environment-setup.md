@@ -4,7 +4,7 @@
 
 대상 서비스: Borderless Global GTM (`global-gtm`)
 
-상태: **방법 확인 완료 — 아직 적용하지 않음**
+상태: **운영 적용 완료**
 
 ## 1. 목적
 
@@ -182,14 +182,16 @@ Vector Store 자료에 문제가 있으면 `OPENAI_GTM_VECTOR_STORE_ID`를 제�
 - [Vercel Sensitive Environment Variables](https://vercel.com/docs/environment-variables/sensitive-environment-variables)
 - [Vercel Managing Environment Variables](https://vercel.com/docs/environment-variables/managing-environment-variables)
 
-## 11. 현재 중단 지점
+## 11. 적용 결과
 
-이 문서는 적용 방법만 확정한다. 현재 시점에는 다음 작업을 수행하지 않았다.
+2026-08-05 기준으로 다음 작업을 완료했다.
 
-- OpenAI API 키 생성 또는 입력
-- OpenAI Vector Store 생성
-- Obsidian 자료 업로드
-- Vercel 환경변수 추가·수정
-- Preview 또는 Production 재배포
+- Borderless 전용 OpenAI API 키를 로컬과 Vercel Sensitive 환경변수로 저장
+- `Borderless GTM Knowledge` Vector Store 생성
+- 허용된 Obsidian GTM Markdown 49개 업로드·색인 완료, 실패 0개
+- `OPENAI_API_KEY`와 `OPENAI_GTM_VECTOR_STORE_ID`를 Vercel Production·Preview에 등록
+- `gpt-5.6-luna`와 Vector Store 검색 최소 API 요청 성공
+- Preview 최종 HTTP 200 및 비로그인 AI API 401 확인
+- Production 재배포 완료 및 `https://global-gtm.vercel.app` 연결 확인
 
-다음 작업을 재개할 때는 **2. 사전 준비**부터 순서대로 진행한다.
+API 키 값은 이 문서와 Git 이력에 기록하지 않았다. 이후 지식 자료를 변경하면 **4. Obsidian GTM 자료 동기화** 절차부터 다시 실행한다.
