@@ -592,6 +592,60 @@ svg {
   margin: 0;
 }
 
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 42px;
+  padding: 0 3px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.lang-switch__item {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 11px;
+  border-radius: 9px;
+  color: var(--muted);
+  transition: color 0.16s ease, background 0.16s ease;
+}
+
+.lang-switch__item:hover,
+.lang-switch__item:focus-visible {
+  color: var(--green);
+}
+
+.lang-switch__item.is-active {
+  background: var(--green-dark);
+  color: var(--mint);
+}
+
+/* 선택기는 랜딩(non-compact)에만 나타나고, 랜딩 헤더는 어두운 배경 위에 얹힌다. */
+.landing-shell .lang-switch {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.landing-shell .lang-switch__item {
+  color: rgba(245, 251, 248, 0.72);
+}
+
+.landing-shell .lang-switch__item:hover,
+.landing-shell .lang-switch__item:focus-visible {
+  color: #79ddb2;
+}
+
+.landing-shell .lang-switch__item.is-active {
+  background: var(--mint);
+  color: var(--green-dark);
+}
+
 .signup-panel {
   width: min(620px, 100%);
 }
