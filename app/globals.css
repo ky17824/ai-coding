@@ -906,15 +906,15 @@ svg {
   align-items: center;
   overflow: hidden;
   background: var(--green-dark);
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 14px;
   font-weight: 700;
 }
 
 .trust-strip__track {
   display: flex;
   width: max-content;
-  animation: trust-marquee 24s linear infinite;
+  animation: trust-marquee 32s linear infinite;
   will-change: transform;
 }
 

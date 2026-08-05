@@ -28,9 +28,10 @@ const steps = [
 ];
 
 const trustPrinciples = [
-  "GLOBAL CLASS 방법론 기반",
-  "근거 중심 준비도 진단",
-  "승인된 전문가 서비스"
+  "실리콘밸리 현지화 방법론 기반",
+  "근거 중심 준비도(Readiness) 예비진단",
+  "AI-GTM 어시스턴트 계획 작성지원",
+  "실전경험 있는 전문가 서비스"
 ];
 
 export default function HomePage() {
