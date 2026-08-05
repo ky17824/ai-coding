@@ -158,7 +158,7 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
       <section className="assistant-workspace">
         <div className="question-heading">
           <span>FOUNDER WORKSHOP</span>
-          <h2>대표님의 계획을 말씀해 주세요.</h2>
+          <h2>초기 타깃 시장에 대하여 말씀해 주세요.</h2>
           <p>고객 이름과 연락처, 계약서 원본은 입력하지 마세요. 목표와 제약 조건만 알려 주시면 됩니다.</p>
         </div>
         <div className="assistant-context panel">
