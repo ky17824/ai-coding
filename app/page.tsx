@@ -9,25 +9,25 @@ import { MobileAutoScroll } from "@/components/mobile-autoscroll";
 const steps = [
   {
     number: "01",
-    title: "대표님 회사의 해외진출 준비도를 확인하세요",
+    title: "대표님 회사의 해외 진출 준비도를 확인하세요",
     description:
-      "55개 문항으로 극초기·준비중·준비완료 중 지금 어느 단계인지 확인합니다."
+      "55개 문항에 답하시면 극초기·준비중·준비완료 가운데 지금 어느 단계인지 알려드립니다."
   },
   {
     number: "02",
-    title: "맞춤형 진단으로 대응방안을 확인하세요",
+    title: "맞춤형 진단으로 대응 방안을 확인하세요",
     description:
-      "가장 큰 준비도 격차부터 책임자·기한·완료 기준이 있는 액션으로 바꿉니다."
+      "가장 큰 준비도 격차부터 책임자와 기한, 완료 기준이 있는 액션으로 바꿔 드립니다."
   },
   {
     number: "03",
     title: "AI-GTM 어시스턴트가 계획 작성을 돕습니다",
     description:
-      "진단 결과와 타겟 시장을 반영한 GTM 실행 계획 초안을 만들고, 대표님이 검토해 확정합니다."
+      "진단 결과와 타깃 시장을 반영해 GTM 실행 계획 초안을 만들어 드리면, 대표님이 검토해 확정하십니다."
   },
   {
     number: "04",
-    title: "검증된 전문가가 여러분과 함께 합니다",
+    title: "검증된 전문가가 여러분과 함께합니다",
     description:
       "필요한 순간에 승인된 멘토와 컨설팅 패키지를 예약하고 여정 안에서 관리합니다."
   }
@@ -36,8 +36,8 @@ const steps = [
 const trustPrinciples = [
   "실리콘밸리 현지화 방법론 기반",
   "근거 중심 준비도(Readiness) 예비진단",
-  "AI-GTM 어시스턴트 계획 작성지원",
-  "실전경험 있는 전문가 서비스"
+  "AI-GTM 어시스턴트 계획 작성 지원",
+  "실전 경험을 갖춘 전문가 서비스"
 ];
 
 export default function HomePage() {
@@ -61,12 +61,12 @@ export default function HomePage() {
                 <em>준비</em>된 만큼
               </span>
               <span>
-                <em>성공</em> 할 수 있습니다
+                <em>성공</em>할 수 있습니다
               </span>
             </h1>
             <p>
-              준비도를 객관적으로 진단하고, 지금 필요한 액션과 전문가를
-              연결해 글로벌 진출의 전 과정을 한눈에 관리하세요.
+              준비도를 객관적으로 진단해 드리고 지금 필요한 액션과 전문가를
+              연결해 드립니다. 글로벌 진출의 전 과정을 한눈에 관리하세요.
             </p>
             <div className="hero__actions">
               <Link href="/assessment" className="button button--primary">
@@ -128,7 +128,7 @@ export default function HomePage() {
               <CheckIcon />
               <span>
                 <strong>근거 기반 진단</strong>
-                <small>완료에는 증빙이 필요해요</small>
+                <small>완료하려면 증빙이 필요합니다</small>
               </span>
             </div>
             <div className="floating-card floating-card--bottom">

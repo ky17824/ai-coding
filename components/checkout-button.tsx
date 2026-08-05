@@ -84,7 +84,7 @@ export function CheckoutButton({
       if (!response) {
         setStatus("결제창을 열지 못했습니다.");
       } else if (response.code) {
-        setStatus(response.message ?? "결제가 완료되지 않았습니다.");
+        setStatus(response.message ?? "결제가 완료되지 않았습니다. 다시 시도해 주세요.");
       } else {
         window.location.href = `/orders/${order.orderId}`;
       }
@@ -107,7 +107,7 @@ export function CheckoutButton({
             onChange={(event) => setSlotId(event.target.value)}
           >
             {!availableSlots.length && (
-              <option value="">예약 가능한 일정 없음</option>
+              <option value="">예약 가능한 일정이 없습니다</option>
             )}
             {availableSlots.map((slot) => (
               <option value={slot.id} key={slot.id}>

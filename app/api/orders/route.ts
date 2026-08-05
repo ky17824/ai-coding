@@ -75,13 +75,13 @@ export async function POST(request: Request) {
     provider?.approval_status !== "approved"
   ) {
     return NextResponse.json(
-      { message: "승인된 서비스를 구매할 수 없습니다." },
+      { message: "승인되지 않은 서비스는 구매할 수 없습니다." },
       { status: 403 }
     );
   }
   if (!profile.job_title || !profile.phone_enc) {
     return NextResponse.json(
-      { message: "전문가 서비스 주문 전에 마이페이지에서 회사 정보와 연락처를 완성해 주세요." },
+      { message: "전문가 서비스를 주문하시려면 마이페이지에서 회사 정보와 연락처를 먼저 입력해 주세요." },
       { status: 403 }
     );
   }
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       .single();
     if (!slot || new Date(slot.starts_at) <= new Date()) {
       return NextResponse.json(
-        { message: "선택한 일정을 예약할 수 없습니다." },
+        { message: "선택하신 일정은 예약할 수 없습니다." },
         { status: 409 }
       );
     }
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
     acceptedAt: now,
     sellerDisclosure: "Borderless는 통신판매중개자이며 전문가는 서비스 제공 당사자입니다.",
     refundPolicy:
-      "서비스 시작 전 전액 환불. 시작 후 취소·분쟁은 관리자 수동 검토.",
+      "서비스 시작 전에는 전액 환불됩니다. 시작 후의 취소·분쟁은 관리자가 직접 검토합니다.",
     serviceStartsAt: scheduledAt
   };
   const serviceSnapshot = {
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
   });
   if (error?.code === "23505") {
     return NextResponse.json(
-      { message: "선택한 일정이 방금 예약됐습니다. 다른 시간을 선택해 주세요." },
+      { message: "선택하신 일정이 방금 예약되었습니다. 다른 시간을 선택해 주세요." },
       { status: 409 }
     );
   }

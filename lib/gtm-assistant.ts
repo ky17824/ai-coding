@@ -108,18 +108,18 @@ export function buildDeterministicPlan(
       horizon,
       priority: action.urgency,
       title: action.title,
-      rationale: "진단에서 확인된 준비도 격차를 완료 증거가 있는 실행으로 전환합니다.",
+      rationale: "진단에서 확인된 준비도 격차를 완료 근거가 남는 실행으로 바꿉니다.",
       ownerLabel: action.owner_label,
       dueDate: dateAfter(now, horizon),
       completionEvidence: action.completion_evidence,
       dependencies: [],
-      riskNote: expertRequired ? "현지 규정과 계약 조건은 실행 전에 전문가 확인이 필요합니다." : "가정이 바뀌면 일정과 완료 기준을 다시 확인하세요.",
+      riskNote: expertRequired ? "현지 규정과 계약 조건은 실행 전에 전문가 확인이 필요합니다." : "전제가 바뀌면 일정과 완료 기준을 다시 확인해 주세요.",
       status: "not_started",
       expertRequired,
       expertReason: expertRequired ? "법률·세무·규제 판단이 포함될 수 있습니다." : "",
       serviceTag: action.service_tag,
       handoffBrief: expertRequired
-        ? `${action.title}의 현지 적용 조건과 완료 증거를 검토해 주세요.`
+        ? `${action.title}의 현지 적용 조건과 완료 근거를 검토해 주세요.`
         : "",
       sources: [source]
     };
@@ -127,7 +127,7 @@ export function buildDeterministicPlan(
 
   return {
     kind: "plan_draft",
-    summary: "진단에서 확인된 우선 격차를 30·60·90일 실행 순서로 정리했습니다.",
+    summary: "진단에서 확인된 우선 격차를 30·60·90일 실행 순서로 정리해 드렸습니다.",
     assumptions: ["현재 진단 응답과 저장된 실행 액션을 기준으로 작성했습니다."],
     items,
     generatedBy: "deterministic-fallback"

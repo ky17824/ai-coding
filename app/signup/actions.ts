@@ -51,7 +51,7 @@ export async function signUpWithPassword(
     const fields = parsed.error.flatten().fieldErrors;
     return {
       ok: false,
-      message: "입력한 가입 정보를 확인해 주세요.",
+      message: "입력하신 가입 정보를 확인해 주세요.",
       fieldErrors: Object.fromEntries(
         Object.entries(fields).map(([key, messages]) => [key, messages?.[0] ?? ""])
       )
@@ -65,7 +65,7 @@ export async function signUpWithPassword(
   } catch (error) {
     return {
       ok: false,
-      message: "입력한 가입 정보를 확인해 주세요.",
+      message: "입력하신 가입 정보를 확인해 주세요.",
       fieldErrors: { phone: error instanceof Error ? error.message : "번호를 확인해 주세요." }
     };
   }

@@ -37,7 +37,7 @@ export default async function DashboardPage() {
           {incomplete && <IncompleteProfile />}
           <div className="empty-state panel">
             <strong>{organization?.name ?? "우리 회사"}의 첫 진단을 시작하세요.</strong>
-            <p>55문항을 완료하면 준비 단계와 실행 액션이 여기에 저장됩니다.</p>
+            <p>55문항을 모두 마치시면 준비 단계와 실행 액션이 여기에 저장됩니다.</p>
             <Link href="/assessment" className="button button--primary">무료 준비도 진단</Link>
           </div>
         </div>
@@ -79,8 +79,8 @@ export default async function DashboardPage() {
         <div className="dashboard-heading">
           <span>
             <span className="page-kicker">{organization?.name ?? "우리 회사"} · GLOBAL JOURNEY</span>
-            <h1 className="page-title">{profile.display_name}님, 다음 진출 준비를 이어가세요.</h1>
-            <p className="page-description">최근 진단과 아직 완료하지 않은 액션을 기준으로 정리했습니다.</p>
+            <h1 className="page-title">{profile.display_name}님, 이어서 진출 준비를 진행하세요.</h1>
+            <p className="page-description">최근 진단 결과와 아직 완료하지 않은 액션을 기준으로 정리해 드렸습니다.</p>
           </span>
           <Link href="/assessment" className="button button--primary">진단 업데이트</Link>
         </div>
@@ -103,20 +103,20 @@ export default async function DashboardPage() {
           <article className="next-session panel">
             <span className="page-kicker">LATEST ASSESSMENT</span>
             <h2>{new Date(assessment.completed_at).toLocaleDateString("ko-KR")} 진단</h2>
-            <p>{assessment.is_on_hold ? `Gate 확인 필요 ${gateMessages.length}건` : "현재 단계의 Gate 조건을 통과했습니다."}</p>
+            <p>{assessment.is_on_hold ? `확인이 필요한 선결 조건 ${gateMessages.length}건` : "현재 단계의 선결 조건을 모두 통과했습니다."}</p>
             <Link href="/assessment" className="button button--ghost button--full">응답 다시 보기</Link>
           </article>
         </section>
 
         {gateMessages.length > 0 && (
-          <section className="hold-banner"><div><span>GATE CHECK</span><h2>먼저 해결할 선결조건</h2></div><ul>{gateMessages.map((message) => <li key={message}>{message}</li>)}</ul></section>
+          <section className="hold-banner"><div><span>GATE CHECK</span><h2>먼저 해결해야 할 선결 조건</h2></div><ul>{gateMessages.map((message) => <li key={message}>{message}</li>)}</ul></section>
         )}
 
         <section className="dashboard-section">
           <div className="dashboard-section__heading">
             <span>
               <span className="page-kicker">AI GTM PLAN</span>
-              <h2>{plan?.summary || "진단을 30·60·90일 실행계획으로 바꾸세요."}</h2>
+              <h2>{plan?.summary || "진단 결과를 30·60·90일 실행 계획으로 바꿔 보세요."}</h2>
             </span>
             <Link href={`/assistant/${assessment.id}`} className="button button--primary">
               {plan ? "AI 계획 이어가기" : "AI 계획 만들기"} →
@@ -164,5 +164,5 @@ export default async function DashboardPage() {
 }
 
 function IncompleteProfile() {
-  return <p className="notice-banner">전문가 서비스 주문 전에 회사 정보와 연락처를 완성해 주세요. <Link href="/account/onboarding?next=/dashboard">지금 입력 →</Link></p>;
+  return <p className="notice-banner">전문가 서비스를 주문하시려면 회사 정보와 연락처를 먼저 입력해 주세요. <Link href="/account/onboarding?next=/dashboard">지금 입력 →</Link></p>;
 }

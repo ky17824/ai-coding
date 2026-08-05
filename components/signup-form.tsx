@@ -16,7 +16,7 @@ export function SignupForm({ next, googleEnabled }: { next: string; googleEnable
   return (
     <div className="signin-form">
       {hasAssessment && (
-        <p className="notice-banner" role="status">진단 응답 55개를 이 탭에 보관 중입니다.</p>
+        <p className="notice-banner" role="status">이 탭에 진단 응답 55개를 보관하고 있습니다.</p>
       )}
       {googleEnabled && (
         <>

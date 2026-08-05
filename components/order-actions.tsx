@@ -21,7 +21,7 @@ export function OrderActions({
     setMessage(
       result.message ??
         (result.status === "refunded" || result.status === "cancelled"
-          ? "취소·환불 요청이 완료되었습니다."
+          ? "취소·환불 요청을 접수했습니다."
           : "요청을 접수했습니다.")
     );
     setLoading(false);

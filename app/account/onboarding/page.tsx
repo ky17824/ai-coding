@@ -25,7 +25,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
       <div className="app-container narrow-container account-page">
         <span className="page-kicker">COMPLETE PROFILE</span>
         <h1 className="page-title">회사 정보를 보완해 주세요.</h1>
-        <p className="page-description">진단 결과 저장은 건너뛸 수 있지만 전문가 서비스 주문 전에는 필요한 정보입니다.</p>
+        <p className="page-description">진단 결과 저장은 건너뛰셔도 되지만, 전문가 서비스를 주문하시려면 필요한 정보입니다.</p>
         <AccountProfileForm onboarding next={next} profile={{
           displayName: profile.display_name,
           companyName: organization?.name === "새 스타트업" ? "" : organization?.name ?? "",

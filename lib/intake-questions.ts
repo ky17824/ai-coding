@@ -67,7 +67,7 @@ export const INTAKE_ITEMS = [
   { id: "local-plan", stageId: "ready", label: "현지 BMC · 30-60-90", weight: 9, owner: "대표·GTM 책임자", serviceTag: "gtm" },
   { id: "local-team", stageId: "ready", label: "현지 최소 운영인력", weight: 7, owner: "대표·인사 책임자", serviceTag: "organization" },
   { id: "partner-contract", stageId: "ready", label: "파트너 계약 · 운영화", weight: 8, owner: "사업개발·법무 담당", serviceTag: "compliance" },
-  { id: "resource-allocation", stageId: "ready", label: "현지운영 리소스 배정", weight: 6, owner: "재무 책임자", serviceTag: "unit-economics" }
+  { id: "resource-allocation", stageId: "ready", label: "현지 운영 리소스 배정", weight: 6, owner: "재무 책임자", serviceTag: "unit-economics" }
 ] as const;
 
 export type IntakeItemId = (typeof INTAKE_ITEMS)[number]["id"];
@@ -86,7 +86,7 @@ export interface IntakeQuestion {
   action: string;
   /** 볼트 v4.0 프레임워크의 원 출처 (영역·Level 2·문항번호) */
   source: string;
-  /** Critical 선결조건. 3단계 미만이면 해당 Phase Gate를 차단한다. */
+  /** Critical 선결 조건. 3단계 미만이면 해당 Phase Gate를 차단한다. */
   critical?: true;
 }
 
@@ -194,7 +194,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "이미 자체 자금만으로 그 범위를 실행하고 있습니다"
     ],
     followUp: "지원금 없이도 진행하실 국가·고객군·제품 범위를 적어주세요.",
-    action: "정부지원금을 뺀 최소 실행범위를 국가·고객군·제품 단위로 확정한다",
+    action: "정부 지원금을 뺀 최소 실행 범위를 국가·고객군·제품 단위로 확정한다",
     source: "영역4 L2-2 Q4"
   },
   {
@@ -225,7 +225,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "대체 인력이나 인수인계 방법까지 마련했습니다"
     ],
     followUp: "그 한 사람이 빠지면 멈추는 의사결정이나 관계를 적어주세요.",
-    action: "한 사람에게 묶인 의사결정과 관계를 목록화하고 대체 방법을 마련한다",
+    action: "한 사람에게 묶인 의사결정과 관계를 목록으로 정리하고 대체 방법을 마련한다",
     source: "영역4 L2-4 Q3"
   },
   {
@@ -348,7 +348,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "기준이나 가중치를 바꿔가며 순위가 뒤집히는지도 확인했습니다"
     ],
     followUp: "비교 기준과 상위 국가 순위를 적어주세요.",
-    action: "후보국을 매력도·적합도·장벽·접근성·학습가치로 비교표를 만든다",
+    action: "후보국을 매력도·적합도·장벽·접근성·학습 가치로 비교한 표를 만든다",
     source: "영역3 L2-4 Q1"
   },
   {
@@ -378,7 +378,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "현지 전문가나 규제기관 회신으로 분류를 확정받았습니다"
     ],
     followUp: "확인한 기관 이름과 문서 이름, 확인 날짜를 적어주세요.",
-    action: "규제기관 원문으로 제품분류와 적용 법규를 확인하고 출처·날짜를 기록한다",
+    action: "규제기관 원문으로 제품 분류와 적용 법규를 확인하고 출처·날짜를 기록한다",
     source: "영역6 L2-1 Q1",
     critical: true
   },
@@ -394,7 +394,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "요건별 담당자·비용·기한까지 정해 진행 중입니다"
     ],
     followUp: "필요한 요건과 파악하신 만큼의 비용·기간을 적어주세요.",
-    action: "판매 전 필요한 인허가·인증·등록·라벨·세금·통관 요건을 목록화한다",
+    action: "판매 전에 필요한 인허가·인증·등록·라벨·세금·통관 요건을 목록으로 정리한다",
     source: "영역6 L2-1 Q2"
   },
   {
@@ -469,7 +469,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "실제 거래 정산에서 그 계산이 맞는지 확인했습니다"
     ],
     followUp: "우리가 받는 금액과 고객이 내는 금액을 각각 적어주세요.",
-    action: "세금·환율·수수료·환불을 반영한 고객 실지불액을 항목별로 계산한다",
+    action: "세금·환율·수수료·환불을 반영한 고객이 실제로 내는 금액을 항목별로 계산한다",
     source: "영역5 L2-3 Q4"
   },
   {
@@ -546,7 +546,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "원인 분석과 재발 방지 조치까지 이어갔습니다"
     ],
     followUp: "나온 문제와 아직 고치지 못한 것을 적어주세요.",
-    action: "시험에서 나온 결함과 해결 결과를 기록하고 미해결 항목을 남긴다",
+    action: "시험에서 나온 결함과 해결 결과를 기록하고 아직 해결하지 못한 항목을 남긴다",
     source: "영역5 L2-2 Q2"
   },
   {
@@ -591,7 +591,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "그 신호를 계획에 반영해 가설을 수정했습니다"
     ],
     followUp: "어떤 신호였는지, 무엇을 바꾸셨는지 적어주세요.",
-    action: "가치 이전을 반박하는 현지 신호를 의도적으로 찾아 기록한다",
+    action: "우리 가치가 현지에서 통하지 않는다는 신호를 일부러 찾아 기록한다",
     source: "영역1 L2-4 Q4"
   },
   {
@@ -621,7 +621,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "실제 거래 결과로 그 비교가 맞는지 확인했습니다"
     ],
     followUp: "두 방식의 건당 손익을 적어주세요.",
-    action: "마진·리베이트·교육·지원비를 넣어 파트너 채널과 직접판매를 비교한다",
+    action: "마진·리베이트·교육·지원비를 넣어 파트너 채널과 직접 판매를 비교한다",
     source: "영역8 L2-4 Q2"
   },
   {
@@ -666,7 +666,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "그 이유를 분류해 제품이나 영업에 반영했습니다"
     ],
     followUp: "사지 않는 이유로 무엇을 들으셨는지 적어주세요.",
-    action: "소개받지 않은 콜드 고객과 비구매자 의견을 확보한다",
+    action: "소개로 만나지 않은 고객과 구매하지 않은 고객의 의견을 확보한다",
     source: "영역3 L2-3 Q5"
   },
   {
@@ -681,7 +681,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "그 지표를 정기적으로 보고 결정에 쓰고 있습니다"
     ],
     followUp: "가설과 선행·후행 지표를 적어주세요.",
-    action: "현 단계 검증 가설과 선행·후행 KPI를 정의한다",
+    action: "현재 단계에서 검증할 가설과 선행·후행 지표를 정의한다",
     source: "영역10 L2-1 Q1"
   },
   {
@@ -711,7 +711,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "정기 회의에서 그 자료로 실제 결정을 내립니다"
     ],
     followUp: "어디에서 무엇을 보고 계신지 적어주세요.",
-    action: "목표·실적·전망·담당자·다음 결정일을 한 곳에서 추적한다",
+    action: "목표·실적·전망·담당자·다음 결정일을 한곳에서 추적한다",
     source: "영역10 L2-1 Q4"
   },
   {
@@ -726,7 +726,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "실제로 되돌린 사례가 있습니다"
     ],
     followUp: "변경 승인과 되돌리기 절차를 적어주세요.",
-    action: "현지화 변경의 버전·승인·롤백 절차를 만든다",
+    action: "현지화 변경의 버전 관리·승인·되돌리기 절차를 만든다",
     source: "영역5 L2-4 Q4"
   },
   {
@@ -802,7 +802,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "실제 문제 상황에서 그 경로가 작동했습니다"
     ],
     followUp: "급한 일과 일반적인 일의 전달 경로와 시간을 적어주세요.",
-    action: "긴급·일반 사안의 에스컬레이션 대상과 응답 시간을 정한다",
+    action: "긴급 사안과 일반 사안의 보고 대상과 응답 시간을 정한다",
     source: "영역9 L2-2 Q4",
     critical: true
   },
@@ -879,7 +879,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "그 기준으로 실제 예산을 집행하거나 보류해봤습니다"
     ],
     followUp: "마일스톤과 거기에 걸린 금액을 적어주세요.",
-    action: "마일스톤별 예산 해제 조건을 정한다",
+    action: "마일스톤별로 예산을 집행하는 조건을 정한다",
     source: "영역4 L2-2 Q5"
   },
   {
@@ -909,7 +909,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "그 한도를 실제 실험이나 진입에 적용해봤습니다"
     ],
     followUp: "예산·기간·고객 범위 한도를 적어주세요.",
-    action: "조건부 계속의 예산·기간·고객 범위 한도를 정한다",
+    action: "조건부로 사업을 이어갈 때의 예산·기간·고객 범위 한도를 정한다",
     source: "영역10 L2-2 Q5"
   },
   {
@@ -919,7 +919,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     question: "특정 고객이나 채널에 매출이 쏠리는 것을 어디까지 관리하고 계신가요?",
     options: [
       "따로 보고 있지 않습니다",
-      "몰려 있다는 것은 알지만 기준은 없습니다",
+      "쏠려 있다는 것은 알지만 기준은 없습니다",
       "허용 비중을 정하고 지켜보고 있습니다",
       "한도를 넘었을 때 실제로 완화 조치를 해봤습니다"
     ],

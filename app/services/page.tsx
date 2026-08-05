@@ -15,7 +15,7 @@ export default async function ServicesPage() {
         <h1 className="page-title">검증된 전문가와 다음 액션을 실행하세요</h1>
         <p className="page-description">
           관리자 승인을 거친 멘토·컨설턴트의 표준화된 서비스만 공개됩니다.
-          추천 순서는 준비도 액션과 전문 태그의 일치도로 결정됩니다.
+          추천 순서는 준비도 액션과 전문 분야의 일치도에 따라 정해집니다.
         </p>
         <div className="filter-row" aria-label="서비스 유형 필터">
           <button className="active" type="button">전체</button>

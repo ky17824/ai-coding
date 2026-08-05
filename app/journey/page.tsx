@@ -62,8 +62,8 @@ export default async function JourneyPage() {
         <span className="page-kicker">GLOBAL GTM JOURNEY</span>
         <h1 className="page-title">진출 준비부터 확장까지 한 흐름으로</h1>
         <p className="page-description">
-          Global Class 11단계를 세 구간으로 묶었습니다. 일정이 아니라 완료
-          증거가 있어야 다음 단계로 이동합니다.
+          Global Class 11단계를 세 구간으로 묶었습니다. 정해진 일정이 아니라
+          완료를 증명할 근거가 있어야 다음 단계로 넘어갑니다.
         </p>
         {activePlan && planItems.length > 0 ? (
           <>
@@ -74,7 +74,7 @@ export default async function JourneyPage() {
             <div className="journey-board">
               {[30, 60, 90].map((horizon) => (
                 <section className="journey-column panel" key={horizon}>
-                  <header><span>{horizon}</span><div><h2>{horizon}일 계획</h2><p>완료 증거를 남겨 다음 구간으로 이동합니다.</p></div></header>
+                  <header><span>{horizon}</span><div><h2>{horizon}일 계획</h2><p>완료 근거를 남기시면 다음 구간으로 넘어갑니다.</p></div></header>
                   <div className="journey-step-list">
                     {planItems.filter((item) => item.horizon === horizon).map((item, index) => (
                       <article key={item.id}>

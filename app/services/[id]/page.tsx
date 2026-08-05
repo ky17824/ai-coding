@@ -61,13 +61,13 @@ export default async function ServiceDetailPage({
           <div className="detail-block">
             <h2>진행 방식</h2>
             <ol>
-              <li>결제 후 목표와 현재 자료를 사전 질문지로 정리합니다.</li>
+              <li>결제하시면 목표와 보유 자료를 사전 질문지로 정리해 드립니다.</li>
               <li>
                 {service.type === "mentoring"
                   ? `${service.durationLabel} 화상 세션을 진행합니다.`
                   : `${service.durationLabel} 동안 합의된 마일스톤을 수행합니다.`}
               </li>
-              <li>합의된 결과물을 확인한 뒤 거래를 완료합니다.</li>
+              <li>합의하신 결과물을 확인하신 뒤 거래를 마칩니다.</li>
             </ol>
           </div>
           <div className="detail-block">

@@ -91,7 +91,7 @@ export function AssessmentForm({
     if (missing) {
       setErrors((current) => ({
         ...current,
-        [missing.id]: "이 단계의 모든 문항에 답해주세요."
+        [missing.id]: "이 단계의 모든 문항에 답해 주세요."
       }));
       document
         .getElementById(`question-${missing.id}`)
@@ -159,7 +159,7 @@ export function AssessmentForm({
     const pending = loadPending();
     if (!pending) {
       if (resume) {
-        setRestoreMessage("보관된 진단 응답을 찾지 못했습니다. 다시 진단해 주세요.");
+        setRestoreMessage("보관된 진단 응답을 찾지 못했습니다. 처음부터 다시 진단해 주세요.");
       }
       return;
     }
@@ -212,14 +212,14 @@ export function AssessmentForm({
                 ? "결과를 저장하고 있습니다."
                 : saved
                   ? "조직 대시보드에 저장했습니다."
-                  : "로컬 결과입니다. 로그인하면 조직 대시보드에 저장됩니다."}
+                  : "이 기기에만 저장된 결과입니다. 로그인하시면 조직 대시보드에 저장됩니다."}
             </div>
             {saved && assessmentId && (
               <Link
                 href={`/assistant/${assessmentId}`}
                 className="button button--primary"
               >
-                AI GTM 실행계획 만들기 →
+                AI GTM 실행 계획 만들기 →
               </Link>
             )}
           </div>
@@ -273,8 +273,8 @@ export function AssessmentForm({
                   {entry.passed
                     ? `통과 — ${entry.unlocks}`
                     : entry.blockers.length > 0
-                      ? `필수 선결조건 ${entry.blockers.length}건 미해소`
-                      : `${entry.positiveScore}/${entry.totalScore}점 · ${entry.scoreToPass}점 부족`}
+                      ? `필수 선결 조건 ${entry.blockers.length}건이 남았습니다`
+                      : `${entry.positiveScore}/${entry.totalScore}점 · ${entry.scoreToPass}점이 부족합니다`}
                 </small>
               </div>
             ))}
@@ -359,7 +359,7 @@ export function AssessmentForm({
         <h1>해외 진출 준비도 진단</h1>
         <p>
           {INTAKE_QUESTIONS.length}개 문항으로 극초기·준비중·준비완료 세 단계를
-          평가합니다. 아직 하지 않은 것을 골라도 불이익은 없습니다.
+          진단합니다. 아직 하지 않은 항목을 고르셔도 불이익은 없습니다.
         </p>
         <div className="progress-block">
           <span>
@@ -449,7 +449,7 @@ export function AssessmentForm({
                       <span>{question.followUp}</span>
                       <textarea
                         rows={2}
-                        placeholder="선택 사항입니다. 적어주시면 전문가 검토가 정확해집니다."
+                        placeholder="선택 사항입니다. 적어 주시면 전문가 검토가 더 정확해집니다."
                         value={evidence[question.id]?.value ?? ""}
                         onChange={(event) =>
                           setEvidence((current) => ({
@@ -464,7 +464,7 @@ export function AssessmentForm({
                         }
                       />
                       <small>
-                        계약서·고객 명부 원문은 넣지 마세요. 고객사는 '고객 A'처럼
+                        계약서나 고객 명부 원본은 넣지 마세요. 고객사 이름은 '고객 A'처럼
                         익명으로 적으셔도 됩니다.
                       </small>
                     </label>

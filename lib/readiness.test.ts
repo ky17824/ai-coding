@@ -116,7 +116,7 @@ describe("phase gate", () => {
     expect(result.stages[0].ratio).toBeGreaterThan(GATE_THRESHOLD);
     expect(result.stages[0].blockers).toHaveLength(1);
     expect(result.stages[0].passed).toBe(false);
-    expect(result.gateMessages[0]).toContain("필수 선결조건");
+    expect(result.gateMessages[0]).toContain("필수 선결 조건");
   });
 
   it("stops at the first failed stage even when a later stage would pass", () => {

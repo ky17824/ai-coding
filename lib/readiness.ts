@@ -82,7 +82,7 @@ export function calculateReadiness(
   const gateMessages: string[] = [];
   if (current) {
     for (const blocker of current.blockers) {
-      gateMessages.push(`필수 선결조건 미해소 — ${blocker}`);
+      gateMessages.push(`필수 선결 조건이 남았습니다 — ${blocker}`);
     }
     if (current.blockers.length === 0 && current.scoreToPass > 0) {
       gateMessages.push(
