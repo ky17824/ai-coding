@@ -31,7 +31,7 @@ export async function GET(request: Request) {
   }
   const { data: existing, error: profileError } = await admin
     .from("profiles")
-    .select("id,role,job_title,phone_enc,terms_agreed_at,privacy_agreed_at,deleted_at")
+    .select("id,organization_id,role,job_title,phone_enc,terms_agreed_at,privacy_agreed_at,deleted_at")
     .eq("id", user.id)
     .maybeSingle();
   if (profileError) {
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   }
 
   let profile = existing;
-  if (!existing) {
+  if (!existing?.organization_id) {
     const meta = user.user_metadata;
     const companyName =
       meta.company_name ??
@@ -61,33 +61,41 @@ export async function GET(request: Request) {
         new URL("/signin?error=onboarding", url.origin)
       );
     }
-    const { error: insertError } = await admin.from("profiles").insert({
-      id: user.id,
-      organization_id: organization.id,
-      email: user.email,
-      display_name: meta.display_name ?? meta.full_name ?? user.email,
-      job_title: meta.job_title ?? null,
-      phone_enc: meta.phone_enc ?? null,
-      marketing_opt_in: meta.marketing_opt_in === true,
-      terms_agreed_at: meta.terms_agreed_at ?? null,
-      privacy_agreed_at: meta.privacy_agreed_at ?? null,
-      role: "startup"
-    });
-    if (insertError) {
+    const { error: writeError } = existing
+      ? await admin
+          .from("profiles")
+          .update({ organization_id: organization.id })
+          .eq("id", user.id)
+      : await admin.from("profiles").insert({
+          id: user.id,
+          organization_id: organization.id,
+          email: user.email,
+          display_name: meta.display_name ?? meta.full_name ?? user.email,
+          job_title: meta.job_title ?? null,
+          phone_enc: meta.phone_enc ?? null,
+          marketing_opt_in: meta.marketing_opt_in === true,
+          terms_agreed_at: meta.terms_agreed_at ?? null,
+          privacy_agreed_at: meta.privacy_agreed_at ?? null,
+          role: "startup"
+        });
+    if (writeError) {
       await admin.from("organizations").delete().eq("id", organization.id);
       return NextResponse.redirect(
         new URL("/signin?error=onboarding", url.origin)
       );
     }
-    profile = {
-      id: user.id,
-      role: "startup",
-      job_title: meta.job_title ?? null,
-      phone_enc: meta.phone_enc ?? null,
-      terms_agreed_at: meta.terms_agreed_at ?? null,
-      privacy_agreed_at: meta.privacy_agreed_at ?? null,
-      deleted_at: null
-    };
+    profile = existing
+      ? { ...existing, organization_id: organization.id }
+      : {
+          id: user.id,
+          organization_id: organization.id,
+          role: "startup",
+          job_title: meta.job_title ?? null,
+          phone_enc: meta.phone_enc ?? null,
+          terms_agreed_at: meta.terms_agreed_at ?? null,
+          privacy_agreed_at: meta.privacy_agreed_at ?? null,
+          deleted_at: null
+        };
   }
 
   const next = safeNextPath(requestedNext, dashboardPathForRole(profile?.role));
