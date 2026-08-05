@@ -59,7 +59,7 @@ export const INTAKE_ITEMS = [
   { id: "global-mindset", stageId: "early", label: "Global mindset · MVC", weight: 6, owner: "대표·이사회", serviceTag: "leadership" },
   { id: "resources", stageId: "early", label: "인적 · 자원 · 운영 리소스", weight: 9, owner: "대표·재무 책임자", serviceTag: "leadership" },
   { id: "home-pmf", stageId: "early", label: "가치제안 · 국내 PMF", weight: 7.5, owner: "대표·제품 책임자", serviceTag: "market-validation" },
-  { id: "target-market", stageId: "early", label: "타겟국 · 초기 고객군", weight: 7.5, owner: "사업개발 책임자", serviceTag: "market-validation" },
+  { id: "target-market", stageId: "early", label: "타깃국 · 초기 고객군", weight: 7.5, owner: "사업개발 책임자", serviceTag: "market-validation" },
   { id: "bmlc", stageId: "preparing", label: "BMLC 규제 · 문화 분석", weight: 8, owner: "규제·법무 담당", serviceTag: "compliance" },
   { id: "lpa", stageId: "preparing", label: "LPA 6축 시장조사", weight: 8, owner: "제품·운영 책임자", serviceTag: "gtm" },
   { id: "market-testing", stageId: "preparing", label: "Market testing", weight: 12, owner: "제품·GTM 책임자", serviceTag: "gtm" },
@@ -95,7 +95,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mvc-purpose-alignment",
     itemId: "global-mindset",
     weight: 2,
-    question: "해외에 진출하려는 이유를 경영진이 모두 같게 설명하시나요?",
+    question: "왜 해외에 나가야 하는지, 대표님과 경영진이 서로 같은 이유를 말씀하시나요?",
     options: [
       "경영진끼리 이 주제를 따로 맞춰본 적이 없습니다",
       "이야기를 나눠보긴 했지만 각자 설명이 다릅니다",
@@ -110,7 +110,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mvc-stop-criteria",
     itemId: "global-mindset",
     weight: 1.5,
-    question: "해외 성과가 기대에 못 미칠 때 어떻게 할지 미리 정해두셨나요?",
+    question: "해외 진출 성과가 기대에 못 미칠 경우 언제 어떤 조치를 할지 기준을 미리 정해두셨나요?",
     options: [
       "아직 거기까지 생각해보지 못했습니다",
       "생각은 해봤지만 기준을 정해두지는 않았습니다",
@@ -125,7 +125,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mvc-resource-priority",
     itemId: "global-mindset",
     weight: 1.5,
-    question: "국내 사업과 해외 사업이 같은 인력·예산을 두고 부딪힌 적이 있나요?",
+    question: "국내 사업과 해외 사업이 같은 인력이나 예산을 놓고 부딪힌 적이 있는지요? 있었다면 어떻게 정하셨나요?",
     options: [
       "아직 해외에 인력이나 예산을 따로 배정하지 않았습니다",
       "배정은 했지만 아직 부딪힌 적은 없습니다",
@@ -140,7 +140,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mvc-reference-market",
     itemId: "global-mindset",
     weight: 1,
-    question: "해외 고객에게 우리 제품의 가치가 통하는지 확인할 초기 타겟 시장이 있나요?",
+    question: "우리 제품의 가치가 해외 고객에게도 통하는지 확인해 볼 초기 타깃 시장을 정하셨는지요?",
     options: [
       "아직 어느 시장을 기준으로 볼지 정하지 못했습니다",
       "국내 시장을 기준으로 보고 있고 아직 검증하는 중입니다",
@@ -155,7 +155,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "res-tce",
     itemId: "resources",
     weight: 3,
-    question: "이번 해외 진출 계획에 총 얼마가 들지 계산해보셨나요?",
+    question: "이번 해외 진출에 인증·현지화·인력·법률·물류를 모두 더해 총 얼마가 들지 계산해보셨나요?",
     options: [
       "아직 계산해보지 못했습니다",
       "대략 감은 있지만 항목별로 정리하지는 않았습니다",
@@ -171,7 +171,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "res-cash-runway",
     itemId: "resources",
     weight: 2,
-    question: "현지 매출이 늦어져도 버틸 수 있는 기간을 알고 계신가요?",
+    question: "현지 매출이 예상보다 늦어질 경우 회사가 몇 개월이나 버틸 수 있는지 알고 계신가요?",
     options: [
       "따로 계산해보지 않았습니다",
       "대략 알지만 숫자로 정리하지는 않았습니다",
@@ -186,7 +186,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "res-no-grant-scope",
     itemId: "resources",
     weight: 2,
-    question: "정부 지원금 없이도 진행할 최소 범위를 정해두셨나요?",
+    question: "정부 지원금을 받지 못하더라도 자체 자금만으로 진행할 최소 범위를 정해두셨는지요?",
     options: [
       "지원금을 전제로 계획을 세웠습니다",
       "지원금이 없으면 어떻게 할지 고민만 해봤습니다",
@@ -201,7 +201,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "res-owner-time",
     itemId: "resources",
     weight: 1,
-    question: "이번 진출을 맡은 책임자가 정해져 있나요?",
+    question: "이번 해외 진출을 책임지고 이끌 담당자가 정해져 있는지요? 그분이 이 일에 쓸 시간은 확보되어 있나요?",
     options: [
       "아직 정하지 않았고 그때그때 나눠서 합니다",
       "사람은 정했지만 다른 업무를 겸하고 있어 쓸 시간이 거의 없습니다",
@@ -217,7 +217,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "res-key-person-risk",
     itemId: "resources",
     weight: 1,
-    question: "특정 한 사람이 빠지면 멈추는 일이 있나요?",
+    question: "특정 한 사람이 자리를 비우면 진행이 멈춰 버리는 의사결정이나 거래 관계가 있는지요?",
     options: [
       "생각해본 적이 없습니다",
       "있다는 것은 알지만 무엇인지 정리하지 못했습니다",
@@ -232,7 +232,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "pmf-paid-conversion",
     itemId: "home-pmf",
     weight: 3,
-    question: "우리 제품이나 서비스에 돈을 낸 고객이 있었나요?",
+    question: "지금까지 우리 제품이나 서비스에 실제로 돈을 지불한 고객이 있었는지요?",
     options: [
       "아직 유료 고객이나 실사용 고객이 없습니다",
       "관심을 보인 고객은 있지만 아직 비용을 낸 곳은 없습니다",
@@ -249,7 +249,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "pmf-churn-cases",
     itemId: "home-pmf",
     weight: 1.5,
-    question: "관심을 보였다가 떠난 고객이 왜 떠났는지 알고 계신가요?",
+    question: "우리 제품에 관심을 보였던 고객이 이탈한 적이 있는지요? 있었다면 왜 이탈했는지 파악하고 계신가요?",
     options: [
       "아직 그런 고객이 없었습니다",
       "있었지만 왜 떠났는지 확인하지 못했습니다",
@@ -264,7 +264,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "pmf-buying-roles",
     itemId: "home-pmf",
     weight: 1.5,
-    question: "고객사에서 누가 쓰고 누가 결정하는지 파악하고 계신가요?",
+    question: "대표님의 고객사에서 누가 우리 서비스를 실제로 사용하고, 누가 구매를 결정하는지 파악하고 계신지요?",
     options: [
       "아직 거기까지 나눠서 보지 못했습니다",
       "대략 짐작은 하지만 확인해보지는 않았습니다",
@@ -280,7 +280,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "pmf-customer-words",
     itemId: "home-pmf",
     weight: 1.5,
-    question: "고객이 우리를 택하거나 거절한 이유를 직접 들어보셨나요?",
+    question: "고객이 우리를 선택했거나 거절했을 때 그 이유를 고객에게 직접 들어보신 적이 있는지요?",
     options: [
       "아직 물어본 적이 없습니다",
       "짐작은 하지만 고객에게 직접 확인해보지는 않았습니다",
@@ -295,7 +295,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mkt-icp-count",
     itemId: "target-market",
     weight: 2,
-    question: "초기 타겟 시장에 고객이 될 만한 곳이 몇 곳인지 세어보셨나요?",
+    question: "초기 타깃 시장에 우리 고객이 될 만한 회사가 몇 곳이나 되는지 실제로 세어보셨는지요?",
     options: [
       "아직 목표 국가를 정하지 못했습니다",
       "국가는 정했지만 고객 수는 시장 규모 자료로만 알고 있습니다",
@@ -310,7 +310,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mkt-icp-source",
     itemId: "target-market",
     weight: 1.5,
-    question: "그 고객 수를 어디에서 얻으셨나요?",
+    question: "그 고객 수를 어떤 자료에서 얻으셨는지요? 통계로 추정하신 것인가요, 실제 명단을 세신 것인가요?",
     options: [
       "아직 세어보지 않았습니다",
       "인구나 산업 통계에서 추정했습니다",
@@ -325,7 +325,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mkt-inbound-signal",
     itemId: "target-market",
     weight: 2,
-    question: "광고 없이 먼저 들어온 해외 문의나 제안이 있었나요?",
+    question: "광고나 영업을 하지 않았는데도 해외에서 먼저 들어온 문의나 제안이 있었는지요?",
     options: [
       "아직 없습니다",
       "있었지만 어느 나라에서 왜 왔는지 정리하지 않았습니다",
@@ -340,7 +340,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mkt-country-compare",
     itemId: "target-market",
     weight: 1,
-    question: "후보 국가를 여러 개 놓고 비교해보셨나요?",
+    question: "진출 후보 국가를 여러 곳 놓고 같은 기준으로 비교해보신 적이 있는지요?",
     options: [
       "한 나라만 보고 있습니다",
       "여러 나라를 생각해보긴 했지만 비교표로 정리하지는 않았습니다",
@@ -355,7 +355,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mkt-bias-check",
     itemId: "target-market",
     weight: 1,
-    question: "인맥이나 지원사업을 빼고 따져도 그 시장이 여전히 1순위인가요?",
+    question: "인맥이나 정부 지원사업이라는 조건을 빼고 따져도 그 시장이 여전히 1순위인지요?",
     options: [
       "그렇게 따져본 적이 없습니다",
       "따져보면 순위가 바뀔 것 같습니다",
@@ -370,7 +370,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "bmlc-classification",
     itemId: "bmlc",
     weight: 2.5,
-    question: "우리 제품이 그 나라에서 법적으로 어떻게 분류되는지 확인하셨나요?",
+    question: "우리 제품이 진출하려는 나라에서 법적으로 어떤 품목으로 분류되는지 확인하셨는지요?",
     options: [
       "아직 확인해보지 못했습니다",
       "인터넷 검색이나 지인 이야기로 대략 파악한 정도입니다",
@@ -386,7 +386,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "bmlc-preconditions",
     itemId: "bmlc",
     weight: 2,
-    question: "판매 전에 반드시 받아야 할 인허가나 인증을 알고 계신가요?",
+    question: "그 나라에서 판매를 시작하기 전에 반드시 받아야 할 인허가나 인증이 무엇인지 알고 계신가요?",
     options: [
       "무엇이 필요한지 아직 모릅니다",
       "몇 가지는 알지만 전체 목록은 없습니다",
@@ -401,7 +401,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "bmlc-na-basis",
     itemId: "bmlc",
     weight: 1.5,
-    question: "'우리에게는 해당 없다'고 넘어간 규제 요건이 있나요?",
+    question: "규제 요건을 검토하시면서 '우리에게는 해당 없다'고 판단해 넘어간 항목이 있는지요? 그 판단의 근거는 확인하셨나요?",
     options: [
       "규제 요건을 아직 살펴보지 못했습니다",
       "해당 없다고 본 항목이 있지만 내부 판단이었습니다",
@@ -416,7 +416,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "bmlc-local-practice",
     itemId: "bmlc",
     weight: 1,
-    question: "현지 거래 관행이나 대금 지급 방식을 알아보셨나요?",
+    question: "그 나라의 거래 관행과 대금 지급 방식이 국내와 어떻게 다른지 알아보셨는지요?",
     options: [
       "아직 알아보지 못했습니다",
       "자료로 읽어본 정도입니다",
@@ -431,7 +431,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "bmlc-hq-gap",
     itemId: "bmlc",
     weight: 1,
-    question: "현지 고객이 우리 생각과 다르게 반응한 적이 있나요?",
+    question: "현지 고객이 본사에서 예상한 것과 다르게 반응한 적이 있는지요?",
     options: [
       "아직 현지 고객 반응을 들어보지 못했습니다",
       "들어봤지만 특별히 다른 점은 느끼지 못했습니다",
@@ -446,7 +446,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "lpa-pricing-payment",
     itemId: "lpa",
     weight: 2,
-    question: "현지 고객이 기대하는 가격 표시와 결제 방식을 알아보셨나요?",
+    question: "현지 고객이 익숙한 가격 표시 방식과 결제 수단이 무엇인지 알아보셨는지요?",
     options: [
       "아직 알아보지 못했습니다",
       "자료로 대략 파악한 정도입니다",
@@ -461,7 +461,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "lpa-net-price",
     itemId: "lpa",
     weight: 1.5,
-    question: "세금·환율·수수료까지 더해 고객이 실제로 내는 금액을 계산해보셨나요?",
+    question: "세금과 환율, 수수료까지 모두 더했을 때 현지 고객이 실제로 내는 금액이 얼마인지 계산해보셨는지요?",
     options: [
       "아직 계산해보지 못했습니다",
       "대략 알지만 항목별로 계산해보지는 않았습니다",
@@ -476,7 +476,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "lpa-infra-partner",
     itemId: "lpa",
     weight: 1.5,
-    question: "물류·결제·클라우드 같은 현지 공급자를 정하셨나요?",
+    question: "현지에서 이용할 물류·결제·클라우드 같은 공급업체를 정하셨는지요?",
     options: [
       "아직 알아보지 못했습니다",
       "후보는 있지만 조건을 받아보지는 않았습니다",
@@ -491,7 +491,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "lpa-bridge-person",
     itemId: "lpa",
     weight: 1.5,
-    question: "현지 사정과 우리 제품을 모두 이해하고 양쪽을 이어주는 사람이 있나요?",
+    question: "현지 사정과 우리 제품을 모두 알아서 본사와 현지 사이를 이어 줄 사람이 있는지요?",
     options: [
       "아직 그런 사람이 없습니다",
       "필요하다고 느끼지만 아직 찾지 못했습니다",
@@ -506,7 +506,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "lpa-journey-blocker",
     itemId: "lpa",
     weight: 1.5,
-    question: "현지 사용자가 어디에서 막히는지 보신 적이 있나요?",
+    question: "현지 사용자가 우리 제품을 쓰다가 어디에서 막히는지 직접 지켜보신 적이 있는지요?",
     options: [
       "아직 현지 사용자가 써본 적이 없습니다",
       "써보기는 했지만 어디에서 막히는지 지켜보지는 못했습니다",
@@ -521,7 +521,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "test-environment",
     itemId: "market-testing",
     weight: 3,
-    question: "현지 환경에서 제품이 제대로 작동하는지 시험해보셨나요?",
+    question: "현지의 실제 환경에서 우리 제품이 제대로 작동하는지 시험해보셨는지요?",
     options: [
       "아직 시험해보지 못했습니다",
       "국내에서만 시험했고 현지 조건은 반영하지 못했습니다",
@@ -538,7 +538,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "test-defects",
     itemId: "market-testing",
     weight: 2.5,
-    question: "시험 과정에서 나온 문제를 파악하고 계신가요?",
+    question: "시험 과정에서 나온 문제들을 기록해 두고 어디까지 해결됐는지 파악하고 계신가요?",
     options: [
       "아직 시험을 하지 않아 해당 사항이 없습니다",
       "시험은 했지만 문제를 따로 기록하지는 않았습니다",
@@ -553,7 +553,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "test-message-worked",
     itemId: "market-testing",
     weight: 2.5,
-    question: "어떤 메시지나 데모가 실제 문의로 이어졌는지 아시나요?",
+    question: "현지에 알리신 메시지나 데모 가운데 어떤 것이 실제 문의로 이어졌는지 아시는지요?",
     options: [
       "아직 현지에 알려본 적이 없습니다",
       "알리기는 했지만 무엇이 통했는지는 모릅니다",
@@ -568,7 +568,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "test-no-discount",
     itemId: "market-testing",
     weight: 2.5,
-    question: "할인이나 무료 제공 없이도 고객이 구매로 이어지나요?",
+    question: "할인이나 무료 제공 없이 제값을 받고도 고객이 구매까지 이어진 사례가 있는지요?",
     options: [
       "아직 구매 사례가 없습니다",
       "구매는 있었지만 모두 할인이나 무료 제공이 있었습니다",
@@ -583,7 +583,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "test-counter-evidence",
     itemId: "market-testing",
     weight: 1.5,
-    question: "'이 시장에서는 통하지 않을 수도 있겠다' 싶은 신호를 본 적이 있나요?",
+    question: "'이 시장에서는 우리 방식이 통하지 않을 수도 있겠다' 싶은 신호를 보신 적이 있는지요?",
     options: [
       "그런 관점에서 살펴본 적이 없습니다",
       "걱정은 되지만 구체적인 신호를 확인하지는 못했습니다",
@@ -598,7 +598,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "partner-actual-work",
     itemId: "partner-acquisition",
     weight: 3,
-    question: "현지 파트너가 정해져 있고 실제로 움직이고 있나요?",
+    question: "현지 파트너가 정해져 있는지요? 있다면 맡기로 한 일을 실제로 수행하고 있나요?",
     options: [
       "아직 파트너가 없습니다",
       "논의 중이거나 MOU·의향서만 있습니다",
@@ -613,7 +613,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "partner-economics",
     itemId: "partner-acquisition",
     weight: 2.5,
-    question: "파트너를 통하는 편이 직접 파는 것보다 나은지 계산해보셨나요?",
+    question: "파트너를 통해 파는 것과 직접 파는 것 중 어느 쪽이 이익인지 숫자로 비교해보셨는지요?",
     options: [
       "아직 계산해보지 못했습니다",
       "대략 감은 있지만 숫자로 비교해보지는 않았습니다",
@@ -628,7 +628,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "partner-ecosystem-interviews",
     itemId: "partner-acquisition",
     weight: 2.5,
-    question: "현지에서 역할이 다른 사람들을 고루 만나보셨나요?",
+    question: "현지에서 사용자·구매 담당·유통·조달·규제 등 역할이 다른 사람들을 고루 만나보셨는지요?",
     options: [
       "아직 만나본 적이 없습니다",
       "몇 명 만났지만 역할이 한쪽에 몰려 있습니다",
@@ -643,7 +643,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "partner-shortfall",
     itemId: "partner-acquisition",
     weight: 2,
-    question: "파트너가 약속한 것을 지키지 못한 적이 있나요?",
+    question: "파트너가 약속한 물량이나 일정을 지키지 못한 적이 있는지요? 그때 어떻게 대응하셨나요?",
     options: [
       "아직 파트너가 없거나 판단하기에 이릅니다",
       "약속이 지켜지는지 따로 확인하지 않고 있습니다",
@@ -658,7 +658,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "partner-cold-check",
     itemId: "partner-acquisition",
     weight: 2,
-    question: "아직 사지 않는 고객의 이야기도 들어보셨나요?",
+    question: "소개로 만난 분들 외에, 아직 구매하지 않는 고객의 이야기도 들어보셨는지요?",
     options: [
       "소개받은 분들 위주로만 만났습니다",
       "필요하다고 느끼지만 아직 만나지 못했습니다",
@@ -673,7 +673,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "plan-hypothesis-kpi",
     itemId: "local-plan",
     weight: 3,
-    question: "지금 타겟 시장에서 확인해야 할 가설과 그것을 지켜볼 지표가 정해져 있나요?",
+    question: "지금 타깃 시장에서 무엇을 검증할지, 그리고 그것을 어떤 지표로 확인할지 정해두셨는지요?",
     options: [
       "아직 정하지 못했습니다",
       "무엇을 봐야 할지 고민 중입니다",
@@ -688,7 +688,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "plan-stop-rule",
     itemId: "local-plan",
     weight: 2.5,
-    question: "추가 투자를 멈출 기준이 정해져 있나요?",
+    question: "성과가 나지 않을 때 추가 투자를 멈출 기준이 숫자로 정해져 있는지요?",
     options: [
       "아직 정하지 않았습니다",
       "필요하다고 생각은 하지만 숫자로 정하지는 않았습니다",
@@ -703,7 +703,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "plan-single-tracker",
     itemId: "local-plan",
     weight: 2,
-    question: "목표와 실적, 담당자를 한곳에서 보고 계신가요?",
+    question: "해외 진출의 목표와 실적, 담당자를 한곳에 모아서 보고 계신가요?",
     options: [
       "따로 관리하는 곳이 없습니다",
       "여러 문서와 메신저에 흩어져 있습니다",
@@ -718,7 +718,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "plan-change-control",
     itemId: "local-plan",
     weight: 1.5,
-    question: "현지화 변경을 누가 승인하고 되돌릴지 정해져 있나요?",
+    question: "제품이나 정책을 현지에 맞게 바꿀 때 누가 승인하고, 문제가 생기면 누가 되돌릴지 정해져 있는지요?",
     options: [
       "아직 정하지 않았습니다",
       "필요하면 그때그때 상의해서 정합니다",
@@ -733,7 +733,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "org-single-owner",
     itemId: "local-team",
     weight: 2,
-    question: "그 시장의 성과를 최종 책임지는 한 사람이 있나요?",
+    question: "그 시장의 매출과 손익을 최종적으로 책임지는 사람이 한 명으로 정해져 있는지요?",
     options: [
       "아직 정하지 않았습니다",
       "여러 명이 나눠서 보고 있습니다",
@@ -749,7 +749,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "org-continuity",
     itemId: "local-team",
     weight: 1.5,
-    question: "해외 진출을 이끄는 핵심 인력이 자리를 비워도 일이 계속 돌아갈까요?",
+    question: "해외 진출을 이끄는 핵심 인력이 자리를 비우더라도 일이 계속 돌아갈 수 있는지요?",
     options: [
       "생각해본 적이 없습니다",
       "그 사람이 없으면 멈출 것 같습니다",
@@ -764,7 +764,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "org-decision-cases",
     itemId: "local-team",
     weight: 1.5,
-    question: "가격·품질·규제 문제를 실제로 누가 결정했는지 아시나요?",
+    question: "가격이나 품질, 규제 문제가 생겼을 때 실제로 누가 결정하고 누가 승인했는지 아시는지요?",
     options: [
       "아직 그런 상황이 없었습니다",
       "상황마다 달라서 정해진 것이 없습니다",
@@ -779,7 +779,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "org-local-authority",
     itemId: "local-team",
     weight: 1,
-    question: "현지 책임자가 본사 승인 없이 정할 수 있는 일이 있나요?",
+    question: "현지 책임자가 본사 승인 없이 스스로 정할 수 있는 일과 금액 범위가 있는지요?",
     options: [
       "아직 현지 책임자가 없습니다",
       "모든 결정을 본사가 합니다",
@@ -794,7 +794,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "org-escalation",
     itemId: "local-team",
     weight: 1,
-    question: "급한 문제가 생기면 누구에게 얼마 만에 전달되나요?",
+    question: "현지에서 급한 문제가 생겼을 때 누구에게 얼마 만에 전달되는지 정해져 있는지요?",
     options: [
       "정해둔 것이 없습니다",
       "그때그때 연락하는 사람에게 전달합니다",
@@ -810,7 +810,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "contract-control",
     itemId: "partner-contract",
     weight: 2.5,
-    question: "파트너 계약에 우리를 지킬 조항이 들어가 있나요?",
+    question: "파트너 계약서에 독점 범위·데이터·가격·계약 종료처럼 우리를 지켜 줄 조항이 들어가 있는지요?",
     options: [
       "아직 계약을 맺지 않았습니다",
       "계약은 있지만 상대방 양식을 그대로 썼습니다",
@@ -826,7 +826,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "contract-exit",
     itemId: "partner-contract",
     weight: 2,
-    question: "파트너와 헤어져도 고객을 그대로 유지할 수 있나요?",
+    question: "파트너와 계약이 끝나더라도 그동안 확보한 고객을 우리가 그대로 유지할 수 있는지요?",
     options: [
       "생각해본 적이 없습니다",
       "어려울 것 같지만 확인해보지는 않았습니다",
@@ -841,7 +841,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "contract-switch-cost",
     itemId: "partner-contract",
     weight: 2,
-    question: "그 파트너를 다른 업체나 인력으로 바꿀 수 있나요?",
+    question: "지금 파트너를 다른 업체로 바꿔야 할 상황이 오면 바꾸는 데 얼마나 걸릴지 알고 계신가요?",
     options: [
       "생각해본 적이 없습니다",
       "바꾸기 어렵다고만 알고 있습니다",
@@ -856,7 +856,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "contract-dependency-limit",
     itemId: "partner-contract",
     weight: 1.5,
-    question: "한 파트너에 얼마나 의존할지 기준을 정해두셨나요?",
+    question: "한 파트너에 어느 정도까지 의존해도 되는지 그 한도를 정해두셨는지요?",
     options: [
       "생각해본 적이 없습니다",
       "의존도가 크다는 것은 알지만 기준은 없습니다",
@@ -871,7 +871,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "alloc-milestone-budget",
     itemId: "resource-allocation",
     weight: 2,
-    question: "다음 예산을 집행하는 조건이 정해져 있나요?",
+    question: "다음 단계 예산을 집행하려면 무엇이 달성되어야 하는지 조건이 정해져 있는지요?",
     options: [
       "아직 정하지 않았습니다",
       "필요할 때마다 그때그때 결정합니다",
@@ -886,7 +886,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "alloc-capacity",
     itemId: "resource-allocation",
     weight: 1.5,
-    question: "주문이 갑자기 늘면 어디가 먼저 막힐지 아시나요?",
+    question: "주문이 갑자기 늘어날 경우 생산·시스템·인력 가운데 어디가 먼저 막힐지 아시는지요?",
     options: [
       "생각해본 적이 없습니다",
       "짐작은 하지만 확인해보지는 않았습니다",
@@ -901,7 +901,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "alloc-conditional-limit",
     itemId: "resource-allocation",
     weight: 1.5,
-    question: "조건부로 사업을 이어갈 때 쓸 예산의 한도를 정해두셨나요?",
+    question: "성과가 확실하지 않은 상태로 사업을 이어갈 때 쓸 예산의 상한을 정해두셨는지요?",
     options: [
       "아직 정하지 않았습니다",
       "필요하다고 보지만 숫자로 정하지는 않았습니다",
@@ -916,7 +916,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "alloc-concentration",
     itemId: "resource-allocation",
     weight: 1,
-    question: "특정 고객이나 채널에 매출이 쏠리는 것을 어디까지 관리하고 계신가요?",
+    question: "특정 고객이나 채널 한 곳에 매출이 쏠리고 있지는 않은지 살펴보고 계신가요?",
     options: [
       "따로 보고 있지 않습니다",
       "쏠려 있다는 것은 알지만 기준은 없습니다",
