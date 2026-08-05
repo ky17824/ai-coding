@@ -27,6 +27,12 @@ const steps = [
   }
 ];
 
+const trustPrinciples = [
+  "GLOBAL CLASS 방법론 기반",
+  "근거 중심 준비도 진단",
+  "승인된 전문가 서비스"
+];
+
 export default function HomePage() {
   return (
     <main>
@@ -130,10 +136,19 @@ export default function HomePage() {
       </div>
 
       <section className="trust-strip" aria-label="서비스 원칙">
-        <span>GLOBAL CLASS 방법론 기반</span>
-        <span>근거 중심 준비도 진단</span>
-        <span>승인된 전문가 서비스</span>
-        <span>안전한 결제·정산</span>
+        <div className="trust-strip__track">
+          {[false, true].map((duplicate) => (
+            <div
+              className="trust-strip__group"
+              aria-hidden={duplicate || undefined}
+              key={duplicate ? "duplicate" : "primary"}
+            >
+              {trustPrinciples.map((principle) => (
+                <span key={principle}>{principle}</span>
+              ))}
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="section">
