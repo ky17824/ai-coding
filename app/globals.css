@@ -2577,7 +2577,7 @@ svg {
   color: var(--ink);
   font: inherit;
   /* font: inherit 가 감싼 label 의 라벨 크기를 물려받는다. 본문 크기로 되돌린다. */
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.6;
   font-weight: 500;
   padding: 13px 14px;
