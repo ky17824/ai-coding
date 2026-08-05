@@ -16,11 +16,11 @@ export type AnswerLevel = 1 | 2 | 3 | 4;
 
 /**
  * 스타트업이 파는 것이 제품인지 서비스인지 아직 모를 때가 많다. 그래서 문항은
- * «제품/서비스»로 써 두고, 대표님이 밝히시면 그때부터 한쪽으로 좁혀 보여준다.
+ * «제품·서비스»로 써 두고, 대표님이 밝히시면 그때부터 한쪽으로 좁혀 보여준다.
  */
 export type OfferingType = "both" | "product" | "service";
 
-/** «제품/서비스» 뒤 조사는 받침 없는 '서비스' 기준으로 적혀 있다. '제품'으로 좁히면 함께 바꾼다. */
+/** «제품·서비스» 뒤 조사는 받침 없는 '서비스' 기준으로 적혀 있다. '제품'으로 좁히면 함께 바꾼다. */
 const PARTICLE_AFTER_BATCHIM: Record<string, string> = {
   "가": "이",
   "를": "을",
@@ -32,7 +32,7 @@ const PARTICLE_AFTER_BATCHIM: Record<string, string> = {
 export function applyOffering(text: string, offering: OfferingType): string {
   if (offering === "both") return text;
   const word = offering === "product" ? "제품" : "서비스";
-  return text.replace(/제품\/서비스([가를는와])?/g, (_match, particle?: string) => {
+  return text.replace(/제품·서비스([가를는와])?/g, (_match, particle?: string) => {
     if (!particle) return word;
     return word + (offering === "product" ? PARTICLE_AFTER_BATCHIM[particle] : particle);
   });
@@ -164,7 +164,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mvc-reference-market",
     itemId: "global-mindset",
     weight: 1,
-    question: "우리 제품/서비스의 가치가 해외 고객에게도 통하는지 확인해 볼 초기 타깃 시장을 정하셨는지요?",
+    question: "우리 제품·서비스의 가치가 해외 고객에게도 통하는지 확인해 볼 초기 타깃 시장을 정하셨는지요?",
     options: [
       "아직 어느 시장을 기준으로 볼지 정하지 못했습니다",
       "국내 시장을 기준으로 보고 있고 아직 검증하는 중입니다",
@@ -217,8 +217,8 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "지원금 없이 진행할 최소 범위를 정해두었습니다",
       "이미 자체 자금만으로 그 범위를 실행하고 있습니다"
     ],
-    followUp: "지원금 없이도 진행하실 국가·고객군·제품/서비스 범위를 적어주세요.",
-    action: "정부 지원금을 뺀 최소 실행 범위를 국가·고객군·제품/서비스 단위로 확정한다",
+    followUp: "지원금 없이도 진행하실 국가와 고객군, 제품·서비스 범위를 적어주세요.",
+    action: "정부 지원금을 뺀 최소 실행 범위를 국가와 고객군, 제품·서비스 단위로 확정한다",
     source: "영역4 L2-2 Q4"
   },
   {
@@ -256,7 +256,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "pmf-paid-conversion",
     itemId: "home-pmf",
     weight: 3,
-    question: "지금까지 우리 제품/서비스에 실제로 돈을 지불한 고객이 있었는지요?",
+    question: "지금까지 우리 제품·서비스에 실제로 돈을 지불한 고객이 있었는지요?",
     options: [
       "아직 유료 고객이나 실사용 고객이 없습니다",
       "관심을 보인 고객은 있지만 아직 비용을 낸 곳은 없습니다",
@@ -273,12 +273,12 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "pmf-churn-cases",
     itemId: "home-pmf",
     weight: 1.5,
-    question: "우리 제품/서비스에 관심을 보였던 고객이 이탈한 적이 있는지요? 있었다면 왜 이탈했는지 파악하고 계신가요?",
+    question: "우리 제품·서비스에 관심을 보였던 고객이 이탈한 적이 있는지요? 있었다면 왜 이탈했는지 파악하고 계신가요?",
     options: [
       "아직 그런 고객이 없었습니다",
       "있었지만 왜 떠났는지 확인하지 못했습니다",
       "어떤 고객이 언제, 왜 떠났는지 파악하고 있습니다",
-      "그 이유를 제품/서비스나 영업 방식에 반영했습니다"
+      "그 이유를 제품·서비스나 영업 방식에 반영했습니다"
     ],
     followUp: "떠난 고객이 언제, 왜 거래를 멈췄는지 적어주세요.",
     action: "이탈 고객에게 중단 시점과 이유를 직접 확인해 기록한다",
@@ -394,7 +394,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "bmlc-classification",
     itemId: "bmlc",
     weight: 2.5,
-    question: "우리 제품/서비스가 진출하려는 나라에서 법적으로 어떻게 분류되는지 확인하셨는지요?",
+    question: "우리 제품·서비스가 진출하려는 나라에서 법적으로 어떻게 분류되는지 확인하셨는지요?",
     options: [
       "아직 확인해보지 못했습니다",
       "인터넷 검색이나 지인 이야기로 대략 파악한 정도입니다",
@@ -402,7 +402,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "현지 전문가나 규제기관 회신으로 분류를 확정받았습니다"
     ],
     followUp: "확인한 기관 이름과 문서 이름, 확인 날짜를 적어주세요.",
-    action: "규제기관 원문으로 제품/서비스 분류와 적용 법규를 확인하고 출처·날짜를 기록한다",
+    action: "규제기관 원문으로 제품·서비스 분류와 적용 법규를 확인하고 출처·날짜를 기록한다",
     source: "영역6 L2-1 Q1",
     critical: true
   },
@@ -460,7 +460,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "아직 현지 고객 반응을 들어보지 못했습니다",
       "들어봤지만 특별히 다른 점은 느끼지 못했습니다",
       "본사 생각과 다른 반응을 확인했습니다",
-      "그 차이를 반영해 제품/서비스나 메시지를 바꿨습니다"
+      "그 차이를 반영해 제품·서비스나 메시지를 바꿨습니다"
     ],
     followUp: "본사와 현지의 판단이 달랐던 항목을 적어주세요.",
     action: "현지 고객 반응을 듣고 본사 판단과 다른 지점을 기록한다",
@@ -515,7 +515,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "lpa-bridge-person",
     itemId: "lpa",
     weight: 1.5,
-    question: "현지 사정과 우리 제품/서비스를 모두 알아서 본사와 현지 사이를 이어 줄 사람이 있는지요?",
+    question: "현지 사정과 우리 제품·서비스를 모두 알아서 본사와 현지 사이를 이어 줄 사람이 있는지요?",
     options: [
       "아직 그런 사람이 없습니다",
       "필요하다고 느끼지만 아직 찾지 못했습니다",
@@ -523,14 +523,14 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "그 사람을 통해 실제 의사결정이나 거래가 진행되고 있습니다"
     ],
     followUp: "그 역할을 누가 어떤 방식으로 하고 있는지 적어주세요.",
-    action: "현지 지식과 본사 제품/서비스 지식을 잇는 담당자를 지정한다",
+    action: "현지 지식과 본사 제품·서비스 지식을 잇는 담당자를 지정한다",
     source: "영역9 L2-1 Q3"
   },
   {
     id: "lpa-journey-blocker",
     itemId: "lpa",
     weight: 1.5,
-    question: "현지 사용자가 우리 제품/서비스를 쓰다가 어디에서 막히는지 직접 지켜보신 적이 있는지요?",
+    question: "현지 사용자가 우리 제품·서비스를 쓰다가 어디에서 막히는지 직접 지켜보신 적이 있는지요?",
     options: [
       "아직 현지 사용자가 써본 적이 없습니다",
       "써보기는 했지만 어디에서 막히는지 지켜보지는 못했습니다",
@@ -545,7 +545,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "test-environment",
     itemId: "market-testing",
     weight: 3,
-    question: "현지의 실제 환경에서 우리 제품/서비스가 제대로 작동하는지 시험해보셨는지요?",
+    question: "현지의 실제 환경에서 우리 제품·서비스가 제대로 작동하는지 시험해보셨는지요?",
     options: [
       "아직 시험해보지 못했습니다",
       "국내에서만 시험했고 현지 조건은 반영하지 못했습니다",
@@ -554,7 +554,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     ],
     followUp:
       "어떤 조건에서 무엇을 시험하셨는지 적어주세요. 실물이 없는 서비스라면 네트워크·기기·데이터 규정 환경에서 시험한 내용을 적어주세요.",
-    action: "현지 조건을 반영한 제품/서비스 작동 시험을 설계해 실행한다",
+    action: "현지 조건을 반영한 제품·서비스 작동 시험을 설계해 실행한다",
     source: "영역5 L2-2 Q1",
     critical: true
   },
@@ -687,7 +687,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "소개받은 분들 위주로만 만났습니다",
       "필요하다고 느끼지만 아직 만나지 못했습니다",
       "사지 않는 고객이나 냉담한 반응도 들어봤습니다",
-      "그 이유를 분류해 제품/서비스나 영업에 반영했습니다"
+      "그 이유를 분류해 제품·서비스나 영업에 반영했습니다"
     ],
     followUp: "사지 않는 이유로 무엇을 들으셨는지 적어주세요.",
     action: "소개로 만나지 않은 고객과 구매하지 않은 고객의 의견을 확보한다",
@@ -742,7 +742,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "plan-change-control",
     itemId: "local-plan",
     weight: 1.5,
-    question: "제품/서비스나 정책을 현지에 맞게 바꿀 때 누가 승인하고, 문제가 생기면 누가 되돌릴지 정해져 있는지요?",
+    question: "제품·서비스나 정책을 현지에 맞게 바꿀 때 누가 승인하고, 문제가 생기면 누가 되돌릴지 정해져 있는지요?",
     options: [
       "아직 정하지 않았습니다",
       "필요하면 그때그때 상의해서 정합니다",

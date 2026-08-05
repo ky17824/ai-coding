@@ -41,7 +41,7 @@ export function AssessmentForm({
   resume?: boolean;
 }) {
   const [answers, setAnswers] = useState<Record<string, ReadinessLevel>>({});
-  // 대표님이 파는 것이 정해지기 전까지 문항은 «제품/서비스»로 묻는다.
+  // 대표님이 파는 것이 정해지기 전까지 문항은 «제품·서비스»로 묻는다.
   // ponytail: 이 선택은 진단 한 번에만 남는다. 회사마다 기억시키려면
   // organizations 에 칸을 하나 늘린다.
   const [offering, setOffering] = useState<OfferingType>("both");
