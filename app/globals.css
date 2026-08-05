@@ -174,16 +174,30 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  /* flex 행에서 옆 글이 길면 버튼이 눌려 글자가 세로로 쌓인다. */
+  flex-shrink: 0;
+  white-space: nowrap;
   font-weight: 750;
   cursor: pointer;
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
     background 160ms ease;
 }
 
+/* 모든 버튼은 올라오면서 그림자가 깊어진다. 변형별 색은 아래에서 각각 준다. */
 .button:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(16, 34, 27, 0.16);
+}
+
+/* 눌리는 순간에는 도로 내려앉아 클릭이 손끝에 잡히게 한다. */
+.button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(16, 34, 27, 0.14);
+  transition-duration: 60ms;
 }
 
 .button:focus-visible,
@@ -221,14 +235,35 @@ svg {
   color: var(--ink);
 }
 
+.button--primary:hover {
+  background: #19693f;
+  box-shadow: 0 16px 34px rgba(29, 123, 76, 0.3);
+}
+
+.button--dark:hover {
+  background: #1e3a2e;
+}
+
+.button--light:hover {
+  background: #a9ecc0;
+}
+
+.button--ghost:hover {
+  border-color: var(--green);
+  background: #f4faf6;
+  color: var(--green-dark);
+}
+
 .button--full {
   width: 100%;
 }
 
-.button:disabled {
+.button:disabled,
+.button:disabled:hover {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 .hero {
@@ -384,6 +419,17 @@ svg {
   color: var(--ink);
   font-weight: 750;
   font-size: 14px;
+}
+
+.text-link {
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.text-link:hover {
+  color: var(--green);
+  transform: translateX(2px);
 }
 
 .text-link svg {
@@ -2613,6 +2659,16 @@ svg {
   display: grid;
   gap: 20px;
   margin-top: 24px;
+}
+
+/* 다른 섹션의 h2 는 짧은 제목이지만 여기는 여러 줄짜리 요약문이다. */
+.assistant-plan .dashboard-section__heading h2 {
+  margin: 8px 0 0;
+  max-width: 62ch;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
 }
 
 .assistant-plan-item {
