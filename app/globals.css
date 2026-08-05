@@ -593,7 +593,7 @@ svg {
   border-radius: 12px;
   background: #edf7f0;
   color: var(--green-dark);
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -2505,7 +2505,7 @@ svg {
 .assistant-sidebar p,
 .assistant-sidebar li {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
 }
 
@@ -2559,9 +2559,9 @@ svg {
 .assistant-prompt label,
 .assistant-plan-fields label {
   display: grid;
-  gap: 7px;
+  gap: 8px;
   color: var(--ink);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -2576,11 +2576,11 @@ svg {
   background: #fff;
   color: var(--ink);
   font: inherit;
-  /* font: inherit 가 감싼 label 의 11px 라벨 크기를 물려받는다. 본문에 맞춰 되돌린다. */
-  font-size: 15px;
+  /* font: inherit 가 감싼 label 의 라벨 크기를 물려받는다. 본문 크기로 되돌린다. */
+  font-size: 16px;
   line-height: 1.6;
   font-weight: 500;
-  padding: 12px 14px;
+  padding: 13px 14px;
 }
 
 .assistant-context__wide {
@@ -2630,7 +2630,7 @@ svg {
 .assistant-plan-item header a {
   margin-left: auto;
   color: var(--green);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 850;
 }
 
@@ -2656,7 +2656,7 @@ svg {
 .action-row p {
   margin: 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 @media (max-width: 900px) {
