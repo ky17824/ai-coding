@@ -956,6 +956,14 @@ svg {
   padding-top: 40px;
 }
 
+.section--steps {
+  padding: 72px 0 48px;
+}
+
+.section--steps .section-heading {
+  margin-bottom: 32px;
+}
+
 .section-heading {
   margin-bottom: 48px;
 }
@@ -981,8 +989,8 @@ svg {
 }
 
 .step-card {
-  min-height: 280px;
-  padding: 30px;
+  min-height: 220px;
+  padding: 28px;
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--white);
@@ -996,7 +1004,7 @@ svg {
 }
 
 .step-card h3 {
-  margin: 58px 0 14px;
+  margin: 36px 0 14px;
   font-size: 21px;
 }
 
@@ -1101,9 +1109,9 @@ svg {
 
 .cta-band {
   width: min(1180px, calc(100% - 48px));
-  min-height: 220px;
-  margin: 30px auto 80px;
-  padding: 48px 56px;
+  min-height: 160px;
+  margin: 18px auto 56px;
+  padding: 32px 48px;
   border-radius: 28px;
   display: flex;
   align-items: center;

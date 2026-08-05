@@ -151,7 +151,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section section--steps">
         <div className="section-heading">
           <span className="eyebrow">HOW IT WORKS</span>
           <h2>막연한 해외 진출을<br />실행 가능한 여정으로</h2>
