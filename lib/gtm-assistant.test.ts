@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { zodTextFormat } from "openai/helpers/zod";
 import {
+  assistantResponseSchema,
   buildDeterministicPlan,
   sanitizeFounderText,
-  shouldUseWebSearch
+  shouldUseWebSearch,
+  validatePlanDraft
 } from "./gtm-assistant";
 import type { SavedAction } from "./gtm-assistant";
 
@@ -17,6 +20,13 @@ const actions: SavedAction[] = Array.from({ length: 5 }, (_, index) => ({
 }));
 
 describe("AI GTM assistant safeguards", () => {
+  it("uses an object root required by OpenAI structured outputs", () => {
+    const format = zodTextFormat(assistantResponseSchema, "gtm_assistant_turn");
+
+    expect(format.schema).toMatchObject({ type: "object" });
+    expect(JSON.stringify(format.schema)).not.toContain('"format":"uri"');
+  });
+
   it("turns saved diagnostic actions into a bounded 30·60·90 day plan", () => {
     const plan = buildDeterministicPlan(actions, new Date("2026-08-05T00:00:00Z"));
 
@@ -27,6 +37,13 @@ describe("AI GTM assistant safeguards", () => {
       sourceActionItemId: "action-1",
       sources: [{ kind: "diagnosis", title: "55문항 준비도 진단" }]
     });
+  });
+
+  it("rejects unsafe source URLs after model parsing", () => {
+    const plan = buildDeterministicPlan(actions, new Date("2026-08-05T00:00:00Z"));
+    plan.items[0].sources[0].url = "javascript:alert(1)";
+
+    expect(() => validatePlanDraft(plan)).toThrow("근거 URL은 HTTP(S) 주소여야 합니다.");
   });
 
   it("removes common personal identifiers before model or search use", () => {

@@ -11,7 +11,7 @@ export const ASSISTANT_MODEL = "gpt-5.6-luna" as const;
 const sourceSchema = z.object({
   kind: z.enum(["diagnosis", "vault", "web"]),
   title: z.string().min(1).max(180),
-  url: z.string().url().nullable(),
+  url: z.string().max(2048).nullable(),
   checkedAt: z.string().nullable()
 });
 
@@ -51,6 +51,10 @@ export const assistantOutputSchema = z.discriminatedUnion("kind", [
     items: z.array(itemSchema).min(1).max(8)
   })
 ]);
+
+export const assistantResponseSchema = z.object({
+  result: assistantOutputSchema
+});
 
 export type AssistantModelOutput = z.infer<typeof assistantOutputSchema>;
 
@@ -134,6 +138,13 @@ export function validatePlanDraft(output: AssistantModelOutput) {
   if (output.kind !== "plan_draft") return output;
   if (output.items.some((item) => item.sources.length === 0)) {
     throw new Error("모든 계획 항목에는 근거가 필요합니다.");
+  }
+  for (const source of output.items.flatMap((item) => item.sources)) {
+    if (!source.url) continue;
+    const url = new URL(source.url);
+    if (!["http:", "https:"].includes(url.protocol)) {
+      throw new Error("근거 URL은 HTTP(S) 주소여야 합니다.");
+    }
   }
   return output;
 }

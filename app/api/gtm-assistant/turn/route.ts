@@ -5,7 +5,7 @@ import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import {
   ASSISTANT_MODEL,
-  assistantOutputSchema,
+  assistantResponseSchema,
   buildDeterministicPlan,
   sanitizeFounderText,
   shouldUseWebSearch,
@@ -241,7 +241,7 @@ export async function POST(request: Request) {
         max_num_results: 8
       });
     }
-    if (useWeb) tools.push({ type: "web_search_preview" });
+    if (useWeb) tools.push({ type: "web_search" });
 
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const response = await client.responses.parse({
@@ -263,9 +263,9 @@ export async function POST(request: Request) {
       include: tools.some((tool) => tool.type === "file_search")
         ? ["file_search_call.results"]
         : undefined,
-      text: { format: zodTextFormat(assistantOutputSchema, "gtm_assistant_turn") }
+      text: { format: zodTextFormat(assistantResponseSchema, "gtm_assistant_turn") }
     });
-    const output = response.output_parsed;
+    const output = response.output_parsed?.result;
     if (!output) return fallback("모델이 구조화된 결과를 반환하지 않았습니다.");
     const result = withGeneratedBy(validatePlanDraft(output));
     const trace = {
