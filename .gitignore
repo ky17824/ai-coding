@@ -9,4 +9,5 @@ coverage
 supabase/.temp
 .gtm-knowledge-manifest.json
 .claude/settings.local.json
+.omc
 .env*
