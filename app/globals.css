@@ -988,12 +988,26 @@ svg {
   gap: 20px;
 }
 
+.steps-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .step-card {
   min-height: 220px;
   padding: 28px;
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--white);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.step-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--green);
+  box-shadow: var(--shadow);
 }
 
 .step-card > span {
@@ -2527,6 +2541,13 @@ svg {
 
   .action-row .button {
     grid-column: 1 / -1;
+  }
+}
+
+/* 4단계 카드가 한 줄에 다 들어가기엔 좁아지는 구간. 900px 이하는 아래에서 1열로 떨어진다. */
+@media (max-width: 1080px) {
+  .steps-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
