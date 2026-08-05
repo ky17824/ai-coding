@@ -204,8 +204,8 @@ export function AssessmentForm({
                     result.stages.find(
                       (entry) => entry.stageId === result.achievedStageId
                     )!.label
-                  } 단계를 통과했습니다. 다음 단계는 각 단계 배점의 ${GATE_PERCENT}% 이상을 «해봤다» 이상으로 채우면 열립니다.`
-                : `각 단계 배점의 ${GATE_PERCENT}% 이상을 «해봤다» 이상으로 채우면 다음 단계가 열립니다. 앞 단계를 통과해야 다음 단계로 넘어갑니다.`}
+                  } 단계를 통과했습니다. 다음 단계는 각 단계 배점의 ${GATE_PERCENT}% 이상을 '해봤다' 이상으로 채우면 열립니다.`
+                : `각 단계 배점의 ${GATE_PERCENT}% 이상을 '해봤다' 이상으로 채우면 다음 단계가 열립니다. 앞 단계를 통과해야 다음 단계로 넘어갑니다.`}
             </p>
             <div className="save-state" role="status">
               {saving
@@ -464,7 +464,7 @@ export function AssessmentForm({
                         }
                       />
                       <small>
-                        계약서·고객명부 원문은 넣지 마세요. 고객사는 «고객 A»처럼
+                        계약서·고객 명부 원문은 넣지 마세요. 고객사는 '고객 A'처럼
                         익명으로 적으셔도 됩니다.
                       </small>
                     </label>
