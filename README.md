@@ -22,10 +22,23 @@ Supabase 환경값이 없을 때 개발 환경에서는 샘플 데이터로 진�
 3. PortOne V2 웹훅을 `/api/portone/webhook`으로 설정하고 웹훅 시크릿을 발급합니다.
 4. Vercel 배포 URL을 `NEXT_PUBLIC_APP_URL`에 등록합니다.
 5. 관리자 계정의 `profiles.role`을 `admin`으로 지정합니다.
-6. Supabase SQL Editor에서 `002_api_role_grants.sql`, `003_intake_55.sql`, `004_account_pii.sql` 순서로 적용합니다.
+6. Supabase SQL Editor에서 `002_api_role_grants.sql`, `003_intake_55.sql`, `004_account_pii.sql`, `005_ai_gtm_assistant.sql` 순서로 적용합니다.
 7. Supabase Auth의 Site URL과 Redirect URL에 운영 도메인의 `/auth/callback`을 등록하고 Secure password change를 활성화합니다.
 8. Google 로그인을 쓸 때 Google Provider를 설정한 뒤 `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true`로 바꿉니다.
 9. 운영 인증 메일용 SMTP를 연결합니다.
+10. AI GTM 어시스턴트를 사용할 때 `OPENAI_API_KEY`, `AI_GTM_ASSISTANT_ENABLED=true`, `AI_GTM_ASSISTANT_MODEL=gpt-5.6-luna`, `OPENAI_GTM_VECTOR_STORE_ID`를 등록합니다. API 키나 벡터 저장소가 없으면 저장된 진단 액션으로 기본 계획을 생성합니다.
+
+## GTM 지식 동기화
+
+옵시디언 원본은 읽기 전용으로 사용합니다. 기본 실행은 변경 예정 목록만 보여주며, `--apply`를 붙여야 OpenAI 벡터 저장소를 갱신합니다.
+
+```bash
+GTM_VAULT_PATH="/Users/kyuhwangyeon/Library/Mobile Documents/com~apple~CloudDocs/Obsidian Vault/GlobalGoToMarket" \
+OPENAI_GTM_VECTOR_STORE_ID="vs_..." npm run knowledge:sync
+
+GTM_VAULT_PATH="..." OPENAI_API_KEY="..." OPENAI_GTM_VECTOR_STORE_ID="vs_..." \
+npm run knowledge:sync -- --apply
+```
 
 전화번호 암호화 키는 다음 명령으로 생성해 Vercel의 `PII_ENCRYPTION_KEY`에 등록하고 별도 비밀번호 관리자에도 보관합니다.
 

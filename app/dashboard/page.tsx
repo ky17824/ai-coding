@@ -45,13 +45,25 @@ export default async function DashboardPage() {
     );
   }
 
-  const [{ data: actions }, services] = await Promise.all([
+  const [{ data: actions }, services, { data: plan }] = await Promise.all([
     admin.from("action_items")
       .select("id,title,owner_label,completion_evidence,urgency,service_tag,due_date,completed_at")
       .eq("assessment_id", assessment.id)
       .order("created_at"),
-    getPublishedServices()
+    getPublishedServices(),
+    admin.from("gtm_plans")
+      .select("id,status,summary,updated_at")
+      .eq("assessment_id", assessment.id)
+      .in("status", ["draft", "active"])
+      .maybeSingle()
   ]);
+  const { data: planItems } = plan
+    ? await admin.from("gtm_plan_items")
+        .select("id,horizon,priority,title,owner_label,due_date,status,expert_required,service_tag")
+        .eq("plan_id", plan.id)
+        .order("horizon")
+        .order("sort_order")
+    : { data: null };
   const serviceTags = new Set((actions ?? []).map((action) => action.service_tag));
   const recommended = services
     .filter((service) => service.tags.some((tag) => serviceTags.has(tag)))
@@ -99,6 +111,33 @@ export default async function DashboardPage() {
         {gateMessages.length > 0 && (
           <section className="hold-banner"><div><span>GATE CHECK</span><h2>먼저 해결할 선결조건</h2></div><ul>{gateMessages.map((message) => <li key={message}>{message}</li>)}</ul></section>
         )}
+
+        <section className="dashboard-section">
+          <div className="dashboard-section__heading">
+            <span>
+              <span className="page-kicker">AI GTM PLAN</span>
+              <h2>{plan?.summary || "진단을 30·60·90일 실행계획으로 바꾸세요."}</h2>
+            </span>
+            <Link href={`/assistant/${assessment.id}`} className="button button--primary">
+              {plan ? "AI 계획 이어가기" : "AI 계획 만들기"} →
+            </Link>
+          </div>
+          {planItems && planItems.length > 0 && (
+            <div className="dashboard-action-list">
+              {planItems.slice(0, 5).map((item, index) => (
+                <article className="dashboard-action panel" key={item.id}>
+                  <span className="action-index">{String(index + 1).padStart(2, "0")}</span>
+                  <div>
+                    <span className={`priority priority--${item.priority}`}>{item.priority} · {item.horizon}일</span>
+                    <h3>{item.title}</h3>
+                    <p>{item.owner_label} · {item.due_date}{item.expert_required ? " · 전문가 확인 필요" : ""}</p>
+                  </div>
+                  <strong>{item.status === "completed" ? "완료" : item.status === "in_progress" ? "진행 중" : "진행 전"}</strong>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="dashboard-section">
           <div className="dashboard-section__heading"><span><span className="page-kicker">PRIORITY ACTIONS</span><h2>이번 진단의 실행 액션</h2></span></div>

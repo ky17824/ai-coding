@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { JOURNEY_PHASES } from "@/lib/readiness-data";
+import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Global GTM 여정" };
 
@@ -18,7 +20,41 @@ const detailedSteps = [
   "글로벌 스케일 3대 기둥"
 ];
 
-export default function JourneyPage() {
+export const dynamic = "force-dynamic";
+
+export default async function JourneyPage() {
+  const user = await requireUser();
+  const admin = createSupabaseAdminClient();
+  let activePlan: { id: string; assessment_id: string; summary: string } | null = null;
+  let planItems: {
+    id: string;
+    horizon: number;
+    priority: string;
+    title: string;
+    owner_label: string;
+    due_date: string;
+    status: string;
+    expert_required: boolean;
+    service_tag: string;
+  }[] = [];
+  if (user && admin) {
+    const { data: profile } = await admin.from("profiles")
+      .select("organization_id").eq("id", user.id).single();
+    if (profile?.organization_id) {
+      const { data: plan } = await admin.from("gtm_plans")
+        .select("id,assessment_id,summary")
+        .eq("organization_id", profile.organization_id)
+        .eq("status", "active")
+        .order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      activePlan = plan;
+      if (plan) {
+        const { data } = await admin.from("gtm_plan_items")
+          .select("id,horizon,priority,title,owner_label,due_date,status,expert_required,service_tag")
+          .eq("plan_id", plan.id).order("horizon").order("sort_order");
+        planItems = data ?? [];
+      }
+    }
+  }
   return (
     <main className="app-page">
       <SiteHeader compact />
@@ -29,6 +65,29 @@ export default function JourneyPage() {
           Global Class 11단계를 세 구간으로 묶었습니다. 일정이 아니라 완료
           증거가 있어야 다음 단계로 이동합니다.
         </p>
+        {activePlan && planItems.length > 0 ? (
+          <>
+            <div className="dashboard-section__heading">
+              <span><span className="page-kicker">APPROVED AI GTM PLAN</span><h2>{activePlan.summary}</h2></span>
+              <Link className="button button--ghost" href={`/assistant/${activePlan.assessment_id}`}>계획 수정</Link>
+            </div>
+            <div className="journey-board">
+              {[30, 60, 90].map((horizon) => (
+                <section className="journey-column panel" key={horizon}>
+                  <header><span>{horizon}</span><div><h2>{horizon}일 계획</h2><p>완료 증거를 남겨 다음 구간으로 이동합니다.</p></div></header>
+                  <div className="journey-step-list">
+                    {planItems.filter((item) => item.horizon === horizon).map((item, index) => (
+                      <article key={item.id}>
+                        <span className={item.status === "completed" ? "done" : item.status === "in_progress" ? "active" : ""}>{item.status === "completed" ? "✓" : index + 1}</span>
+                        <div><small>{item.priority} · {item.owner_label} · {item.due_date}</small><h3>{item.title}</h3>{item.expert_required && <Link href={`/services?tag=${encodeURIComponent(item.service_tag)}`}>전문가 연결 →</Link>}</div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </>
+        ) : (
         <div className="journey-board">
           {JOURNEY_PHASES.map((phase, phaseIndex) => (
             <section className="journey-column panel" key={phase.id}>
@@ -55,6 +114,7 @@ export default function JourneyPage() {
             </section>
           ))}
         </div>
+        )}
       </div>
     </main>
   );

@@ -916,7 +916,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "alloc-concentration",
     itemId: "resource-allocation",
     weight: 1,
-    question: "한 고객이나 채널에 매출이 몰리는 정도를 관리하고 계신가요?",
+    question: "특정 고객이나 채널에 매출이 쏠리는 것을 어디까지 관리하고 계신가요?",
     options: [
       "따로 보고 있지 않습니다",
       "몰려 있다는 건 알지만 기준은 없습니다",

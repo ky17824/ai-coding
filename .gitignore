@@ -7,4 +7,6 @@ coverage
 .vercel
 .DS_Store
 supabase/.temp
+.gtm-knowledge-manifest.json
 .claude/settings.local.json
+.env*

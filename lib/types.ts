@@ -88,3 +88,66 @@ export interface ServiceOffering {
     endsAt: string;
   }[];
 }
+
+export type GtmPlanStatus = "draft" | "active" | "superseded" | "completed";
+export type GtmPlanItemStatus = "not_started" | "in_progress" | "completed" | "blocked";
+
+export interface GtmPlanSource {
+  kind: "diagnosis" | "vault" | "web";
+  title: string;
+  url: string | null;
+  checkedAt: string | null;
+}
+
+export interface GtmPlanItem {
+  id?: string;
+  sourceActionItemId: string | null;
+  questionId: string | null;
+  horizon: 30 | 60 | 90;
+  priority: "P0" | "P1";
+  title: string;
+  rationale: string;
+  ownerLabel: string;
+  dueDate: string;
+  completionEvidence: string;
+  dependencies: string[];
+  riskNote: string;
+  status: GtmPlanItemStatus;
+  expertRequired: boolean;
+  expertReason: string;
+  serviceTag: string;
+  handoffBrief: string;
+  sources: GtmPlanSource[];
+}
+
+export interface GtmPlanDraft {
+  kind: "plan_draft";
+  summary: string;
+  assumptions: string[];
+  items: GtmPlanItem[];
+  generatedBy: "gpt-5.6-luna" | "deterministic-fallback";
+}
+
+export interface GtmAssistantQuestion {
+  kind: "next_question";
+  questionKey: string;
+  question: string;
+  reason: string;
+  inputType: "text" | "date" | "select";
+  options: string[];
+  generatedBy: "gpt-5.6-luna";
+}
+
+export interface StoredGtmPlan {
+  id: string;
+  assessmentId: string;
+  status: GtmPlanStatus;
+  summary: string;
+  assumptions: string[];
+  founderContext: Record<string, string>;
+  recentMessages: { role: "assistant" | "user"; content: string }[];
+  turnCount: number;
+  generationCount: number;
+  generatedBy: string;
+  items: GtmPlanItem[];
+}

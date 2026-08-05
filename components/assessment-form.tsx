@@ -45,6 +45,7 @@ export function AssessmentForm({
   const [result, setResult] = useState<ReadinessResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [restoreMessage, setRestoreMessage] = useState("");
   const restored = useRef(false);
 
@@ -114,7 +115,9 @@ export function AssessmentForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ answers: answersToSubmit })
       });
+      const payload = (await response.json()) as { assessmentId?: string };
       setSaved(response.ok);
+      setAssessmentId(response.ok ? (payload.assessmentId ?? null) : null);
       if (response.ok && restoredAnswers) clearPending();
     } catch {
       setSaved(false);
@@ -211,6 +214,14 @@ export function AssessmentForm({
                   ? "조직 대시보드에 저장했습니다."
                   : "로컬 결과입니다. 로그인하면 조직 대시보드에 저장됩니다."}
             </div>
+            {saved && assessmentId && (
+              <Link
+                href={`/assistant/${assessmentId}`}
+                className="button button--primary"
+              >
+                AI GTM 실행계획 만들기 →
+              </Link>
+            )}
           </div>
           <div className="score-orb">
             <strong>{result.overallScore}</strong>
@@ -289,12 +300,6 @@ export function AssessmentForm({
                       담당: {action.owner} · 완료 확인: {action.completionEvidence}
                     </p>
                   </div>
-                  <button
-                    className="button button--small button--dark"
-                    type="button"
-                  >
-                    여정에 추가
-                  </button>
                 </article>
               ))}
             </div>
