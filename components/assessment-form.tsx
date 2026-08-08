@@ -16,12 +16,13 @@ import {
   questionsOfStage,
   validateAssessmentAnswers
 } from "@/lib/readiness";
-import { recommendServices, SAMPLE_SERVICES } from "@/lib/service-data";
+import { recommendServices } from "@/lib/service-data";
 import type {
   EvidenceInput,
   ReadinessAnswer,
   ReadinessLevel,
-  ReadinessResult
+  ReadinessResult,
+  ServiceOffering
 } from "@/lib/types";
 import { ServiceCard } from "@/components/service-card";
 import {
@@ -34,9 +35,11 @@ const LEVELS: ReadinessLevel[] = [1, 2, 3, 4];
 const GATE_PERCENT = Math.round(GATE_THRESHOLD * 100);
 
 export function AssessmentForm({
+  availableServices,
   isSignedIn,
   resume = false
 }: {
+  availableServices: ServiceOffering[];
   isSignedIn: boolean;
   resume?: boolean;
 }) {
@@ -186,12 +189,13 @@ export function AssessmentForm({
 
   if (result) {
     const matched = recommendServices(
+      availableServices,
       result.actions.map((action) => action.serviceTag)
     );
     const services =
       matched.length > 0
         ? matched
-        : SAMPLE_SERVICES.filter((service) => service.approved).slice(0, 3);
+        : availableServices.filter((service) => service.approved).slice(0, 3);
     const current = result.stages.find(
       (entry) => entry.stageId === result.currentStageId
     );
@@ -334,26 +338,28 @@ export function AssessmentForm({
           </div>
         </section>
 
-        <section className="result-section">
-          <div className="section-heading section-heading--row">
-            <span>
-              <span className="page-kicker">EXPERT SERVICES</span>
-              <h2>
-                {matched.length > 0
-                  ? "현재 액션에 맞는 전문가"
-                  : "지금 필요한 전문가와 바로 실행하세요"}
-              </h2>
-            </span>
-            <Link href="/services" className="text-link">
-              전체 서비스 보기 →
-            </Link>
-          </div>
-          <div className="service-grid">
-            {services.map((service) => (
-              <ServiceCard service={service} key={service.id} />
-            ))}
-          </div>
-        </section>
+        {services.length > 0 && (
+          <section className="result-section">
+            <div className="section-heading section-heading--row">
+              <span>
+                <span className="page-kicker">EXPERT SERVICES</span>
+                <h2>
+                  {matched.length > 0
+                    ? "현재 액션에 맞는 전문가"
+                    : "지금 필요한 전문가와 바로 실행하세요"}
+                </h2>
+              </span>
+              <Link href="/services" className="text-link">
+                전체 서비스 보기 →
+              </Link>
+            </div>
+            <div className="service-grid">
+              {services.map((service) => (
+                <ServiceCard service={service} key={service.id} />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     );
   }

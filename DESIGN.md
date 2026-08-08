@@ -3,9 +3,9 @@
 ## Source of truth
 
 - Status: Active
-- Last refreshed: 2026-08-05
+- Last refreshed: 2026-08-08
 - Primary product surfaces: 랜딩, 인증·온보딩, 55문항 준비도 진단, AI GTM 공동계획, 대시보드·여정, 전문가 서비스
-- Evidence reviewed: `app/page.tsx`, `app/globals.css`, `components/site-header.tsx`, `components/assessment-form.tsx`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`
+- Evidence reviewed: `app/page.tsx`, `app/globals.css`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`
 - Observed fact: 기존 UI는 `--ink`, `--green`, `--green-dark`, `--mint`, `--paper` 토큰과 흰색 panel, 12px 내외 radius, 짧은 상태 문구를 공통으로 사용한다.
 - Design inference: AI 화면도 별도 챗봇 브랜드가 아니라 Borderless 실행 여정의 한 단계로 보여야 한다.
 
@@ -17,9 +17,9 @@
 
 ## Product goals
 
-- Goals: 55문항 결과를 창업자가 승인할 수 있는 30·60·90일 계획으로 전환하고 실행과 전문가 handoff까지 연결한다.
+- Goals: 55문항 결과를 창업자가 승인·다운로드할 수 있는 30·60·90일 계획으로 전환하고 실행과 전문가 handoff까지 연결한다.
 - Non-goals: 자유 채팅, AI 재채점, 자동 예약·결제, 법률·세무·규제 확정 판단
-- Success signals: 계획 시작·승인·30일 실행률, 근거 표시율, fallback 성공률, 전문가 brief 확인률
+- Success signals: 계획 시작·승인·다운로드·30일 실행률, 근거 표시율, fallback 성공률, 전문가 brief 확인률
 
 ## Personas and jobs
 
@@ -32,7 +32,7 @@
 
 - Primary navigation: 대시보드 / 준비도 진단 / GTM 여정 / 전문가 서비스 / 계정
 - Core routes/screens: `/assessment` 결과 → `/assistant/[assessmentId]` 공동계획 → `/dashboard` 요약 → `/journey` 실행 보드 → `/services` 전문가 연결
-- Content hierarchy: 서버 진단 원본 → 추가 질문 → 계획 초안 → 출처·가정 → 승인 → 실행 상태 → 전문가 handoff
+- Content hierarchy: 서버 진단 원본 → 추가 질문 → 계획 초안 → 출처·가정 → 승인·다운로드 → 실행 상태 → 전문가 handoff
 - The assistant is entered from a saved assessment only; it is not a global chat entry in primary navigation.
 
 ## Design principles
@@ -55,7 +55,7 @@
 ## Components
 
 - Existing components to reuse: `SiteHeader`, `.panel`, `.button` variants, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, 서비스 카드
-- New/changed components: `GtmAssistant`, `PlanItemEditor`, `SourceList`; 진단 결과 CTA와 대시보드 active plan 요약
+- New/changed components: `GtmAssistant`의 계획 다운로드 액션, `PlanItemEditor`, `SourceList`; 진단 결과 CTA와 대시보드 active plan 요약
 - Variants and states: 질문/계획, draft/active/superseded/completed, not_started/in_progress/blocked/completed, founder/vault/web/deterministic source
 - Token/component ownership: 전역 토큰과 공통 상태는 `app/globals.css`; assistant 전용 레이아웃도 같은 파일의 기존 토큰을 사용한다.
 - Do not add a component library, Tailwind layer, icon package, or design-token abstraction.
@@ -63,7 +63,7 @@
 ## Accessibility
 
 - Target standard: WCAG 2.1 AA 수준의 핵심 흐름
-- Keyboard/focus behavior: 질문, 편집, 승인, 상태 변경 전부 Tab/Enter/Space로 가능하고 기존 `:focus-visible`을 유지한다.
+- Keyboard/focus behavior: 질문, 편집, 승인, 다운로드, 상태 변경 전부 Tab/Enter/Space로 가능하고 기존 `:focus-visible`을 유지한다.
 - Contrast/readability: muted text도 흰 panel에서 읽히는 기존 대비 이상을 유지하고, 출처 유형을 색만으로 구분하지 않는다.
 - Screen-reader semantics: 진행상황은 `role=status`, 오류는 `role=alert`, 질문 묶음은 heading/fieldset, 출처는 list, 비동기 버튼은 `disabled`와 상태 문구를 제공한다.
 - Reduced motion and sensory considerations: `prefers-reduced-motion`에서는 새 애니메이션을 끈다. 로딩은 회전 애니메이션 없이 텍스트로도 전달한다.
@@ -79,7 +79,7 @@
 - Loading: `계획을 준비하고 있습니다`와 현재 단계 표시, 중복 제출 방지
 - Empty: 저장된 진단이 없으면 진단 CTA, 계획이 없으면 AI 계획 시작 CTA
 - Error: 오류 원인과 재시도 또는 결정론적 계획 계속 사용을 함께 제공
-- Success: 계획 초안 생성, 승인, 항목 상태 변경을 각각 짧은 `role=status`로 확인
+- Success: 계획 초안 생성, 승인, 다운로드, 항목 상태 변경을 각각 짧은 `role=status`로 확인
 - Disabled: 미완료 진단, 한도 초과, 처리 중, 권한 없음은 비활성 이유를 인접 문구로 표시
 - Offline/slow network: 사용자 입력은 전송 완료 전 유지하고 네트워크 실패 시 다시 시도할 수 있게 한다.
 
@@ -95,6 +95,7 @@
 - Design-token constraints: `:root` 기존 변수와 현재 버튼/panel 패턴만 확장
 - Performance constraints: 최초 페이지 렌더에 AI 호출 금지, 상태 변경에 AI 호출 금지, 클라이언트 번들에 OpenAI/Supabase service key 코드 금지
 - Compatibility constraints: 한국어 장문, 55문항 진단 타입과 Supabase RLS, 비로그인 진단 후 인증 복귀 흐름 유지
+- Download constraints: 초안·승인본 모두 현재 화면의 편집값을 Markdown 한 파일로 내보내며, 진단 요약·창업자 조건·가정·전체 계획 항목·위험·전문가 handoff·출처를 포함한다. 브라우저 Blob 다운로드를 사용하고 새 의존성을 추가하지 않는다.
 - Test/screenshot expectations: typecheck/build와 assistant 상태별 수동 브라우저 확인; 새 E2E 의존성은 추가하지 않는다.
 
 ## Open questions

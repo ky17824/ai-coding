@@ -55,7 +55,9 @@ function mapService(row: ServiceRow): ServiceOffering {
 
 export async function getPublishedServices() {
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return SAMPLE_SERVICES;
+  if (!supabase) {
+    return process.env.NODE_ENV === "development" ? SAMPLE_SERVICES : [];
+  }
 
   const { data, error } = await supabase
     .from("service_offerings")
@@ -65,7 +67,7 @@ export async function getPublishedServices() {
     .eq("is_published", true)
     .limit(50);
 
-  if (error || !data?.length) return SAMPLE_SERVICES;
+  if (error || !data?.length) return [];
   return (data as unknown as ServiceRow[]).map(mapService);
 }
 

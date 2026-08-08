@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import {
+  buildGtmPlanFilename,
+  buildGtmPlanMarkdown
+} from "@/lib/gtm-plan-download";
 import type {
   GtmAssistantQuestion,
   GtmPlanDraft,
@@ -33,6 +37,8 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
   const [planId, setPlanId] = useState(initialPlan?.id ?? "");
   const [planStatus, setPlanStatus] = useState(initialPlan?.status ?? "draft");
   const [summary, setSummary] = useState(initialPlan?.summary ?? "");
+  const [assumptions, setAssumptions] = useState(initialPlan?.assumptions ?? []);
+  const [generatedBy, setGeneratedBy] = useState(initialPlan?.generatedBy ?? "");
   const [items, setItems] = useState<GtmPlanItem[]>(initialPlan?.items ?? []);
   const [question, setQuestion] = useState<GtmAssistantQuestion | null>(
     pendingQuestion
@@ -82,6 +88,8 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
       } else {
         setQuestion(null);
         setSummary(payload.result.summary);
+        setAssumptions(payload.result.assumptions);
+        setGeneratedBy(payload.result.generatedBy);
         setItems(payload.result.items);
         setNotice(
           payload.result.generatedBy === "deterministic-fallback"
@@ -139,6 +147,33 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
     }
   }
 
+  function downloadPlan() {
+    const exportedAt = new Date();
+    const markdown = buildGtmPlanMarkdown(
+      {
+        assessment,
+        founderContext: context,
+        planStatus,
+        summary,
+        assumptions,
+        generatedBy,
+        items
+      },
+      exportedAt
+    );
+    const url = URL.createObjectURL(
+      new Blob([markdown], { type: "text/markdown;charset=utf-8" })
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = buildGtmPlanFilename(context.targetCountry, exportedAt);
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setNotice("현재 화면의 계획 전체를 Markdown 파일로 다운로드했습니다.");
+  }
+
   return (
     <div className="app-container assistant-layout">
       <aside className="assistant-sidebar panel">
@@ -185,11 +220,16 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
           <section className="assistant-plan">
             <div className="dashboard-section__heading">
               <span><span className="page-kicker">30 · 60 · 90 DAY PLAN</span><h2 className="plan-summary">{summary}</h2></span>
-              {planStatus === "active" ? (
-                <Link className="button button--dark" href="/journey">승인된 여정 보기 →</Link>
-              ) : (
-                <button className="button button--dark" type="button" onClick={approve}>계획 승인</button>
-              )}
+              <div className="assistant-plan-actions">
+                <button className="button button--ghost" type="button" onClick={downloadPlan}>
+                  전체 계획 다운로드 ↓
+                </button>
+                {planStatus === "active" ? (
+                  <Link className="button button--dark" href="/journey">승인된 여정 보기 →</Link>
+                ) : (
+                  <button className="button button--dark" type="button" onClick={approve}>계획 승인</button>
+                )}
+              </div>
             </div>
             <div className="assistant-plan-list">
               {items.map((item, index) => (

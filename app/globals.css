@@ -2767,6 +2767,13 @@ svg {
   margin-top: 24px;
 }
 
+.assistant-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 /* 옆 섹션 제목들과 달리 여기 h2 는 여러 줄짜리 요약문이라 제목 크기로는 너무 크다.
    .hold-banner h2(22px)보다 한 단 작게 잡는다. 대시보드·여정·어시스턴트 공통. */
 h2.plan-summary {
@@ -2897,6 +2904,12 @@ h2.plan-summary {
   .assistant-plan-item header,
   .assistant-plan-item footer {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .assistant-plan-actions {
+    width: 100%;
+    align-items: stretch;
     flex-direction: column;
   }
 }

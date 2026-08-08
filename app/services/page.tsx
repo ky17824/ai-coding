@@ -22,11 +22,18 @@ export default async function ServicesPage() {
           <button type="button">1:1 멘토링</button>
           <button type="button">컨설팅 패키지</button>
         </div>
-        <div className="service-grid">
-          {services.map((service) => (
-            <ServiceCard key={service.id} service={service} />
-          ))}
-        </div>
+        {services.length > 0 ? (
+          <div className="service-grid">
+            {services.map((service) => (
+              <ServiceCard key={service.id} service={service} />
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state panel">
+            <strong>현재 공개된 전문가 서비스가 없습니다.</strong>
+            <p>승인된 서비스가 등록되면 이곳에 표시됩니다.</p>
+          </div>
+        )}
       </div>
     </main>
   );

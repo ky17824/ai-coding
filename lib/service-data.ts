@@ -125,9 +125,13 @@ export const SAMPLE_SERVICES: ServiceOffering[] = [
   }
 ];
 
-export function recommendServices(tags: string[], limit = 3) {
+export function recommendServices(
+  services: ServiceOffering[],
+  tags: string[],
+  limit = 3
+) {
   const wanted = new Set(tags);
-  return SAMPLE_SERVICES.filter(
+  return services.filter(
     (service) =>
       service.approved && service.tags.some((tag) => wanted.has(tag))
   )
