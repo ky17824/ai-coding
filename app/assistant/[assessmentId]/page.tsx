@@ -98,6 +98,7 @@ export default async function AssistantPage({
           id: assessment.id,
           score: assessment.overall_score,
           status: assessment.status_label,
+          domainScores: (assessment.domain_scores as Record<string, number>) ?? {},
           isOnHold: assessment.is_on_hold,
           gateMessages: (assessment.gate_messages as string[]) ?? []
         }}

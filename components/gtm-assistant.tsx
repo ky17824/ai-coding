@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   buildGtmPlanFilename,
-  buildGtmPlanMarkdown
+  buildGtmPlanHtml
 } from "@/lib/gtm-plan-download";
 import type {
   GtmAssistantQuestion,
@@ -18,6 +18,7 @@ interface Props {
     id: string;
     score: number;
     status: string;
+    domainScores: Record<string, number>;
     isOnHold: boolean;
     gateMessages: string[];
   };
@@ -149,9 +150,9 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
 
   function downloadPlan() {
     const exportedAt = new Date();
-    const markdown = buildGtmPlanMarkdown(
+    const html = buildGtmPlanHtml(
       {
-        assessment,
+        assessment: { ...assessment, priorityActions: actions },
         founderContext: context,
         planStatus,
         summary,
@@ -162,7 +163,7 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
       exportedAt
     );
     const url = URL.createObjectURL(
-      new Blob([markdown], { type: "text/markdown;charset=utf-8" })
+      new Blob([html], { type: "text/html;charset=utf-8" })
     );
     const link = document.createElement("a");
     link.href = url;
@@ -171,7 +172,7 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 0);
-    setNotice("현재 화면의 계획 전체를 Markdown 파일로 다운로드했습니다.");
+    setNotice("진단 해석과 전체 계획을 담은 웹 보고서를 다운로드했습니다.");
   }
 
   return (
@@ -222,7 +223,7 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
               <span><span className="page-kicker">30 · 60 · 90 DAY PLAN</span><h2 className="plan-summary">{summary}</h2></span>
               <div className="assistant-plan-actions">
                 <button className="button button--ghost" type="button" onClick={downloadPlan}>
-                  전체 계획 다운로드 ↓
+                  웹 보고서 다운로드 ↓
                 </button>
                 {planStatus === "active" ? (
                   <Link className="button button--dark" href="/journey">승인된 여정 보기 →</Link>

@@ -32,7 +32,7 @@
 
 - Primary navigation: 대시보드 / 준비도 진단 / GTM 여정 / 전문가 서비스 / 계정
 - Core routes/screens: `/assessment` 결과 → `/assistant/[assessmentId]` 공동계획 → `/dashboard` 요약 → `/journey` 실행 보드 → `/services` 전문가 연결
-- Content hierarchy: 서버 진단 원본 → 추가 질문 → 계획 초안 → 출처·가정 → 승인·다운로드 → 실행 상태 → 전문가 handoff
+- Content hierarchy: 서버 진단 원본 → 추가 질문 → 계획 초안 → 출처·가정 → 승인·보고서 다운로드 → 실행 상태 → 전문가 handoff
 - The assistant is entered from a saved assessment only; it is not a global chat entry in primary navigation.
 
 ## Design principles
@@ -55,7 +55,7 @@
 ## Components
 
 - Existing components to reuse: `SiteHeader`, `.panel`, `.button` variants, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, 서비스 카드
-- New/changed components: `GtmAssistant`의 계획 다운로드 액션, `PlanItemEditor`, `SourceList`; 진단 결과 CTA와 대시보드 active plan 요약
+- New/changed components: `GtmAssistant`의 웹 보고서 다운로드 액션과 self-contained HTML 보고서, `PlanItemEditor`, `SourceList`; 진단 결과 CTA와 대시보드 active plan 요약
 - Variants and states: 질문/계획, draft/active/superseded/completed, not_started/in_progress/blocked/completed, founder/vault/web/deterministic source
 - Token/component ownership: 전역 토큰과 공통 상태는 `app/globals.css`; assistant 전용 레이아웃도 같은 파일의 기존 토큰을 사용한다.
 - Do not add a component library, Tailwind layer, icon package, or design-token abstraction.
@@ -95,7 +95,8 @@
 - Design-token constraints: `:root` 기존 변수와 현재 버튼/panel 패턴만 확장
 - Performance constraints: 최초 페이지 렌더에 AI 호출 금지, 상태 변경에 AI 호출 금지, 클라이언트 번들에 OpenAI/Supabase service key 코드 금지
 - Compatibility constraints: 한국어 장문, 55문항 진단 타입과 Supabase RLS, 비로그인 진단 후 인증 복귀 흐름 유지
-- Download constraints: 초안·승인본 모두 현재 화면의 편집값을 Markdown 한 파일로 내보내며, 진단 요약·창업자 조건·가정·전체 계획 항목·위험·전문가 handoff·출처를 포함한다. 브라우저 Blob 다운로드를 사용하고 새 의존성을 추가하지 않는다.
+- Download constraints: 초안·승인본 모두 현재 화면의 편집값을 self-contained HTML 한 파일로 내보낸다. 핵심 결론, 진단 산정 방식과 단계별 해석, 선결 조건, 창업자 조건, AI 계획의 성격과 가정, 30·60·90일 전체 계획, 위험, 전문가 handoff, 출처를 문서 순서로 제공한다. 브라우저에서 바로 읽고 인쇄·PDF 저장할 수 있어야 하며, Blob 다운로드와 인라인 CSS를 사용하고 새 의존성을 추가하지 않는다.
+- Report visual language: 흰 문서 바탕, 짙은 녹색 표지와 청록 포인트, 큰 숫자 요약, 단계별 막대, 실행 카드로 구성한다. 화면에서는 최대 1080px 문서 폭, 인쇄에서는 버튼·그림자를 제거하고 페이지 나눔 중 카드 분리를 피한다.
 - Test/screenshot expectations: typecheck/build와 assistant 상태별 수동 브라우저 확인; 새 E2E 의존성은 추가하지 않는다.
 
 ## Open questions
