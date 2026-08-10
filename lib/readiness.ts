@@ -10,7 +10,8 @@ import type {
   ReadinessLevel,
   ReadinessResult,
   ReadinessStatus,
-  StageResult
+  StageResult,
+  TargetMarketContext
 } from "@/lib/types";
 
 /** 단계 통과에 필요한 긍정 비율. 문항 수가 아니라 배점 가중이다. */
@@ -32,6 +33,18 @@ export const questionsOfStage = (stageId: string) =>
     (question) => ITEM.get(question.itemId)!.stageId === stageId
   );
 
+export function normalizeGateMessage(message: string) {
+  return message.replace(/^필수 선결 조건이 남았습니다\s*—\s*/, "").trim();
+}
+
+export function isTargetMarketConfirmed(targetMarket?: TargetMarketContext | null) {
+  return Boolean(
+    targetMarket?.targetCountry.trim() &&
+      targetMarket.targetCustomerSegment.trim() &&
+      (targetMarket.confirmed || targetMarket.confirmedAt)
+  );
+}
+
 export function buildStageAnswerInsights(
   submitted: ReadinessAnswer[],
   stageId: string
@@ -44,7 +57,8 @@ export function buildStageAnswerInsights(
   const answers = stageQuestions.flatMap((question) => {
     const answer = answerById.get(question.id);
     if (!answer) return [];
-    const status: AnswerInsightStatus = answer.level < POSITIVE_LEVEL
+    const missingCriticalEvidence = question.critical && !answer.evidence?.value;
+    const status: AnswerInsightStatus = answer.level < POSITIVE_LEVEL || missingCriticalEvidence
       ? question.critical ? "blocker" : "needs_work"
       : answer.level === 4 ? "strength" : "passed";
     const statusLabel = status === "blocker"
@@ -59,10 +73,12 @@ export function buildStageAnswerInsights(
       question: question.question,
       level: answer.level,
       answerText: question.options[answer.level - 1],
-      meaning: LEVEL_MEANING[answer.level],
+      meaning: missingCriticalEvidence && answer.level >= POSITIVE_LEVEL
+        ? "긍정 응답이지만 필수 문항의 확인 근거가 없어 단계 통과 조건이 남았습니다."
+        : LEVEL_MEANING[answer.level],
       status,
       statusLabel,
-      action: answer.level < POSITIVE_LEVEL ? question.action : null,
+      action: answer.level < POSITIVE_LEVEL || missingCriticalEvidence ? question.action : null,
       completionEvidence: answer.evidence?.value || question.followUp,
       hasEvidence: Boolean(answer.evidence?.value)
     }];
@@ -136,18 +152,21 @@ export function validateAssessmentAnswers(answers: ReadinessAnswer[]) {
 
 export function hasPassedStage(
   submitted: ReadinessAnswer[],
-  stageId: string
+  stageId: string,
+  targetMarket?: TargetMarketContext | null
 ) {
   return (
-    calculateReadiness(submitted).stages.find((stage) => stage.stageId === stageId)
+    calculateReadiness(submitted, targetMarket).stages.find((stage) => stage.stageId === stageId)
       ?.passed ?? false
   );
 }
 
 export function calculateReadiness(
-  submitted: ReadinessAnswer[]
+  submitted: ReadinessAnswer[],
+  targetMarket?: TargetMarketContext | null
 ): ReadinessResult {
   const levels = new Map(submitted.map((a) => [a.questionId, a.level]));
+  const evidence = new Map(submitted.map((a) => [a.questionId, a.evidence?.value.trim()]));
   const positive = (id: string) => (levels.get(id) ?? 0) >= POSITIVE_LEVEL;
 
   const stages: StageResult[] = INTAKE_STAGES.map((stage) => {
@@ -156,8 +175,21 @@ export function calculateReadiness(
       .filter((question) => positive(question.id))
       .reduce((sum, question) => sum + question.weight, 0);
     const blockers = questions
-      .filter((question) => question.critical && !positive(question.id))
+      .filter(
+        (question) =>
+          question.critical && (!positive(question.id) || !evidence.get(question.id))
+      )
       .map((question) => question.question);
+    const prerequisiteBlockers = stage.id === "preparing" && !isTargetMarketConfirmed(targetMarket)
+      ? [
+          ...(!targetMarket?.targetCountry.trim() ? ["초기 목표국가를 확정해 주세요."] : []),
+          ...(!targetMarket?.targetCustomerSegment.trim() ? ["초기 목표국가의 목표 고객군을 확정해 주세요."] : []),
+          ...(targetMarket?.targetCountry.trim() && targetMarket.targetCustomerSegment.trim() &&
+          !targetMarket.confirmed && !targetMarket.confirmedAt
+            ? ["초기 목표시장 정보를 확인해 주세요."]
+            : [])
+        ]
+      : [];
     const ratio = positiveScore / stage.weight;
 
     return {
@@ -169,7 +201,11 @@ export function calculateReadiness(
       totalScore: stage.weight,
       ratio,
       blockers,
-      passed: ratio >= GATE_THRESHOLD && blockers.length === 0,
+      prerequisiteBlockers,
+      passed:
+        ratio >= GATE_THRESHOLD &&
+        blockers.length === 0 &&
+        prerequisiteBlockers.length === 0,
       scoreToPass:
         Math.round(
           Math.max(0, stage.weight * GATE_THRESHOLD - positiveScore) * 10
@@ -186,8 +222,8 @@ export function calculateReadiness(
 
   const gateMessages: string[] = [];
   if (current) {
-    for (const blocker of current.blockers) {
-      gateMessages.push(`필수 선결 조건이 남았습니다 — ${blocker}`);
+    for (const blocker of [...current.prerequisiteBlockers, ...current.blockers]) {
+      gateMessages.push(normalizeGateMessage(blocker));
     }
     if (current.blockers.length === 0 && current.scoreToPass > 0) {
       gateMessages.push(
@@ -199,7 +235,10 @@ export function calculateReadiness(
   // 액션은 현재 단계에서만 뽑는다. 통과하지 못한 단계를 두고 앞서가게 하지 않는다.
   const actions: ActionRecommendation[] = current
     ? questionsOfStage(current.stageId)
-        .filter((question) => !positive(question.id))
+        .filter(
+          (question) =>
+            !positive(question.id) || (question.critical && !evidence.get(question.id))
+        )
         .sort(
           (a, b) =>
             Number(!!b.critical) - Number(!!a.critical) ||
@@ -237,4 +276,21 @@ export function calculateReadiness(
     achievedStageId: achievedIndex >= 0 ? stages[achievedIndex].stageId : null,
     currentStageId: current?.stageId ?? null
   };
+}
+
+export function decidePlanHorizons(result: ReadinessResult): (30 | 60 | 90)[] {
+  if (result.currentStageId === "early") return [30];
+  if (result.currentStageId === "preparing") {
+    const early = result.stages.find((stage) => stage.stageId === "early");
+    return early && early.ratio >= 0.9 && early.blockers.length === 0
+      ? [60]
+      : [30, 60];
+  }
+  if (result.currentStageId === "ready") {
+    const ready = result.stages.find((stage) => stage.stageId === "ready");
+    return ready && ready.ratio >= 0.6 && ready.blockers.length === 0
+      ? [30, 60]
+      : [30];
+  }
+  return [30, 60, 90];
 }

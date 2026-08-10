@@ -24,6 +24,13 @@ export interface ReadinessAnswer {
   evidence?: EvidenceInput;
 }
 
+export interface TargetMarketContext {
+  targetCountry: string;
+  targetCustomerSegment: string;
+  confirmed?: boolean;
+  confirmedAt?: string | null;
+}
+
 export interface ActionRecommendation {
   questionId: string;
   title: string;
@@ -46,6 +53,8 @@ export interface StageResult {
   ratio: number;
   /** 3단계 미만인 Critical 문항의 질문 문구 */
   blockers: string[];
+  /** 문항 점수와 별도로 창업자가 직접 확정해야 하는 조건 */
+  prerequisiteBlockers: string[];
   passed: boolean;
   /** 80%까지 남은 배점 */
   scoreToPass: number;
@@ -99,6 +108,59 @@ export interface GtmPlanSource {
   checkedAt: string | null;
 }
 
+export interface GtmFounderContext {
+  offeringType: "product" | "service" | "solution" | "hybrid" | "";
+  offeringName: string;
+  offeringSummary: string;
+  customerProblem: string;
+  coreValue: string;
+  currentAlternative: string;
+  differentiation: string;
+  deliveryModel: string;
+  revenueModel: string;
+  validationEvidence: string;
+  targetCountry: string;
+  targetCustomer: string;
+  resources: string;
+  deadline: string;
+  constraints: string;
+}
+
+export interface GtmMarketResearch {
+  kind: "market_research";
+  scope: "market_preresearch" | "sellability_review";
+  targetCountry: string;
+  targetCustomer: string;
+  offeringName: string;
+  executiveSummary: string;
+  trends: { title: string; finding: string; sourceTitle: string; url: string | null }[];
+  marketSizing: {
+    label: "TAM" | "SAM" | "SOM" | "LAM";
+    estimate: string;
+    method: string;
+    assumptions: string[];
+    sourceTitles: string[];
+  }[];
+  competitors: {
+    name: string;
+    type: "direct" | "adjacent" | "alternative";
+    relevance: string;
+    differentiationGap: string;
+    sourceTitle: string;
+    url: string | null;
+  }[];
+  sellability: {
+    available: boolean;
+    verdict: "not_assessed" | "weak" | "conditional" | "promising";
+    summary: string;
+    evidenceGaps: string[];
+  };
+  nextExperiments: string[];
+  limitations: string[];
+  generatedAt: string;
+  generatedBy: "gpt-5.6-luna";
+}
+
 export interface GtmPlanItem {
   id?: string;
   sourceActionItemId: string | null;
@@ -144,7 +206,9 @@ export interface StoredGtmPlan {
   status: GtmPlanStatus;
   summary: string;
   assumptions: string[];
-  founderContext: Record<string, string>;
+  founderContext: Partial<GtmFounderContext>;
+  marketResearch: GtmMarketResearch | null;
+  marketResearchConfirmedAt: string | null;
   recentMessages: { role: "assistant" | "user"; content: string }[];
   turnCount: number;
   generationCount: number;

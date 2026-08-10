@@ -8,6 +8,7 @@ import {
   GATE_THRESHOLD,
   buildStageAnswerInsights,
   calculateReadiness,
+  decidePlanHorizons,
   hasPassedStage,
   isCompleteStageAnswerSet,
   questionsOfStage,
@@ -17,7 +18,18 @@ import type { ReadinessAnswer, ReadinessLevel } from "@/lib/types";
 
 const sum = (values: number[]) => values.reduce((total, n) => total + n, 0);
 const answerAll = (level: ReadinessLevel): ReadinessAnswer[] =>
-  INTAKE_QUESTIONS.map((question) => ({ questionId: question.id, level }));
+  INTAKE_QUESTIONS.map((question) => ({
+    questionId: question.id,
+    level,
+    evidence: question.critical && level >= 3
+      ? { kind: "note", value: "확인 근거" }
+      : undefined
+  }));
+const confirmedMarket = {
+  targetCountry: "일본",
+  targetCustomerSegment: "도쿄 소재 중견 제조사",
+  confirmed: true
+};
 
 describe("intake question set", () => {
   it("keeps 55 questions with unique ids, four options, and an action", () => {
@@ -79,7 +91,11 @@ describe("phase gate", () => {
     const earlyAnswers = answerAll(1).filter((answer) => early.has(answer.questionId));
     expect(earlyAnswers).toHaveLength(18);
     expect(hasPassedStage(earlyAnswers, "early")).toBe(false);
-    expect(hasPassedStage(earlyAnswers.map((answer) => ({ ...answer, level: 4 })), "early"))
+    expect(hasPassedStage(earlyAnswers.map((answer) => ({
+      ...answer,
+      level: 4,
+      evidence: { kind: "note", value: "확인 근거" }
+    })), "early"))
       .toBe(true);
   });
 
@@ -95,7 +111,10 @@ describe("phase gate", () => {
         ...answer,
         level: questionsOfStage("early").some(
           (question) => question.id === answer.questionId
-        ) ? 4 as const : answer.level
+        ) ? 4 as const : answer.level,
+        evidence: questionsOfStage("early").some(
+          (question) => question.id === answer.questionId && question.critical
+        ) ? { kind: "note" as const, value: "확인 근거" } : answer.evidence
       }));
     expect(hasPassedStage(answers, "early")).toBe(true);
     expect(hasPassedStage(answers, "preparing")).toBe(false);
@@ -113,7 +132,7 @@ describe("phase gate", () => {
   });
 
   it("passes every stage once all answers are positive", () => {
-    const result = calculateReadiness(answerAll(3));
+    const result = calculateReadiness(answerAll(3), confirmedMarket);
     expect(result.overallScore).toBe(100);
     expect(result.stages.every((stage) => stage.passed)).toBe(true);
     expect(result.achievedStageId).toBe("ready");
@@ -133,8 +152,12 @@ describe("phase gate", () => {
     const result = calculateReadiness(
       INTAKE_QUESTIONS.map((question) => ({
         questionId: question.id,
-        level: (dropped.has(question.id) ? 2 : 4) as ReadinessLevel
-      }))
+        level: (dropped.has(question.id) ? 2 : 4) as ReadinessLevel,
+        evidence: question.critical
+          ? { kind: "note" as const, value: "확인 근거" }
+          : undefined
+      })),
+      confirmedMarket
     );
     const early = result.stages[0];
     expect(early.positiveScore).toBeCloseTo(23.5, 10);
@@ -149,21 +172,47 @@ describe("phase gate", () => {
     const result = calculateReadiness(
       INTAKE_QUESTIONS.map((question) => ({
         questionId: question.id,
-        level: (question.id === "res-owner-time" ? 1 : 4) as ReadinessLevel
-      }))
+        level: (question.id === "res-owner-time" ? 1 : 4) as ReadinessLevel,
+        evidence: question.critical && question.id !== "res-owner-time"
+          ? { kind: "note" as const, value: "확인 근거" }
+          : undefined
+      })),
+      confirmedMarket
     );
     expect(result.stages[0].ratio).toBeGreaterThan(GATE_THRESHOLD);
     expect(result.stages[0].blockers).toHaveLength(1);
     expect(result.stages[0].passed).toBe(false);
-    expect(result.gateMessages[0]).toContain("필수 선결 조건");
+    expect(result.gateMessages[0]).not.toContain("필수 선결 조건이 남았습니다");
+  });
+
+  it("keeps Gate A independent but blocks Gate B until target market is confirmed", () => {
+    const answers = answerAll(4);
+    const withoutMarket = calculateReadiness(answers);
+    expect(withoutMarket.stages[0].passed).toBe(true);
+    expect(withoutMarket.stages[1].passed).toBe(false);
+    expect(withoutMarket.stages[1].prerequisiteBlockers).toHaveLength(2);
+    expect(withoutMarket.currentStageId).toBe("preparing");
+
+    const withMarket = calculateReadiness(answers, confirmedMarket);
+    expect(withMarket.stages.every((stage) => stage.passed)).toBe(true);
+  });
+
+  it("limits plan horizons to the failed or completed gate", () => {
+    expect(decidePlanHorizons(calculateReadiness(answerAll(1)))).toEqual([30]);
+    expect(decidePlanHorizons(calculateReadiness(answerAll(4)))).toEqual([60]);
+    expect(decidePlanHorizons(calculateReadiness(answerAll(4), confirmedMarket))).toEqual([30, 60, 90]);
   });
 
   it("stops at the first failed stage even when a later stage would pass", () => {
     const result = calculateReadiness(
       INTAKE_QUESTIONS.map((question) => ({
         questionId: question.id,
-        level: (question.itemId === "home-pmf" ? 1 : 4) as ReadinessLevel
-      }))
+        level: (question.itemId === "home-pmf" ? 1 : 4) as ReadinessLevel,
+        evidence: question.critical && question.itemId !== "home-pmf"
+          ? { kind: "note" as const, value: "확인 근거" }
+          : undefined
+      })),
+      confirmedMarket
     );
     expect(result.stages[0].passed).toBe(false);
     expect(result.stages[1].passed).toBe(true);
@@ -184,7 +233,10 @@ describe("dashboard answer insights", () => {
         ? 2
         : question.id === ordinary.id
           ? 4
-          : 3
+          : 3,
+      evidence: question.critical && question.id !== critical.id
+        ? { kind: "note", value: "확인 근거" }
+        : undefined
     }));
 
     const insight = buildStageAnswerInsights(answers, "early");

@@ -4,6 +4,7 @@ import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 
 const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("approve") }),
+  z.object({ action: z.literal("confirm_research") }),
   z.object({
     action: z.literal("update_item"),
     itemId: z.string().uuid(),
@@ -30,7 +31,7 @@ export async function PATCH(
   const { id } = await params;
   const { data: plan } = await admin
     .from("gtm_plans")
-    .select("id,organization_id")
+    .select("id,organization_id,market_research,market_research_confirmed_at")
     .eq("id", id)
     .maybeSingle();
   const { data: profile } = await admin
@@ -43,12 +44,31 @@ export async function PATCH(
   }
 
   if (parsed.data.action === "approve") {
+    if (!plan.market_research || !plan.market_research_confirmed_at) {
+      return NextResponse.json(
+        { message: "시장·경쟁 사전조사를 확인한 뒤 계획을 승인해 주세요." },
+        { status: 409 }
+      );
+    }
     const { error } = await admin
       .from("gtm_plans")
       .update({ status: "active", approved_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("id", id);
     return error
       ? NextResponse.json({ message: "계획을 승인하지 못했습니다." }, { status: 500 })
+      : NextResponse.json({ ok: true });
+  }
+
+  if (parsed.data.action === "confirm_research") {
+    if (!plan.market_research) {
+      return NextResponse.json({ message: "확인할 시장 조사 결과가 없습니다." }, { status: 409 });
+    }
+    const { error } = await admin
+      .from("gtm_plans")
+      .update({ market_research_confirmed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", id);
+    return error
+      ? NextResponse.json({ message: "시장 조사를 확인 처리하지 못했습니다." }, { status: 500 })
       : NextResponse.json({ ok: true });
   }
 

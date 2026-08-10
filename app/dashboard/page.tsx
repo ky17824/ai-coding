@@ -7,6 +7,7 @@ import {
   STAGES,
   buildStageAnswerInsights,
   calculateReadiness,
+  normalizeGateMessage,
   questionsOfStage
 } from "@/lib/readiness";
 import { getPublishedServices } from "@/lib/services";
@@ -34,7 +35,7 @@ export default async function DashboardPage({
   const [{ data: organization }, { data: assessment }] = await Promise.all([
     admin.from("organizations").select("name").eq("id", profile.organization_id).single(),
     admin.from("assessments")
-      .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,completed_at")
+      .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,completed_at,target_country,target_customer_segment,target_market_confirmed_at")
       .eq("organization_id", profile.organization_id)
       .order("completed_at", { ascending: false }).limit(1).maybeSingle()
   ]);
@@ -83,7 +84,6 @@ export default async function DashboardPage({
     .filter((service) => service.tags.some((tag) => serviceTags.has(tag)))
     .slice(0, 3);
   const domainScores = assessment.domain_scores as Record<string, number>;
-  const gateMessages = assessment.gate_messages as string[];
   const readinessAnswers: ReadinessAnswer[] = (answerRows ?? []).flatMap((row) => {
     const level = Number(row.level);
     if (![1, 2, 3, 4].includes(level)) return [];
@@ -102,7 +102,30 @@ export default async function DashboardPage({
   const availableStages = STAGES.filter((stage) =>
     questionsOfStage(stage.id).some((question) => answeredIds.has(question.id))
   );
-  const readinessResult = calculateReadiness(readinessAnswers);
+  const readinessResult = calculateReadiness(readinessAnswers, {
+    targetCountry: assessment.target_country ?? "",
+    targetCustomerSegment: assessment.target_customer_segment ?? "",
+    confirmedAt: assessment.target_market_confirmed_at
+  });
+  const gateMessages = readinessAnswers.length > 0
+    ? readinessResult.gateMessages
+    : [...new Set(((assessment.gate_messages as string[]) ?? []).map(normalizeGateMessage))];
+  const displayIsOnHold = readinessAnswers.length > 0
+    ? readinessResult.isOnHold
+    : assessment.is_on_hold;
+  const targetPrerequisites = [
+    { label: "초기 목표국가", value: assessment.target_country },
+    { label: "목표 고객군", value: assessment.target_customer_segment }
+  ];
+  const showTargetPrerequisites = readinessResult.currentStageId === "preparing" &&
+    targetPrerequisites.some((entry) => !entry.value || !assessment.target_market_confirmed_at);
+  const questionGateMessages = gateMessages.filter(
+    (message) => ![
+      "초기 목표국가를 확정해 주세요.",
+      "초기 목표국가의 목표 고객군을 확정해 주세요.",
+      "초기 목표시장 정보를 확인해 주세요."
+    ].includes(message)
+  );
   const defaultStageId = availableStages.some(
     (stage) => stage.id === readinessResult.currentStageId
   )
@@ -154,13 +177,38 @@ export default async function DashboardPage({
           <article className="next-session panel">
             <span className="page-kicker">최근 진단(Latest Assessment)</span>
             <h2>{new Date(assessment.completed_at).toLocaleDateString("ko-KR")} 진단</h2>
-            <p>{assessment.is_on_hold ? `확인이 필요한 선결 조건 ${gateMessages.length}건` : "현재 단계의 선결 조건을 모두 통과했습니다."}</p>
+            <p>{displayIsOnHold ? `확인이 필요한 선결 조건 ${gateMessages.length}건` : "현재 단계의 선결 조건을 모두 통과했습니다."}</p>
             <Link href="/dashboard#answer-insights" className="button button--ghost button--full">지난 응답 보기</Link>
           </article>
         </section>
 
         {gateMessages.length > 0 && (
-          <section className="hold-banner"><div><span>단계 통과 기준(Stage Gate) 확인</span><h2>먼저 해결해야 할 선결 조건</h2></div><ul>{gateMessages.map((message) => <li key={message}>{message}</li>)}</ul></section>
+          <section className="hold-banner hold-banner--dashboard">
+            <div>
+              <span>단계 통과 기준(Stage Gate) 확인</span>
+              <h2>먼저 해결해야 할 선결 조건</h2>
+              <strong>{gateMessages.length}개 남음</strong>
+            </div>
+            <div className="hold-banner__content">
+              {showTargetPrerequisites && (
+                <div className="gate-prerequisites">
+                  <header><strong>초기 목표시장 정의</strong><small>{targetPrerequisites.filter((entry) => entry.value && assessment.target_market_confirmed_at).length}/2</small></header>
+                  <ul>
+                    {targetPrerequisites.map((entry) => (
+                      <li key={entry.label}><span>{entry.label}</span><strong>{entry.value && assessment.target_market_confirmed_at ? "확정" : "미확정"}</strong></li>
+                    ))}
+                  </ul>
+                  <Link href="/assessment?new=1" className="text-link">초기 목표시장 정하기 →</Link>
+                </div>
+              )}
+              <div>
+                <strong>진단 답변</strong>
+                {questionGateMessages.length > 0
+                  ? <ul>{questionGateMessages.map((message) => <li key={message}>{message}</li>)}</ul>
+                  : <p>질문 점수와 필수 근거 조건은 충족했습니다.</p>}
+              </div>
+            </div>
+          </section>
         )}
 
         <section className="dashboard-section answer-insights" id="answer-insights">

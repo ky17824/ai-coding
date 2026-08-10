@@ -22,7 +22,8 @@ import type {
   EvidenceInput,
   ReadinessAnswer,
   ReadinessLevel,
-  ReadinessResult
+  ReadinessResult,
+  TargetMarketContext
 } from "@/lib/types";
 import { ServiceCard } from "@/components/service-card";
 import {
@@ -36,19 +37,41 @@ const GATE_PERCENT = Math.round(GATE_THRESHOLD * 100);
 
 export function AssessmentForm({
   isSignedIn,
-  resume = false
+  resume = false,
+  initialAnswers = [],
+  initialTargetMarket
 }: {
   isSignedIn: boolean;
   resume?: boolean;
+  initialAnswers?: ReadinessAnswer[];
+  initialTargetMarket?: TargetMarketContext;
 }) {
-  const [answers, setAnswers] = useState<Record<string, ReadinessLevel>>({});
+  const initialResult = calculateReadiness(initialAnswers, initialTargetMarket);
+  const initialStageIndex = Math.max(
+    0,
+    STAGES.findIndex((entry) => entry.id === initialResult.currentStageId)
+  );
+  const [answers, setAnswers] = useState<Record<string, ReadinessLevel>>(
+    Object.fromEntries(initialAnswers.map((answer) => [answer.questionId, answer.level]))
+  );
   // 대표님이 파는 것이 정해지기 전까지 문항은 «제품·서비스»로 묻는다.
   // ponytail: 이 선택은 진단 한 번에만 남는다. 회사마다 기억시키려면
   // organizations 에 칸을 하나 늘린다.
   const [offering, setOffering] = useState<OfferingType>("both");
-  const [evidence, setEvidence] = useState<Record<string, EvidenceInput>>({});
-  const [activeStage, setActiveStage] = useState(0);
-  const [unlockedStage, setUnlockedStage] = useState(0);
+  const [evidence, setEvidence] = useState<Record<string, EvidenceInput>>(
+    Object.fromEntries(
+      initialAnswers.filter((answer) => answer.evidence).map((answer) => [answer.questionId, answer.evidence!])
+    )
+  );
+  const [activeStage, setActiveStage] = useState(initialStageIndex);
+  const [unlockedStage, setUnlockedStage] = useState(initialStageIndex);
+  const [targetCountry, setTargetCountry] = useState(initialTargetMarket?.targetCountry ?? "");
+  const [targetCustomerSegment, setTargetCustomerSegment] = useState(
+    initialTargetMarket?.targetCustomerSegment ?? ""
+  );
+  const [targetMarketConfirmed, setTargetMarketConfirmed] = useState(
+    Boolean(initialTargetMarket?.confirmed || initialTargetMarket?.confirmedAt)
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ReadinessResult | null>(null);
   const [saving, setSaving] = useState(false);
@@ -73,6 +96,11 @@ export function AssessmentForm({
       ),
     [answers, evidence]
   );
+  const targetMarket: TargetMarketContext = {
+    targetCountry,
+    targetCustomerSegment,
+    confirmed: targetMarketConfirmed
+  };
 
   function changeLevel(questionId: string, level: ReadinessLevel) {
     setAnswers((current) => ({ ...current, [questionId]: level }));
@@ -116,7 +144,7 @@ export function AssessmentForm({
       return;
     }
     const completedAnswers = answersThroughStage(activeStage);
-    if (!hasPassedStage(completedAnswers, stage.id)) {
+    if (!hasPassedStage(completedAnswers, stage.id, targetMarket)) {
       await finishAssessment(completedAnswers);
       return;
     }
@@ -131,14 +159,14 @@ export function AssessmentForm({
     restoredAnswers = false,
     openDashboard = false
   ) {
-    if (!openDashboard) setResult(calculateReadiness(answersToSubmit));
+    if (!openDashboard) setResult(calculateReadiness(answersToSubmit, targetMarket));
     setSaving(true);
     setSaved(false);
     try {
       const response = await fetch("/api/assessments", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ answers: answersToSubmit, offering })
+        body: JSON.stringify({ answers: answersToSubmit, offering, targetMarket })
       });
       const payload = (await response.json()) as {
         assessmentId?: string;
@@ -468,6 +496,45 @@ export function AssessmentForm({
           <h2>{stage.label}</h2>
           <p>{stage.intro}</p>
         </div>
+        {activeStage >= 1 && (
+          <fieldset className="target-market-confirmation panel">
+            <legend>준비완료 전 초기 목표시장 확인</legend>
+            <p>준비중 단계부터는 창업자가 직접 확정한 목표국가와 목표 고객군이 있어야 다음 단계로 넘어갑니다.</p>
+            <div>
+              <label>
+                초기 목표국가
+                <input
+                  value={targetCountry}
+                  onChange={(event) => {
+                    setTargetCountry(event.target.value);
+                    setTargetMarketConfirmed(false);
+                  }}
+                  placeholder="예: 일본"
+                />
+              </label>
+              <label>
+                목표 고객군
+                <input
+                  value={targetCustomerSegment}
+                  onChange={(event) => {
+                    setTargetCustomerSegment(event.target.value);
+                    setTargetMarketConfirmed(false);
+                  }}
+                  placeholder="예: 도쿄 소재 중견 제조사"
+                />
+              </label>
+            </div>
+            <label className="target-market-confirmation__check">
+              <input
+                type="checkbox"
+                checked={targetMarketConfirmed}
+                disabled={!targetCountry.trim() || !targetCustomerSegment.trim()}
+                onChange={(event) => setTargetMarketConfirmed(event.target.checked)}
+              />
+              위 정보를 이번 글로벌 진출의 초기 목표시장으로 확인합니다.
+            </label>
+          </fieldset>
+        )}
         {stageItems.map((item) => (
           <div key={item.id}>
             <h3 className="question-group">{item.label}</h3>

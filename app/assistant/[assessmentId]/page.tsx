@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { GtmAssistant } from "@/components/gtm-assistant";
 import { SiteHeader } from "@/components/site-header";
-import type { GtmPlanItem, StoredGtmPlan } from "@/lib/types";
+import type { GtmMarketResearch, GtmPlanItem, StoredGtmPlan } from "@/lib/types";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "AI GTM 어시스턴트" };
@@ -49,7 +49,7 @@ export default async function AssistantPage({
   if (!profile?.organization_id) redirect("/account/onboarding");
   const { data: assessment } = await admin
     .from("assessments")
-    .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages")
+    .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,target_country,target_customer_segment")
     .eq("id", assessmentId)
     .eq("organization_id", profile.organization_id)
     .maybeSingle();
@@ -62,7 +62,7 @@ export default async function AssistantPage({
       .order("created_at"),
     admin
       .from("gtm_plans")
-      .select("id,status,summary,assumptions,founder_context,recent_messages,turn_count,generation_count,model")
+      .select("id,status,summary,assumptions,founder_context,market_research,market_research_confirmed_at,recent_messages,turn_count,generation_count,model")
       .eq("assessment_id", assessmentId)
       .in("status", ["draft", "active"])
       .maybeSingle()
@@ -81,7 +81,9 @@ export default async function AssistantPage({
       status: plan.status,
       summary: plan.summary,
       assumptions: (plan.assumptions as string[]) ?? [],
-      founderContext: (plan.founder_context as Record<string, string>) ?? {},
+      founderContext: (plan.founder_context as StoredGtmPlan["founderContext"]) ?? {},
+      marketResearch: (plan.market_research as GtmMarketResearch | null) ?? null,
+      marketResearchConfirmedAt: plan.market_research_confirmed_at,
       recentMessages: (plan.recent_messages as StoredGtmPlan["recentMessages"]) ?? [],
       turnCount: plan.turn_count,
       generationCount: plan.generation_count,
@@ -99,7 +101,9 @@ export default async function AssistantPage({
           score: assessment.overall_score,
           status: assessment.status_label,
           isOnHold: assessment.is_on_hold,
-          gateMessages: (assessment.gate_messages as string[]) ?? []
+          gateMessages: (assessment.gate_messages as string[]) ?? [],
+          targetCountry: assessment.target_country ?? "",
+          targetCustomer: assessment.target_customer_segment ?? ""
         }}
         actions={(actions ?? []).map((action) => ({
           id: action.id,

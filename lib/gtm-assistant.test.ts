@@ -3,6 +3,7 @@ import { zodTextFormat } from "openai/helpers/zod";
 import {
   assistantResponseSchema,
   buildDeterministicPlan,
+  finalizeMarketResearch,
   sanitizeFounderText,
   shouldUseWebSearch,
   validatePlanDraft
@@ -37,6 +38,31 @@ describe("AI GTM assistant safeguards", () => {
       sourceActionItemId: "action-1",
       sources: [{ kind: "diagnosis", title: "55문항 준비도 진단" }]
     });
+  });
+
+  it("keeps deterministic and model plans inside the allowed horizons", () => {
+    const plan = buildDeterministicPlan(actions, new Date("2026-08-05T00:00:00Z"), [60]);
+    expect(plan.items.every((item) => item.horizon === 60)).toBe(true);
+    expect(() => validatePlanDraft({ ...plan, items: [{ ...plan.items[0], horizon: 30 }] }, [60]))
+      .toThrow("허용되지 않은 계획 기간");
+  });
+
+  it("does not allow a sellability verdict before all 55 questions are available", () => {
+    expect(() => finalizeMarketResearch({
+      scope: "market_preresearch",
+      targetCountry: "일본",
+      targetCustomer: "중견 제조사",
+      offeringName: "제품 A",
+      executiveSummary: "시장 사전조사",
+      trends: [{ title: "추세", finding: "확인", sourceTitle: "공식 자료", url: null }],
+      marketSizing: (["TAM", "SAM", "SOM", "LAM"] as const).map((label) => ({
+        label, estimate: "추정 전", method: "가정 확인 필요", assumptions: [], sourceTitles: []
+      })),
+      competitors: [{ name: "대안 A", type: "alternative", relevance: "대안", differentiationGap: "확인 필요", sourceTitle: "공식 자료", url: null }],
+      sellability: { available: true, verdict: "promising", summary: "판정", evidenceGaps: [] },
+      nextExperiments: ["고객 인터뷰"],
+      limitations: ["사전조사"]
+    })).toThrow("준비완료 전에는");
   });
 
   it("rejects unsafe source URLs after model parsing", () => {

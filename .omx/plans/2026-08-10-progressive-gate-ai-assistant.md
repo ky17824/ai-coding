@@ -8,6 +8,8 @@
 - 뒤 단계 문항은 앞 Gate를 통과하기 전에는 숨기고 잠근다.
 - 첫 미통과 Gate에서 진단 세션을 종료하고, 지금 필요한 기간만 AI 계획에 허용한다.
 - 통과한 앞 단계 응답과 현재 단계 격차를 모두 AI 문맥으로 제공한다.
+- 초기 목표국가(Target Country)와 목표 고객군(Target Customer Segment)은 준비중까지 창업자가 직접 확정해야 하며, 둘 중 하나라도 없으면 준비완료 문항을 열지 않는다.
+- 대시보드의 공통 선결 상태 문구는 한 번만 표시하고 각 목록 행에는 고유한 조건과 다음 행동만 표시한다.
 - 승인된 계획은 독립 HTML 보고서로 내려받을 수 있게 한다.
 
 ## 현재 구현에서 확인한 제약
@@ -18,6 +20,8 @@
 4. `lib/readiness.ts:48-80`은 제출되지 않은 뒤 단계도 0점으로 계산하므로 단계별 저장에 그대로 사용할 수 없다.
 5. `lib/gtm-assistant.ts:91-134`와 `app/api/gtm-assistant/turn/route.ts:246-261`은 어느 Gate에서 멈췄는지와 무관하게 30·60·90일 전체를 만든다.
 6. 계획 보고서를 HTML로 내보내는 경로는 아직 없다.
+7. 목표시장 관련 문항은 있지만 실제 국가명과 고객군을 구조화해 확정하는 값이 없어 Gate가 답변에서 이를 안전하게 판정할 수 없다.
+8. `lib/readiness.ts`가 `필수 선결 조건이 남았습니다 —` 접두문을 blocker마다 붙여 저장하고, `app/dashboard/page.tsx`가 원문을 그대로 나열해 같은 문장이 반복된다.
 
 ## 제안 Gate 정책
 
@@ -27,6 +31,10 @@
 - 미통과: 80% 미만이거나 Critical blocker가 1건 이상이다.
 - 준비완료의 부분 통과: 초기 운영값으로 60% 이상 80% 미만이고 Critical blocker가 0건인 경우를 제안한다.
 - Critical blocker가 있으면 점수와 관계없이 부분 통과가 아니라 미통과다.
+- Gate A는 기존 점수·Critical 규칙만 사용한다. 목표국가와 목표 고객군을 아직 확정하지 않았다는 이유만으로 극초기를 막지 않는다.
+- Gate B는 기존 점수·Critical 규칙에 더해 `초기 목표국가`와 `목표 고객군`이 모두 직접 입력·확정되어야 통과한다. 하나라도 없으면 준비완료는 잠긴다.
+- 목표시장 값은 AI가 문항 답변이나 자유서술에서 추정하지 않는다. 공백을 제거한 유효한 값과 창업자의 명시적 확인 시각이 있어야 `확정`으로 인정한다.
+- 확정값 변경은 과거 진단 답변을 바꾸지 않지만, 기존 시장·경쟁 사전조사를 `다시 확인 필요`로 되돌린다.
 
 `부분 통과 60%`는 AI가 판단할 값이 아니라 제품 규칙 상수로 둔다. 베타 데이터가 쌓이면 상수만 조정한다.
 
@@ -52,7 +60,8 @@ flowchart LR
   A["극초기 문항"] --> B{"Gate A 판정"}
   B -->|"미통과"| C["극초기 격차 + 30일 AI 계획"]
   B -->|"통과"| D["준비중 문항"]
-  D --> E{"Gate B 판정"}
+  D --> T["초기 목표국가·목표 고객군 확인"]
+  T --> E{"Gate B 판정"}
   E -->|"미통과"| F["준비중 격차 + 60일 또는 30·60일 AI 계획"]
   E -->|"통과"| G["준비완료 문항"]
   G --> H{"Gate C 판정"}
@@ -78,6 +87,7 @@ flowchart LR
 - 잠긴 단계는 클릭할 수 없고 `앞 단계를 통과하면 열립니다`를 표시한다.
 - 하단 주 CTA는 마지막까지 공통으로 `Gate A 결과 확인`, `Gate B 결과 확인`, `Gate C 결과 확인`으로 표시한다.
 - 이전에 통과한 단계는 답변 요약만 볼 수 있고 현재 진단 도중 수정하지 않는다.
+- 준비중 화면에는 55문항과 별도로 `준비완료 전 초기 목표시장 확인` 카드가 있다. 목표국가와 목표 고객군을 직접 입력하고 확인하며, 극초기 또는 AI 워크숍에서 이미 확정한 값이 있으면 그대로 불러온다.
 
 ### 화면 2 — Gate 판정
 
@@ -86,6 +96,7 @@ flowchart LR
 - 미통과일 때 뒤 단계 미리보기나 0점 점수를 노출하지 않는다.
 - 주 CTA는 `AI와 30일 계획 만들기`, `AI와 60일 계획 만들기`, `AI와 30·60일 계획 만들기`처럼 실제 허용 기간을 명시한다.
 - 통과 시 주 CTA는 `준비중 진단 계속`, `준비완료 진단 계속`이다.
+- Gate B 점수와 Critical 조건을 충족했지만 목표시장 두 값 중 하나가 없으면 결과는 `질문 기준은 충족했습니다. 초기 목표시장을 확정하면 준비완료가 열립니다.`로 표시하고 주 CTA를 `초기 목표시장 확정`으로 바꾼다.
 
 ### 화면 3 — AI GTM 워크숍
 
@@ -104,6 +115,27 @@ flowchart LR
 - 현재 Gate, 통과 기준 80%, 현재 긍정 배점, Critical 근거 충족 수를 한 카드에 표시한다.
 - 전체 55문항 점수 대신 현재까지 열린 질문만 분모로 사용한다.
 - `다음 단계까지 보완 5문항 · 근거 2건`처럼 남은 조건을 한 문장으로 보여준다.
+
+#### 선결 조건 카드
+
+- 제목은 현재 Gate에 따라 `준비중으로 넘어가기 전 확인할 항목` 또는 `준비완료로 넘어가기 전 확인할 항목`으로 한 번만 표시한다.
+- 우측에는 `3개 남음`처럼 목표시장 미확정 수와 질문 blocker 수를 합한 총계를 표시한다.
+- Gate B에서는 `초기 목표시장 정의 0/2`를 첫 묶음으로 두고 `초기 목표국가`, `목표 고객군`의 `미확정 / 확정` 상태와 `초기 목표시장 정하기` CTA를 표시한다.
+- 질문 blocker는 `진단 답변` 묶음에 두며 `필수 선결 조건이 남았습니다 —`를 반복하지 않고 질문을 짧은 행동 문장으로 표시한다.
+- Gate A에는 목표시장 묶음을 표시하지 않는다. Gate B 이후에만 고정 선결 조건으로 보인다.
+- 새로운 차트나 컴포넌트 라이브러리는 추가하지 않고 기존 `.hold-banner`, `.panel`, `.button`, 상태 색을 재배치해 사용한다.
+
+```text
+단계 통과 기준(Stage Gate) B                         3개 남음
+준비완료로 넘어가기 전 확인할 항목
+
+초기 목표시장 정의                                      0/2
+○ 초기 목표국가                    미확정
+○ 목표 고객군                      미확정      [초기 목표시장 정하기]
+
+진단 답변                                               1개
+! 총 진입비용을 항목별로 계산해 주세요    보완 필요      [답변 보완]
+```
 
 #### 질문별 진행표
 
@@ -159,21 +191,25 @@ flowchart LR
 
 - `assessments.completed_at`을 nullable로 바꾼다. 다음 Gate가 열려 있으면 `null`, 미통과로 중단되거나 Gate C가 끝나면 완료 시각을 기록한다.
 - `assessments.previous_assessment_id` nullable FK 한 개만 추가해 최초 판정과 재확인 이력을 연결한다.
+- `assessments.target_country text`, `target_customer_segment text`, `target_market_confirmed_at timestamptz`를 추가해 진단 시점의 목표시장 확정값을 보존한다. 별도 목표시장 테이블은 만들지 않는다.
 - 별도 workflow 테이블은 만들지 않는다. 현재 단계는 저장된 답변과 기존 Gate 계산으로 유도한다.
-- `POST /api/assessments` 입력을 `{ assessmentId?, stageId, answers, offering }`으로 바꾸고, 해당 단계의 정확한 question id 집합만 허용한다.
+- `POST /api/assessments` 입력을 `{ assessmentId?, stageId, answers, offering, targetMarket? }`으로 바꾸고, 해당 단계의 정확한 question id 집합만 허용한다. `targetMarket`은 준비중 제출에서만 저장하며 두 값이 모두 있을 때 확인 시각을 서버가 기록한다.
 - 첫 단계는 assessment를 생성하고, 다음 단계는 같은 assessment의 답변을 upsert한다.
 - Gate를 통과해 다음 단계로 갈 때는 action item과 AI plan을 아직 만들지 않는다.
 - 첫 미통과 또는 Gate C 종료 시에만 현재 단계의 action item을 교체 생성하고 assessment를 완료한다.
 - 완료된 assessment는 수정하지 않는다. 실행 후 재진단은 `previous_assessment_id`로 연결된 새 assessment를 만들고 현재 Gate의 직전 응답을 복사해 사용자가 확인하도록 한다.
 - 기존 `readiness_answers.evidence_kind/evidence_value`와 `evidence_files.answer_id`를 재사용한다. 계획 항목용 증거 테이블은 만들지 않는다.
+- AI GTM 어시스턴트의 `founder_context.targetCountry/targetCustomer`는 assessment 확정값으로 초기화한다. 어시스턴트에서 두 값을 바꾸면 명시적 확인 뒤 assessment에도 반영해 이중 입력을 피한다.
 
 ### 판정 함수
 
-- `calculateStageReadiness(stageId, answers)`를 추가해 한 단계만 판정한다.
+- `calculateStageReadiness(stageId, answers, targetMarket)`를 추가해 한 단계만 판정한다.
 - Critical 질문은 긍정 응답뿐 아니라 근거 note/URL/file이 있어야 blocker가 해제되도록 한다.
 - `questionProgress(answer, stageUnlocked)`는 `satisfied / evidence_needed / improvement_needed / locked` 상태를 반환한다.
 - 기존 `calculateReadiness`는 저장된 누적 답변을 순서대로 호출해 전체 결과를 조립하도록 단순화한다.
 - `decidePlanHorizons(result)`는 위 표의 기간만 반환한다.
+- Gate B의 `passed`는 기존 점수·Critical 판정과 `targetMarketConfirmed`를 모두 만족할 때만 `true`다. Gate A/C 계산에는 이 필드를 사용하지 않는다.
+- `gateMessages`에는 공통 접두문을 저장하지 않고 고유 blocker 내용만 저장한다. 기존 행은 화면에서 접두문을 한 번 제거해 호환한다.
 - 문항·배점·80% 통과·Critical blocker 규칙은 바꾸지 않는다.
 
 ### AI 입력과 검증
@@ -186,15 +222,15 @@ flowchart LR
 ## 구현 순서
 
 1. `lib/readiness.ts`, `lib/types.ts`, `lib/readiness.test.ts`
-   - 단계 단위 판정, 부분 통과, 기간 결정 함수를 먼저 만들고 테스트로 규칙을 고정한다.
+   - 단계 단위 판정, Gate B 목표시장 확정, 중복 없는 blocker 문구, 부분 통과, 기간 결정 함수를 먼저 만들고 테스트로 규칙을 고정한다.
 2. 새 Supabase migration, `app/api/assessments/route.ts`
-   - 진행 중 assessment와 단계별 upsert를 지원한다.
+   - 진행 중 assessment, 목표시장 확정값과 단계별 upsert를 지원한다.
 3. `components/assessment-form.tsx`, `app/globals.css`, `lib/pending-assessment.ts`
-   - 현재 단계만 표시하고 잠금·판정·다음 단계/AI 분기를 구현한다.
+   - 현재 단계만 표시하고 준비중 목표시장 확인, 잠금·판정·다음 단계/AI 분기를 구현한다.
 4. `lib/gtm-assistant.ts`, `app/api/gtm-assistant/turn/route.ts`, `components/gtm-assistant.tsx`
    - 허용 기간을 AI와 fallback 모두에 강제하고 화면 문구를 동적으로 바꾼다.
 5. `app/dashboard/page.tsx`, 기존 계획 PATCH API, 새 Gate 재확인 route
-   - 질문별 상태, 질문-계획 연결, 계획 상태 변경, 증거 첨부, 새 assessment 재판정을 연결한다.
+   - 목표시장 0/2 상태, 중복 없는 선결 조건 카드, 질문별 상태, 질문-계획 연결, 계획 상태 변경, 증거 첨부, 새 assessment 재판정을 연결한다.
 6. `app/api/gtm-plans/[planId]/export/route.ts`, `components/gtm-assistant.tsx`
    - 조직 소유권을 확인한 독립 HTML 다운로드를 추가한다.
 7. `app/journey/page.tsx`
@@ -217,12 +253,16 @@ flowchart LR
 13. 계획 항목 완료만으로 다음 Gate가 열리지 않으며, 현재 Gate 질문 재응답과 서버 판정을 거쳐야 한다.
 14. Critical 질문은 긍정 응답과 근거가 모두 있어야 통과한다.
 15. Gate 재확인 통과 시 다음 단계가 해제되고, 미통과 시 같은 Gate의 새 계획 버전으로 이어진다.
+16. 극초기는 목표국가·목표 고객군이 미확정이어도 기존 Gate A 규칙으로 판정된다.
+17. 준비중은 점수와 Critical 조건을 충족해도 목표국가 또는 목표 고객군이 미확정이면 준비완료가 열리지 않는다.
+18. 목표시장 두 값을 확정하면 AI GTM 어시스턴트에 다시 입력하지 않아도 동일 값이 표시된다.
+19. 대시보드 선결 조건 카드에서 공통 상태 문구는 한 번만 나오고 각 blocker에는 고유 요구와 CTA만 표시된다.
 
 ## 검증
 
-- 단위 테스트: Gate A/B/C 통과·미통과, Gate C 부분 통과, Critical blocker, 기간 결정, AI 기간 검증.
+- 단위 테스트: Gate A/B/C 통과·미통과, Gate B 목표시장 0/1/2개 확정, Gate C 부분 통과, Critical blocker, 중복 접두문 제거, 기간 결정, AI 기간 검증.
 - API 테스트: 잘못된 stageId, 다른 단계 문항 혼입, 중복 답변, 다른 조직 assessment 수정, 완료 세션 재수정 차단.
-- 브라우저 확인: 세 단계 잠금/해제, 질문 상태 필터, 질문-계획 연결, 근거 첨부, Gate 재확인 통과·미통과, 로그인 전 응답 복원, AI 질문/계획/fallback, 모바일 1열, 키보드 포커스.
+- 브라우저 확인: 세 단계 잠금/해제, Gate A 목표시장 미확정 허용, Gate B 목표시장 미확정 차단과 확정 후 준비완료 해제, 반복 문구 없는 선결 조건 카드, 질문 상태 필터, 질문-계획 연결, 근거 첨부, Gate 재확인 통과·미통과, 로그인 전 응답 복원, AI 질문/계획/fallback, 모바일 1열, 키보드 포커스.
 - 내보내기 확인: 파일명, UTF-8 한국어, HTML 단독 열기, 조직 소유권 403/404, 브라우저 인쇄.
 - 최종 확인: `npm test`, `npm run lint`, `npm run build`와 단계별 대표 화면 캡처.
 
@@ -234,6 +274,7 @@ flowchart LR
 - 부분 통과 기준의 자의성: 60%는 초기 운영값으로 문서화하고 베타 전환 데이터로 조정한다.
 - 보고서의 민감정보: 사용자 입력을 기존 방식으로 마스킹하고 조직 소유권을 확인하며 원본 계약서·연락처는 포함하지 않는다.
 - 상태만 완료하고 증거를 내지 않는 우회: 계획 완료와 Gate 통과를 분리하고 Critical 근거를 서버에서 검증한다.
+- AI가 목표시장을 임의 확정하는 오류: assessment의 창업자 입력값과 확인 시각만 Gate B에 사용하고 모델 추정값은 별도 가정으로 남긴다.
 
 ## 이번 설계에서 하지 않는 것
 

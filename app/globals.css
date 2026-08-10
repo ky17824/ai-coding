@@ -2857,6 +2857,61 @@ svg {
   line-height: 1.8;
 }
 
+.hold-banner--dashboard > div:first-child > strong {
+  display: block;
+  margin-top: 14px;
+  color: #9d571a;
+  font-size: 13px;
+}
+
+.hold-banner__content {
+  display: grid;
+  gap: 18px;
+}
+
+.hold-banner__content > div > strong,
+.gate-prerequisites header strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.hold-banner__content p {
+  margin: 8px 0 0;
+  color: #704b2a;
+  font-size: 13px;
+}
+
+.gate-prerequisites {
+  display: grid;
+  gap: 10px;
+  border-bottom: 1px solid #f1c7a0;
+  padding-bottom: 16px;
+}
+
+.gate-prerequisites header,
+.gate-prerequisites li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.gate-prerequisites header small,
+.gate-prerequisites li strong {
+  color: #9d571a;
+}
+
+.gate-prerequisites ul {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.gate-prerequisites .text-link {
+  justify-self: start;
+  color: #9d571a;
+}
+
 .result-section > h2,
 .result-section .section-heading h2 {
   margin: 8px 0 24px;
@@ -3020,6 +3075,7 @@ svg {
 }
 
 .assistant-context input,
+.assistant-context select,
 .assistant-context textarea,
 .assistant-prompt textarea,
 .assistant-plan-fields input,
@@ -3049,6 +3105,85 @@ svg {
 
 .assistant-prompt .button {
   justify-self: start;
+}
+
+.assistant-context > .button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.assistant-research {
+  display: grid;
+  gap: 22px;
+  padding: 28px;
+}
+
+.assistant-research h2,
+.assistant-research h3,
+.assistant-research p {
+  margin: 0;
+}
+
+.research-confirmed {
+  color: var(--green);
+}
+
+.market-size-grid,
+.assistant-research-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.market-size-grid article {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.market-size-grid strong {
+  color: var(--green);
+  font-family: Georgia, serif;
+  font-size: 24px;
+}
+
+.market-size-grid span {
+  font-weight: 800;
+}
+
+.market-size-grid small,
+.assistant-research-grid span,
+.assistant-research-grid small {
+  color: var(--muted);
+}
+
+.assistant-research-grid > div {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.assistant-research-grid ul {
+  display: grid;
+  gap: 14px;
+  padding-left: 18px;
+}
+
+.assistant-research-grid li {
+  display: grid;
+  gap: 5px;
+}
+
+.assistant-research-grid a {
+  color: var(--green);
+  font-weight: 750;
+}
+
+.assistant-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .assistant-question {
@@ -3111,6 +3246,59 @@ h2.plan-summary {
   border: 0;
   background: none;
   cursor: pointer;
+}
+
+.target-market-confirmation {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding: 24px;
+}
+
+.target-market-confirmation legend {
+  padding: 0 8px;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.target-market-confirmation p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.target-market-confirmation > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.target-market-confirmation label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.target-market-confirmation input:not([type="checkbox"]) {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 13px 14px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.target-market-confirmation .target-market-confirmation__check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.target-market-confirmation__check input {
+  width: 18px;
+  height: 18px;
 }
 
 .action-row h3 {
@@ -3188,12 +3376,18 @@ h2.plan-summary {
   }
 
   .assistant-context,
-  .assistant-plan-fields {
+  .assistant-plan-fields,
+  .market-size-grid,
+  .assistant-research-grid {
     grid-template-columns: 1fr;
   }
 
   .assistant-context__wide {
     grid-column: auto;
+  }
+
+  .target-market-confirmation > div {
+    grid-template-columns: 1fr;
   }
 
   .assistant-plan-item header,

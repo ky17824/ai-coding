@@ -16,7 +16,12 @@ const answerSchema = z.object({
 });
 const requestSchema = z.object({
   answers: z.array(answerSchema).min(1).max(55),
-  offering: z.enum(["both", "product", "service"]).default("both")
+  offering: z.enum(["both", "product", "service"]).default("both"),
+  targetMarket: z.object({
+    targetCountry: z.string().trim().max(100).default(""),
+    targetCustomerSegment: z.string().trim().max(300).default(""),
+    confirmed: z.boolean().default(false)
+  }).default({ targetCountry: "", targetCustomerSegment: "", confirmed: false })
 });
 
 export async function POST(request: Request) {
@@ -34,7 +39,16 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  const result = calculateReadiness(parsed.data.answers);
+  const targetMarket = parsed.data.targetMarket;
+  const marketConfirmed = Boolean(
+    targetMarket.confirmed &&
+    targetMarket.targetCountry &&
+    targetMarket.targetCustomerSegment
+  );
+  const result = calculateReadiness(parsed.data.answers, {
+    ...targetMarket,
+    confirmed: marketConfirmed
+  });
   const user = await requireUser();
   const supabase = await createSupabaseServerClient();
   if (!user || !supabase) {
@@ -65,7 +79,10 @@ export async function POST(request: Request) {
       domain_scores: result.domainScores,
       status_label: result.status,
       is_on_hold: result.isOnHold,
-      gate_messages: result.gateMessages
+      gate_messages: result.gateMessages,
+      target_country: targetMarket.targetCountry || null,
+      target_customer_segment: targetMarket.targetCustomerSegment || null,
+      target_market_confirmed_at: marketConfirmed ? new Date().toISOString() : null
     })
     .select("id")
     .single();

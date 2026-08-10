@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type {
   GtmAssistantQuestion,
+  GtmMarketResearch,
   GtmPlanDraft,
   GtmPlanItem,
   GtmPlanSource
@@ -56,10 +57,52 @@ export const assistantResponseSchema = z.object({
   result: assistantOutputSchema
 });
 
+const researchSourceUrl = z.string().max(2048).nullable();
+export const marketResearchOutputSchema = z.object({
+  scope: z.enum(["market_preresearch", "sellability_review"]),
+  targetCountry: z.string().min(1).max(100),
+  targetCustomer: z.string().min(1).max(300),
+  offeringName: z.string().min(1).max(180),
+  executiveSummary: z.string().min(1).max(1200),
+  trends: z.array(z.object({
+    title: z.string().min(1).max(180),
+    finding: z.string().min(1).max(600),
+    sourceTitle: z.string().min(1).max(180),
+    url: researchSourceUrl
+  })).min(1).max(6),
+  marketSizing: z.array(z.object({
+    label: z.enum(["TAM", "SAM", "SOM", "LAM"]),
+    estimate: z.string().min(1).max(300),
+    method: z.string().min(1).max(500),
+    assumptions: z.array(z.string().max(300)).max(6),
+    sourceTitles: z.array(z.string().max(180)).max(6)
+  })).length(4),
+  competitors: z.array(z.object({
+    name: z.string().min(1).max(180),
+    type: z.enum(["direct", "adjacent", "alternative"]),
+    relevance: z.string().min(1).max(500),
+    differentiationGap: z.string().min(1).max(500),
+    sourceTitle: z.string().min(1).max(180),
+    url: researchSourceUrl
+  })).min(1).max(8),
+  sellability: z.object({
+    available: z.boolean(),
+    verdict: z.enum(["not_assessed", "weak", "conditional", "promising"]),
+    summary: z.string().min(1).max(800),
+    evidenceGaps: z.array(z.string().max(300)).max(8)
+  }),
+  nextExperiments: z.array(z.string().min(1).max(300)).min(1).max(8),
+  limitations: z.array(z.string().min(1).max(300)).min(1).max(8)
+});
+
+export const marketResearchResponseSchema = z.object({
+  result: marketResearchOutputSchema
+});
+
 export type AssistantModelOutput = z.infer<typeof assistantOutputSchema>;
 
 export interface SavedAction {
-  id: string;
+  id: string | null;
   question_id: string | null;
   title: string;
   owner_label: string;
@@ -90,7 +133,8 @@ function dateAfter(base: Date, days: number) {
 
 export function buildDeterministicPlan(
   actions: SavedAction[],
-  now = new Date()
+  now = new Date(),
+  allowedHorizons: (30 | 60 | 90)[] = [30, 60, 90]
 ): GtmPlanDraft {
   const source: GtmPlanSource = {
     kind: "diagnosis",
@@ -98,9 +142,13 @@ export function buildDeterministicPlan(
     url: null,
     checkedAt: now.toISOString().slice(0, 10)
   };
-  const horizons: (30 | 60 | 90)[] = [30, 30, 60, 60, 90, 90, 90, 90];
   const items: GtmPlanItem[] = actions.slice(0, 8).map((action, index) => {
-    const horizon = horizons[index];
+    const horizon = allowedHorizons[
+      Math.min(
+        allowedHorizons.length - 1,
+        Math.floor((index * allowedHorizons.length) / Math.max(1, Math.min(actions.length, 8)))
+      )
+    ];
     const expertRequired = HIGH_RISK.test(`${action.service_tag} ${action.title}`);
     return {
       sourceActionItemId: action.id,
@@ -134,8 +182,14 @@ export function buildDeterministicPlan(
   };
 }
 
-export function validatePlanDraft(output: AssistantModelOutput) {
+export function validatePlanDraft(
+  output: AssistantModelOutput,
+  allowedHorizons: (30 | 60 | 90)[] = [30, 60, 90]
+) {
   if (output.kind !== "plan_draft") return output;
+  if (output.items.some((item) => !allowedHorizons.includes(item.horizon))) {
+    throw new Error("현재 단계에 허용되지 않은 계획 기간입니다.");
+  }
   if (output.items.some((item) => item.sources.length === 0)) {
     throw new Error("모든 계획 항목에는 근거가 필요합니다.");
   }
@@ -147,6 +201,32 @@ export function validatePlanDraft(output: AssistantModelOutput) {
     }
   }
   return output;
+}
+
+export function finalizeMarketResearch(
+  output: z.infer<typeof marketResearchOutputSchema>,
+  now = new Date()
+): GtmMarketResearch {
+  for (const url of [
+    ...output.trends.map((entry) => entry.url),
+    ...output.competitors.map((entry) => entry.url)
+  ]) {
+    if (!url) continue;
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      throw new Error("시장 조사 근거 URL은 HTTP(S) 주소여야 합니다.");
+    }
+  }
+  if (output.scope === "market_preresearch" &&
+      (output.sellability.available || output.sellability.verdict !== "not_assessed")) {
+    throw new Error("준비완료 전에는 실제 판매 가능성을 판정할 수 없습니다.");
+  }
+  return {
+    kind: "market_research",
+    ...output,
+    generatedAt: now.toISOString(),
+    generatedBy: ASSISTANT_MODEL
+  };
 }
 
 export function withGeneratedBy(
