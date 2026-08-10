@@ -10,14 +10,14 @@ const detailedSteps = [
   "본국 PMF 및 확장성 검증",
   "리더십 동의와 4대 약속",
   "후보 시장 선정",
-  "현장 현지화 발견",
-  "BMLC 작성",
-  "LPA 작성",
-  "총 진입비용 산정",
-  "글로벌 성장 피치덱",
-  "가설 검증과 반복",
-  "모멘텀 빌더 구축",
-  "글로벌 스케일 3대 기둥"
+  "현장 현지화(Localization) 발견",
+  "사업모델 현지화 캔버스(Business Model Localization Canvas) 작성",
+  "현지화 프리미엄 분석(Localization Premium Analysis) 작성",
+  "총 진입비용(Total Cost of Entry) 산정",
+  "글로벌 성장 발표자료(Global Growth Pitch Deck) 작성",
+  "가설(Hypothesis) 검증과 반복",
+  "성장동력 구축(Momentum Building)",
+  "글로벌 규모 확장(Global Scaling) 3대 기둥"
 ];
 
 export const dynamic = "force-dynamic";
@@ -59,7 +59,7 @@ export default async function JourneyPage() {
     <main className="app-page">
       <SiteHeader compact />
       <div className="app-container">
-        <span className="page-kicker">GLOBAL GTM JOURNEY</span>
+        <span className="page-kicker">글로벌 GTM 여정(Global GTM Journey)</span>
         <h1 className="page-title">진출 준비부터 확장까지 한 흐름으로</h1>
         <p className="page-description">
           Global Class 11단계를 세 구간으로 묶었습니다. 정해진 일정이 아니라
@@ -68,18 +68,18 @@ export default async function JourneyPage() {
         {activePlan && planItems.length > 0 ? (
           <>
             <div className="dashboard-section__heading">
-              <span><span className="page-kicker">APPROVED AI GTM PLAN</span><h2 className="plan-summary">{activePlan.summary}</h2></span>
+              <span><span className="page-kicker">승인된 AI GTM 계획(Approved AI GTM Plan)</span><h2 className="plan-summary">{activePlan.summary}</h2></span>
               <Link className="button button--ghost" href={`/assistant/${activePlan.assessment_id}`}>계획 수정</Link>
             </div>
             <div className="journey-board">
               {[30, 60, 90].map((horizon) => (
                 <section className="journey-column panel" key={horizon}>
-                  <header><span>{horizon}</span><div><h2>{horizon}일 계획</h2><p>완료 근거를 남기시면 다음 구간으로 넘어갑니다.</p></div></header>
+                  <header><span>{horizon}</span><div><h2>단계별 실행계획(30·60·90 Day Plan) · {horizon}일</h2><p>완료 근거를 남기시면 다음 구간으로 넘어갑니다.</p></div></header>
                   <div className="journey-step-list">
                     {planItems.filter((item) => item.horizon === horizon).map((item, index) => (
                       <article key={item.id}>
                         <span className={item.status === "completed" ? "done" : item.status === "in_progress" ? "active" : ""}>{item.status === "completed" ? "✓" : index + 1}</span>
-                        <div><small>{item.priority} · {item.owner_label} · {item.due_date}</small><h3>{item.title}</h3>{item.expert_required && <Link href={`/services?tag=${encodeURIComponent(item.service_tag)}`}>전문가 연결 →</Link>}</div>
+                        <div><small>{item.priority === "P0" ? "우선순위 0(Priority 0)" : "우선순위 1(Priority 1)"} · {item.owner_label} · {item.due_date}</small><h3>{item.title}</h3>{item.expert_required && <Link href={`/services?tag=${encodeURIComponent(item.service_tag)}`}>전문가 연결 →</Link>}</div>
                       </article>
                     ))}
                   </div>
@@ -105,7 +105,7 @@ export default async function JourneyPage() {
                       {step <= 3 ? "✓" : step}
                     </span>
                     <div>
-                      <small>STEP {step}</small>
+                      <small>단계(Step) {step}</small>
                       <h3>{detailedSteps[step - 1]}</h3>
                     </div>
                   </article>

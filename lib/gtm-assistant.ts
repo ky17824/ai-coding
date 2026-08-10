@@ -127,7 +127,7 @@ export function buildDeterministicPlan(
 
   return {
     kind: "plan_draft",
-    summary: "진단에서 확인된 우선 격차를 30·60·90일 실행 순서로 정리해 드렸습니다.",
+    summary: "진단에서 확인된 우선 격차를 단계별 실행계획(30·60·90 Day Plan) 순서로 정리해 드렸습니다.",
     assumptions: ["현재 진단 응답과 저장된 실행 액션을 기준으로 작성했습니다."],
     items,
     generatedBy: "deterministic-fallback"

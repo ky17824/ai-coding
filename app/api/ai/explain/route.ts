@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     store: false,
     safety_identifier: createHash("sha256").update(user.id).digest("hex"),
     instructions:
-      "당신은 해외 진출 준비도 결과를 설명하는 한국어 코치입니다. 입력된 점수, 액션, 출처만 설명하세요. 새로운 점수, 서비스, 법률 판단, 수치 또는 사실을 만들지 마세요. 4문장 이내로 현재 위치, 가장 중요한 격차, 다음 행동, 근거의 한계를 순서대로 말하세요.",
+      "당신은 글로벌 진출 준비도 결과를 설명하는 한국어 코치입니다. 입력된 점수, 액션, 출처만 설명하세요. 새로운 점수, 서비스, 법률 판단, 수치 또는 사실을 만들지 마세요. 4문장 이내로 현재 위치, 가장 중요한 격차, 다음 행동, 근거의 한계를 순서대로 말하세요.",
     input: JSON.stringify(parsed.data)
   });
   return NextResponse.json({

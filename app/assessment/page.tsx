@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { requireUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "해외 진출 준비도 진단"
+  title: "글로벌 진출 준비도 진단"
 };
 
 export default async function AssessmentPage({

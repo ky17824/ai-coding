@@ -142,29 +142,29 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
   return (
     <div className="app-container assistant-layout">
       <aside className="assistant-sidebar panel">
-        <span className="page-kicker">AI GTM ASSISTANT</span>
+        <span className="page-kicker">AI GTM 어시스턴트(AI GTM Assistant)</span>
         <h1>진단 결과를 실행 계획으로</h1>
-        <p>55문항 결과와 저장된 액션만 사용해 30·60·90일 계획을 함께 만들어 드립니다.</p>
+        <p>55문항 결과와 저장된 액션만 사용해 단계별 실행계획(30·60·90 Day Plan)을 함께 만들어 드립니다.</p>
         <div className="assistant-score"><strong>{assessment.score}</strong><span>{assessment.status}</span></div>
         {assessment.isOnHold && (
           <ul>{assessment.gateMessages.map((message) => <li key={message}>{message}</li>)}</ul>
         )}
         <h2>진단 우선 액션</h2>
         <ol className="assistant-action-list">
-          {actions.map((action) => <li key={action.id}><span>{action.priority}</span>{action.title}</li>)}
+          {actions.map((action) => <li key={action.id}><span>{action.priority === "P0" ? "우선순위 0(Priority 0)" : "우선순위 1(Priority 1)"}</span>{action.title}</li>)}
         </ol>
       </aside>
 
       <section className="assistant-workspace">
         <div className="question-heading">
-          <span>FOUNDER WORKSHOP</span>
-          <h2>초기 타깃 시장에 대하여 말씀해 주세요.</h2>
+          <span>창업자 공동계획 회의(Founder Workshop)</span>
+          <h2>초기 목표시장(Target Market)에 대하여 말씀해 주세요.</h2>
           <p>고객 이름과 연락처, 계약서 원본은 입력하지 마세요. 목표와 제약 조건만 알려 주시면 됩니다.</p>
         </div>
         <div className="assistant-context panel">
-          <label>목표 국가<input value={context.targetCountry} onChange={(event) => setContext({ ...context, targetCountry: event.target.value })} placeholder="예: 일본" /></label>
+          <label>목표국가(Target Country)<input value={context.targetCountry} onChange={(event) => setContext({ ...context, targetCountry: event.target.value })} placeholder="예: 일본" /></label>
           <label>목표 고객<input value={context.targetCustomer} onChange={(event) => setContext({ ...context, targetCustomer: event.target.value })} placeholder="예: 도쿄 소재 중견 제조사" /></label>
-          <label>가용 자원<input value={context.resources} onChange={(event) => setContext({ ...context, resources: event.target.value })} placeholder="예: 대표 1명, 월 300만 원" /></label>
+          <label>가용 자원(Resource)<input value={context.resources} onChange={(event) => setContext({ ...context, resources: event.target.value })} placeholder="예: 대표 1명, 월 300만 원" /></label>
           <label>목표 기한<input type="date" value={context.deadline} onChange={(event) => setContext({ ...context, deadline: event.target.value })} /></label>
           <label className="assistant-context__wide">제약<textarea rows={2} value={context.constraints} onChange={(event) => setContext({ ...context, constraints: event.target.value })} placeholder="예: 현지 법인을 세우기 전에 고객 검증이 필요합니다" /></label>
         </div>
@@ -184,7 +184,7 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
         {items.length > 0 && (
           <section className="assistant-plan">
             <div className="dashboard-section__heading">
-              <span><span className="page-kicker">30 · 60 · 90 DAY PLAN</span><h2 className="plan-summary">{summary}</h2></span>
+              <span><span className="page-kicker">단계별 실행계획(30·60·90 Day Plan)</span><h2 className="plan-summary">{summary}</h2></span>
               {planStatus === "active" ? (
                 <Link className="button button--dark" href="/journey">승인된 여정 보기 →</Link>
               ) : (
@@ -194,7 +194,7 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
             <div className="assistant-plan-list">
               {items.map((item, index) => (
                 <article className="assistant-plan-item panel" key={item.id ?? `${item.title}-${index}`}>
-                  <header><span className={`priority priority--${item.priority}`}>{item.priority}</span><strong>{item.horizon}일</strong>{item.expertRequired && <Link href={`/services?tag=${encodeURIComponent(item.serviceTag)}`}>전문가 확인 필요 →</Link>}</header>
+                  <header><span className={`priority priority--${item.priority}`}>{item.priority === "P0" ? "우선순위 0(Priority 0)" : "우선순위 1(Priority 1)"}</span><strong>{item.horizon}일</strong>{item.expertRequired && <Link href={`/services?tag=${encodeURIComponent(item.serviceTag)}`}>전문가 확인 필요 →</Link>}</header>
                   <h3>{item.title}</h3>
                   <p>{item.rationale}</p>
                   <div className="assistant-plan-fields">

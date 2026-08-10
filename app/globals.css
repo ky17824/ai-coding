@@ -2617,6 +2617,7 @@ svg {
   padding: 5px 8px;
   font-size: 9px;
   font-weight: 850;
+  white-space: nowrap;
 }
 
 .priority--P0 {

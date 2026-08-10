@@ -65,7 +65,7 @@ export default async function ServiceDetailPage({
               <li>
                 {service.type === "mentoring"
                   ? `${service.durationLabel} 화상 세션을 진행합니다.`
-                  : `${service.durationLabel} 동안 합의된 마일스톤을 수행합니다.`}
+                  : `${service.durationLabel} 동안 합의된 단계별 실행목표(Milestone)를 수행합니다.`}
               </li>
               <li>합의하신 결과물을 확인하신 뒤 거래를 마칩니다.</li>
             </ol>
@@ -74,7 +74,7 @@ export default async function ServiceDetailPage({
             <h2>취소·분쟁 정책</h2>
             <p>
               서비스 시작 전에는 전액 환불됩니다. 시작 이후의 취소·노쇼·품질
-              분쟁은 자동 판정하지 않으며, 주문 기록과 마일스톤을 관리자가
+              분쟁은 자동 판정하지 않으며, 주문 기록과 단계별 실행목표(Milestone)를 관리자가
               확인합니다.
             </p>
           </div>

@@ -50,8 +50,8 @@ export const INTAKE_STAGES = [
     journeyPhase: "pre_entry",
     weight: 30,
     intro:
-      "아직 목표 국가와 자원을 정하는 단계입니다. 지금 상태를 그대로 골라주세요. 아직 하지 않은 것을 고르셔도 불이익은 없습니다.",
-    unlocks: "목표 국가를 확정하고 현지 규제·시장 조사에 예산을 투입할 수 있습니다."
+      "아직 목표국가(Target Country)와 자원(Resource)을 정하는 단계입니다. 지금 상태를 그대로 골라주세요. 아직 하지 않은 것을 고르셔도 불이익은 없습니다.",
+    unlocks: "목표국가(Target Country)를 확정하고 현지 규제·시장 조사에 예산을 투입할 수 있습니다."
   },
   {
     id: "preparing",
@@ -80,18 +80,18 @@ export const INTAKE_STAGES = [
 export type IntakeStageId = (typeof INTAKE_STAGES)[number]["id"];
 
 export const INTAKE_ITEMS = [
-  { id: "global-mindset", stageId: "early", label: "Global mindset · MVC", weight: 6, owner: "대표·이사회", serviceTag: "leadership" },
-  { id: "resources", stageId: "early", label: "인적 · 자원 · 운영 리소스", weight: 9, owner: "대표·재무 책임자", serviceTag: "leadership" },
+  { id: "global-mindset", stageId: "early", label: "글로벌 진출 관점(Global Mindset)", weight: 6, owner: "대표·이사회", serviceTag: "leadership" },
+  { id: "resources", stageId: "early", label: "인적·운영 자원(Resource)", weight: 9, owner: "대표·재무 책임자", serviceTag: "leadership" },
   { id: "home-pmf", stageId: "early", label: "가치제안 · 국내 PMF", weight: 7.5, owner: "대표·제품 책임자", serviceTag: "market-validation" },
-  { id: "target-market", stageId: "early", label: "타깃국 · 초기 고객군", weight: 7.5, owner: "사업개발 책임자", serviceTag: "market-validation" },
-  { id: "bmlc", stageId: "preparing", label: "BMLC 규제 · 문화 분석", weight: 8, owner: "규제·법무 담당", serviceTag: "compliance" },
-  { id: "lpa", stageId: "preparing", label: "LPA 6축 시장조사", weight: 8, owner: "제품·운영 책임자", serviceTag: "gtm" },
-  { id: "market-testing", stageId: "preparing", label: "Market testing", weight: 12, owner: "제품·GTM 책임자", serviceTag: "gtm" },
+  { id: "target-market", stageId: "early", label: "목표국가(Target Country) · 초기 고객군", weight: 7.5, owner: "사업개발 책임자", serviceTag: "market-validation" },
+  { id: "bmlc", stageId: "preparing", label: "사업모델 현지화 캔버스(Business Model Localization Canvas) 규제·문화 분석", weight: 8, owner: "규제·법무 담당", serviceTag: "compliance" },
+  { id: "lpa", stageId: "preparing", label: "현지화 프리미엄 분석(Localization Premium Analysis) 6축 시장조사", weight: 8, owner: "제품·운영 책임자", serviceTag: "gtm" },
+  { id: "market-testing", stageId: "preparing", label: "시장 실증시험(Market Testing)", weight: 12, owner: "제품·GTM 책임자", serviceTag: "gtm" },
   { id: "partner-acquisition", stageId: "preparing", label: "네트워크 · 파트너 확보", weight: 12, owner: "사업개발 책임자", serviceTag: "gtm" },
-  { id: "local-plan", stageId: "ready", label: "현지 BMC · 30-60-90", weight: 9, owner: "대표·GTM 책임자", serviceTag: "gtm" },
+  { id: "local-plan", stageId: "ready", label: "현지 비즈니스 모델 캔버스(Business Model Canvas) · 단계별 실행계획(30·60·90 Day Plan)", weight: 9, owner: "대표·GTM 책임자", serviceTag: "gtm" },
   { id: "local-team", stageId: "ready", label: "현지 최소 운영인력", weight: 7, owner: "대표·인사 책임자", serviceTag: "organization" },
   { id: "partner-contract", stageId: "ready", label: "파트너 계약 · 운영화", weight: 8, owner: "사업개발·법무 담당", serviceTag: "compliance" },
-  { id: "resource-allocation", stageId: "ready", label: "현지 운영 리소스 배정", weight: 6, owner: "재무 책임자", serviceTag: "unit-economics" }
+  { id: "resource-allocation", stageId: "ready", label: "현지 운영 자원(Resource) 배정", weight: 6, owner: "재무 책임자", serviceTag: "unit-economics" }
 ] as const;
 
 export type IntakeItemId = (typeof INTAKE_ITEMS)[number]["id"];
@@ -119,7 +119,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mvc-purpose-alignment",
     itemId: "global-mindset",
     weight: 2,
-    question: "왜 해외에 나가야 하는지, 대표님과 경영진이 서로 같은 이유를 말씀하시나요?",
+    question: "왜 글로벌 시장에 진출해야 하는지, 대표님과 경영진이 서로 같은 이유를 말씀하시나요?",
     options: [
       "경영진끼리 이 주제를 따로 맞춰본 적이 없습니다",
       "이야기를 나눠보긴 했지만 각자 설명이 다릅니다",
@@ -134,7 +134,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mvc-stop-criteria",
     itemId: "global-mindset",
     weight: 1.5,
-    question: "해외 진출 성과가 기대에 못 미칠 경우 언제 어떤 조치를 할지 기준을 미리 정해두셨나요?",
+    question: "글로벌 진출 성과가 기대에 못 미칠 경우 언제 어떤 조치를 할지 기준을 미리 정해두셨나요?",
     options: [
       "아직 거기까지 생각해보지 못했습니다",
       "생각은 해봤지만 기준을 정해두지는 않았습니다",
@@ -142,33 +142,33 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "그 기준에 따라 실제로 축소하거나 중단해본 적이 있습니다"
     ],
     followUp: "어떤 지표가 얼마 동안 미달이면 무엇을 하기로 정하셨는지 적어주세요.",
-    action: "계속·축소·피벗·철수를 가르는 지표·기준값·기간을 정해 경영진 승인을 받는다",
+    action: "계속·축소·사업방향 전환(Pivot)·철수를 가르는 지표·기준값·기간을 정해 경영진 승인을 받는다",
     source: "영역4 L2-1 Q3"
   },
   {
     id: "mvc-resource-priority",
     itemId: "global-mindset",
     weight: 1.5,
-    question: "국내 사업과 해외 사업이 같은 인력이나 예산을 놓고 부딪힌 적이 있는지요? 있었다면 어떻게 정하셨나요?",
+    question: "국내 사업과 글로벌 사업이 같은 인력이나 예산을 놓고 부딪힌 적이 있는지요? 있었다면 어떻게 정하셨나요?",
     options: [
-      "아직 해외에 인력이나 예산을 따로 배정하지 않았습니다",
+      "아직 글로벌 사업에 인력이나 예산을 따로 배정하지 않았습니다",
       "배정은 했지만 아직 부딪힌 적은 없습니다",
       "부딪힌 적이 있고 그때그때 판단해서 정했습니다",
       "우선순위 기준이 정해져 있어 그대로 적용합니다"
     ],
     followUp: "가장 최근에 부딪힌 상황과 어느 쪽을 택하셨는지 적어주세요.",
-    action: "국내·해외 자원 충돌 시 우선순위 판단 기준을 문서로 정한다",
+    action: "국내·글로벌 자원(Resource) 충돌 시 우선순위 판단 기준을 문서로 정한다",
     source: "영역4 L2-1 Q5"
   },
   {
     id: "mvc-reference-market",
     itemId: "global-mindset",
     weight: 1,
-    question: "우리 제품·서비스의 가치가 해외 고객에게도 통하는지 확인해 볼 초기 타깃 시장을 정하셨는지요?",
+    question: "우리 제품·서비스의 가치가 글로벌 고객에게도 통하는지 확인해 볼 초기 목표시장(Target Market)을 정하셨는지요?",
     options: [
       "아직 어느 시장을 기준으로 볼지 정하지 못했습니다",
       "국내 시장을 기준으로 보고 있고 아직 검증하는 중입니다",
-      "국내나 특정 해외 시장에서 실제 고객 행동으로 확인했습니다",
+      "국내나 특정 글로벌 시장에서 실제 고객 행동으로 확인했습니다",
       "여러 고객에게서 같은 결과가 반복됐습니다"
     ],
     followUp: "어느 시장의 누가 어떤 행동을 보였는지 적어주세요.",
@@ -179,15 +179,15 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "res-tce",
     itemId: "resources",
     weight: 3,
-    question: "이번 해외 진출에 인증·현지화·인력·법률·물류를 모두 더해 총 얼마가 들지 계산해보셨나요?",
+    question: "이번 글로벌 진출에 인증·현지화(Localization)·인력·법률·물류를 모두 더해 총 얼마가 들지 계산해보셨나요?",
     options: [
       "아직 계산해보지 못했습니다",
       "대략 감은 있지만 항목별로 정리하지는 않았습니다",
-      "인증·현지화·인력·법률·물류·마케팅 등 항목별로 정리했습니다",
+      "인증·현지화(Localization)·인력·법률·물류·마케팅 등 항목별로 정리했습니다",
       "실제 견적과 지출로 항목을 확인하며 갱신하고 있습니다"
     ],
     followUp: "총액과 가장 큰 비용 항목 세 가지를 적어주세요.",
-    action: "인증·현지화·인력·법률·물류·마케팅·지원 비용을 항목별로 합산해 TCE를 산출한다",
+    action: "인증·현지화(Localization)·인력·법률·물류·마케팅·지원 비용을 항목별로 합산해 총 진입비용(Total Cost of Entry)을 산출한다",
     source: "영역4 L2-2 Q1",
     critical: true
   },
@@ -225,7 +225,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "res-owner-time",
     itemId: "resources",
     weight: 1,
-    question: "이번 해외 진출을 책임지고 이끌 담당자가 정해져 있는지요? 그분이 이 일에 쓸 시간은 확보되어 있나요?",
+    question: "이번 글로벌 진출을 책임지고 이끌 담당자가 정해져 있는지요? 그분이 이 일에 쓸 시간은 확보되어 있나요?",
     options: [
       "아직 정하지 않았고 그때그때 나눠서 합니다",
       "사람은 정했지만 다른 업무를 겸하고 있어 쓸 시간이 거의 없습니다",
@@ -319,15 +319,15 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mkt-icp-count",
     itemId: "target-market",
     weight: 2,
-    question: "초기 타깃 시장에 우리 고객이 될 만한 회사가 몇 곳이나 되는지 실제로 세어보셨는지요?",
+    question: "초기 목표시장(Target Market)에 우리 고객이 될 만한 회사가 몇 곳이나 되는지 실제로 세어보셨는지요?",
     options: [
-      "아직 목표 국가를 정하지 못했습니다",
+      "아직 목표국가(Target Country)를 정하지 못했습니다",
       "국가는 정했지만 고객 수는 시장 규모 자료로만 알고 있습니다",
       "구체적인 고객이나 계정을 세어봤습니다",
       "그 명단을 기준으로 실제 접촉을 시작했습니다"
     ],
     followUp: "어떤 고객이 몇 곳인지 적어주세요.",
-    action: "목표 국가의 구매 가능 고객을 명단으로 세어 ICP 계정 수를 산출한다",
+    action: "목표국가(Target Country)의 구매 가능 고객을 명단으로 세어 이상적 고객 프로필(Ideal Customer Profile)에 맞는 계정 수를 산출한다",
     source: "영역3 L2-1 Q1"
   },
   {
@@ -349,7 +349,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "mkt-inbound-signal",
     itemId: "target-market",
     weight: 2,
-    question: "광고나 영업을 하지 않았는데도 해외에서 먼저 들어온 문의나 제안이 있었는지요?",
+    question: "광고나 영업을 하지 않았는데도 글로벌 시장에서 먼저 들어온 문의나 제안이 있었는지요?",
     options: [
       "아직 없습니다",
       "있었지만 어느 나라에서 왜 왔는지 정리하지 않았습니다",
@@ -357,7 +357,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "그 문의가 미팅·샘플·주문으로 이어진 적이 있습니다"
     ],
     followUp: "어느 나라에서 어떤 문의가 왔는지 적어주세요.",
-    action: "광고 이전에 들어온 해외 문의·주문·제안을 국가별로 정리한다",
+    action: "광고 이전에 들어온 글로벌 문의·주문·제안을 국가별로 정리한다",
     source: "영역3 L2-2 Q1"
   },
   {
@@ -562,30 +562,30 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "test-defects",
     itemId: "market-testing",
     weight: 2.5,
-    question: "마켓 테스팅 과정에서 나온 문제들을 기록해 두고 어디까지 해결되었는지 파악하고 계신가요?",
+    question: "시장 실증시험(Market Testing) 과정에서 나온 문제들을 기록해 두고 어디까지 해결되었는지 파악하고 계신가요?",
     options: [
-      "아직 마켓 테스팅을 하지 않아 해당 사항이 없습니다",
-      "마켓 테스팅은 했지만 문제를 따로 기록하지는 않았습니다",
+      "아직 시장 실증시험(Market Testing)을 하지 않아 해당 사항이 없습니다",
+      "시장 실증시험(Market Testing)은 했지만 문제를 따로 기록하지는 않았습니다",
       "나온 문제와 해결 결과를 기록해두었습니다",
       "원인 분석과 재발 방지 조치까지 이어갔습니다"
     ],
     followUp: "나온 문제와 아직 고치지 못한 것을 적어주세요.",
-    action: "마켓 테스팅에서 나온 결함과 해결 결과를 기록하고 아직 해결하지 못한 항목을 남긴다",
+    action: "시장 실증시험(Market Testing)에서 나온 결함과 해결 결과를 기록하고 아직 해결하지 못한 항목을 남긴다",
     source: "영역5 L2-2 Q2"
   },
   {
     id: "test-message-worked",
     itemId: "market-testing",
     weight: 2.5,
-    question: "현지에 홍보한 메시지나 데모 가운데 어떤 것이 실제 문의로 이어졌는지 아시는지요?",
+    question: "현지에 홍보한 메시지나 제품 시연(Demo) 가운데 어떤 것이 실제 문의로 이어졌는지 아시는지요?",
     options: [
       "아직 현지에 홍보해본 적이 없습니다",
       "홍보하기는 했지만 무엇이 통했는지는 모릅니다",
       "문의나 구매로 이어진 메시지를 알고 있습니다",
       "그 메시지가 여러 번 반복해서 통했습니다"
     ],
-    followUp: "어떤 메시지·콘텐츠·데모가 통했는지 적어주세요.",
-    action: "메시지·데모·샘플별로 문의·구매 전환을 나눠 측정한다",
+    followUp: "어떤 메시지·콘텐츠·제품 시연(Demo)이 통했는지 적어주세요.",
+    action: "메시지·제품 시연(Demo)·샘플별로 문의·구매 전환율(Conversion Rate)을 나눠 측정한다",
     source: "영역8 L2-3 Q1"
   },
   {
@@ -612,7 +612,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "그런 관점에서 살펴본 적이 없습니다",
       "걱정은 되지만 구체적인 신호를 확인하지는 못했습니다",
       "실제로 그런 신호나 사례를 확인했습니다",
-      "그 신호를 계획에 반영해 가설을 수정했습니다"
+      "그 신호를 계획에 반영해 가설(Hypothesis)을 수정했습니다"
     ],
     followUp: "어떤 신호였는지, 무엇을 바꾸셨는지 적어주세요.",
     action: "우리 가치가 현지에서 통하지 않는다는 신호를 일부러 찾아 기록한다",
@@ -641,11 +641,11 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     options: [
       "아직 계산해보지 못했습니다",
       "대략 감은 있지만 숫자로 비교해보지는 않았습니다",
-      "마진·리베이트·지원비까지 넣어 비교했습니다",
+      "수익률(Margin)·가격할인 보상(Rebate)·지원비까지 넣어 비교했습니다",
       "실제 거래 결과로 그 비교가 맞는지 확인했습니다"
     ],
     followUp: "두 방식의 건당 손익을 적어주세요.",
-    action: "마진·리베이트·교육·지원비를 넣어 파트너 채널과 직접 판매를 비교한다",
+    action: "수익률(Margin)·가격할인 보상(Rebate)·교육·지원비를 넣어 파트너 채널과 직접 판매를 비교한다",
     source: "영역8 L2-4 Q2"
   },
   {
@@ -657,7 +657,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "아직 만나본 적이 없습니다",
       "몇 명 만났지만 역할이 한쪽에 몰려 있습니다",
       "사용자·구매·유통·조달·규제 등 여러 역할을 만났습니다",
-      "역할별로 충분히 만나 가설을 수정했습니다"
+      "역할별로 충분히 만나 가설(Hypothesis)을 수정했습니다"
     ],
     followUp: "역할별로 몇 명씩 만나셨는지 적어주세요.",
     action: "사용자·구매·유통·조달·규제 역할별로 현지 인터뷰를 진행한다",
@@ -675,7 +675,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "지켜지지 않았을 때 조치하는 절차가 있고 실제로 적용해봤습니다"
     ],
     followUp: "지켜지지 않았던 사례와 그때 하신 조치를 적어주세요.",
-    action: "파트너 파이프라인·판매 약속의 달성 여부를 정기 점검한다",
+    action: "파트너 판매기회 목록(Partner Pipeline)·판매 약속의 달성 여부를 정기 점검한다",
     source: "영역8 L2-4 Q3"
   },
   {
@@ -697,15 +697,15 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "plan-hypothesis-kpi",
     itemId: "local-plan",
     weight: 3,
-    question: "지금 타깃 시장에서 무엇을 검증할지, 그리고 그것을 어떤 지표로 확인할지 정해두셨는지요?",
+    question: "지금 목표시장(Target Market)에서 무엇을 검증할지, 그리고 그것을 어떤 지표로 확인할지 정해두셨는지요?",
     options: [
       "아직 정하지 못했습니다",
       "무엇을 봐야 할지 고민 중입니다",
-      "가설과 지표를 정해두었습니다",
+      "가설(Hypothesis)과 지표를 정해두었습니다",
       "그 지표를 정기적으로 보고 결정에 쓰고 있습니다"
     ],
-    followUp: "가설과 선행·후행 지표를 적어주세요.",
-    action: "현재 단계에서 검증할 가설과 선행·후행 지표를 정의한다",
+    followUp: "가설(Hypothesis)과 선행지표(Leading Indicator)·후행지표(Lagging Indicator)를 적어주세요.",
+    action: "현재 단계에서 검증할 가설(Hypothesis)과 선행지표(Leading Indicator)·후행지표(Lagging Indicator)를 정의한다",
     source: "영역10 L2-1 Q1"
   },
   {
@@ -727,7 +727,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "plan-single-tracker",
     itemId: "local-plan",
     weight: 2,
-    question: "해외 진출의 목표와 실적, 담당자를 한곳에 모아서 보고 계신가요?",
+    question: "글로벌 진출의 목표와 실적, 담당자를 한곳에 모아서 보고 계신가요?",
     options: [
       "따로 관리하는 곳이 없습니다",
       "여러 문서와 메신저에 흩어져 있습니다",
@@ -750,7 +750,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "실제로 되돌린 사례가 있습니다"
     ],
     followUp: "변경 승인과 되돌리기 절차를 적어주세요.",
-    action: "현지화 변경의 버전 관리·승인·되돌리기 절차를 만든다",
+    action: "현지화(Localization) 변경의 버전 관리(Version Control)·승인·되돌리기 절차를 만든다",
     source: "영역5 L2-4 Q4"
   },
   {
@@ -765,7 +765,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "그 사람이 손익까지 책임지고 권한도 함께 갖고 있습니다"
     ],
     followUp: "그 사람이 누구이고 무엇까지 책임지는지 적어주세요.",
-    action: "목표 시장의 매출·손익을 최종 책임질 한 사람을 지정한다",
+    action: "목표시장(Target Market)의 매출·손익을 최종 책임질 한 사람을 지정한다",
     source: "영역9 L2-1 Q1",
     critical: true
   },
@@ -773,7 +773,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "org-continuity",
     itemId: "local-team",
     weight: 1.5,
-    question: "해외 진출을 이끄는 핵심 인력이 자리를 비우더라도 일이 계속 돌아갈 수 있는지요?",
+    question: "글로벌 진출을 이끄는 핵심 인력이 자리를 비우더라도 일이 계속 돌아갈 수 있는지요?",
     options: [
       "생각해본 적이 없습니다",
       "그 사람이 없으면 멈출 것 같습니다",
@@ -834,7 +834,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "contract-control",
     itemId: "partner-contract",
     weight: 2.5,
-    question: "파트너 계약서에 독점 범위·데이터·가격·계약 종료처럼 우리를 지켜 줄 조항이 들어가 있는지요?",
+    question: "파트너 계약서에 독점 범위(Exclusivity Scope)·데이터·가격·계약 종료처럼 우리를 지켜 줄 조항이 들어가 있는지요?",
     options: [
       "아직 계약을 맺지 않았습니다",
       "계약은 있지만 상대방 양식을 그대로 썼습니다",
@@ -872,15 +872,15 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "대체 후보와 예상 시간·비용을 파악하고 있습니다",
       "대체 후보를 실제로 접촉하거나 시험해봤습니다"
     ],
-    followUp: "전환에 드는 시간과 비용을 적어주세요.",
-    action: "대체 파트너 후보와 전환 소요 시간·비용을 파악한다",
+    followUp: "고객 전환비용(Switching Cost)에 해당하는 시간과 비용을 적어주세요.",
+    action: "대체 파트너 후보와 고객 전환비용(Switching Cost)에 해당하는 시간·비용을 파악한다",
     source: "영역7 L2-3 Q4"
   },
   {
     id: "contract-dependency-limit",
     itemId: "partner-contract",
     weight: 1.5,
-    question: "한 파트너에 어느 정도까지 의존해도 되는지 그 한도를 정해두셨는지요?",
+    question: "한 파트너에 어느 정도까지 의존해도 되는지 의존도 허용한도(Dependency Limit)를 정해두셨는지요?",
     options: [
       "생각해본 적이 없습니다",
       "의존도가 크다는 것은 알지만 기준은 없습니다",
@@ -899,11 +899,11 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     options: [
       "아직 정하지 않았습니다",
       "필요할 때마다 그때그때 결정합니다",
-      "마일스톤과 금액이 연결되어 있습니다",
+      "단계별 실행목표(Milestone)와 금액이 연결되어 있습니다",
       "그 기준으로 실제 예산을 집행하거나 보류해봤습니다"
     ],
-    followUp: "마일스톤과 거기에 걸린 금액을 적어주세요.",
-    action: "마일스톤별로 예산을 집행하는 조건을 정한다",
+    followUp: "단계별 실행목표(Milestone)와 거기에 걸린 금액을 적어주세요.",
+    action: "단계별 실행목표(Milestone)별로 예산을 집행하는 조건을 정한다",
     source: "영역4 L2-2 Q5"
   },
   {
@@ -915,7 +915,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "생각해본 적이 없습니다",
       "짐작은 하지만 확인해보지는 않았습니다",
       "어느 공정·시스템·인력이 먼저 막히는지 파악하고 있습니다",
-      "실제로 겪어봤거나 부하 시험을 해봤습니다"
+      "실제로 겪어봤거나 시스템 부하 시험(Load Test)을 해봤습니다"
     ],
     followUp: "가장 먼저 막히는 지점과 그 근거를 적어주세요.",
     action: "수요 급증 시 먼저 무너지는 공정·시스템·인력을 파악한다",
@@ -945,10 +945,10 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
       "따로 보고 있지 않습니다",
       "쏠려 있다는 것은 알지만 기준은 없습니다",
       "허용 비중을 정하고 지켜보고 있습니다",
-      "한도를 넘었을 때 실제로 완화 조치를 해봤습니다"
+      "한도를 넘었을 때 실제로 위험 완화조치(Risk Mitigation)를 해봤습니다"
     ],
     followUp: "현재 가장 큰 고객·채널 비중과 허용 한도를 적어주세요.",
-    action: "단일 고객·채널·공급자 의존 허용 비중과 완화 조치를 정한다",
+    action: "단일 고객·채널·공급자 의존 허용 비중과 위험 완화조치(Risk Mitigation)를 정한다",
     source: "영역10 L2-3 Q2"
   }
 ];

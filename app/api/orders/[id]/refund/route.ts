@@ -60,7 +60,7 @@ export async function POST(
   );
   if (!response.ok) {
     return NextResponse.json(
-      { message: "PG 환불 요청에 실패했습니다." },
+      { message: "결제대행 서비스(Payment Gateway) 환불 요청에 실패했습니다." },
       { status: 502 }
     );
   }

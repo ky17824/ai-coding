@@ -41,7 +41,7 @@ export default async function ProviderPage() {
                     : "검토 대기"}
               </strong>
               <p>
-                승인 후 서비스 유형, 가격, 산출물, 마일스톤과 정산 정보를
+                승인 후 서비스 유형, 가격, 산출물, 단계별 실행목표(Milestone)와 정산 정보를
                 등록할 수 있습니다.
               </p>
             </section>

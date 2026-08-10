@@ -38,7 +38,7 @@ export default async function OrderPage({
           status: "pending",
           amount_krw: 180000,
           service_snapshot: {
-            title: "글로벌 확장 전 Unit Economics 점검",
+            title: "글로벌 확장 전 단위 경제성(Unit Economics) 점검",
             type: "mentoring",
             deliverables: ["핵심 지표 진단표", "90일 개선 우선순위"]
           },

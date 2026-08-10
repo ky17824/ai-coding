@@ -36,7 +36,7 @@ export function buildWorklist(rows: CompanyRow[], now: Date): WorklistItem[] {
       items.push({ ...base, kind: "no-order", label: "진단 후 7일 넘게 주문 없음" });
     }
     if (row.latestAssessment?.gateMessages.length) {
-      items.push({ ...base, kind: "gate-blocked", label: "Critical Gate 차단" });
+      items.push({ ...base, kind: "gate-blocked", label: "필수 단계 통과 기준(Stage Gate) 차단" });
     }
     if (row.orders.some((order) => order.status === "paid")) {
       items.push({ ...base, kind: "paid-not-started", label: "결제 후 서비스 미시작" });

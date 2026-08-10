@@ -146,7 +146,7 @@ export function CheckoutButton({
       )}
       <small>
         Borderless는 통신판매중개자이며, 서비스 제공 당사자는 해당
-        전문가입니다. 카드정보는 PortOne·PG 결제창에서 처리됩니다.
+        전문가입니다. 카드정보는 PortOne·결제대행 서비스(Payment Gateway) 결제창에서 처리됩니다.
       </small>
     </div>
   );

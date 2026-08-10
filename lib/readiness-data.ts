@@ -2,7 +2,7 @@ export const JOURNEY_PHASES = [
   {
     id: "pre_entry" as const,
     label: "진출 전",
-    description: "교두보 시장과 진입 가설을 증거로 확인합니다.",
+    description: "초기 집중시장(Beachhead Market)과 진입 가설(Hypothesis)을 증거로 확인합니다.",
     steps: [1, 2, 3, 4, 5, 6, 7, 8]
   },
   {

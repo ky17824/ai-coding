@@ -37,7 +37,7 @@ export default async function DashboardPage() {
           {incomplete && <IncompleteProfile />}
           <div className="empty-state panel">
             <strong>{organization?.name ?? "우리 회사"}의 첫 진단을 시작하세요.</strong>
-            <p>현재 단계의 문항을 마치면 Gate 결과와 실행 액션이 여기에 저장됩니다.</p>
+            <p>현재 단계의 문항을 마치면 단계 통과 기준(Stage Gate) 결과와 실행 액션이 여기에 저장됩니다.</p>
             <Link href="/assessment" className="button button--primary">무료 준비도 진단</Link>
           </div>
         </div>
@@ -78,7 +78,7 @@ export default async function DashboardPage() {
         {incomplete && <IncompleteProfile />}
         <div className="dashboard-heading">
           <span>
-            <span className="page-kicker">{organization?.name ?? "우리 회사"} · GLOBAL JOURNEY</span>
+            <span className="page-kicker">{organization?.name ?? "우리 회사"} · 글로벌 진출 여정(Global Journey)</span>
             <h1 className="page-title">{profile.display_name}님, 이어서 진출 준비를 진행하세요.</h1>
             <p className="page-description">최근 진단 결과와 아직 완료하지 않은 액션을 기준으로 정리해 드렸습니다.</p>
           </span>
@@ -88,7 +88,7 @@ export default async function DashboardPage() {
         <section className="dashboard-overview">
           <article className="readiness-summary panel">
             <div className="summary-title">
-              <span><small>GLOBAL READINESS</small><h2>단계별 준비도</h2></span>
+              <span><small>시장진입 준비도(Global Readiness)</small><h2>단계별 준비도</h2></span>
               <span className="summary-score"><strong>{assessment.overall_score}</strong><small>{assessment.status_label} 단계</small></span>
             </div>
             <div className="domain-bars">
@@ -101,7 +101,7 @@ export default async function DashboardPage() {
             </div>
           </article>
           <article className="next-session panel">
-            <span className="page-kicker">LATEST ASSESSMENT</span>
+            <span className="page-kicker">최근 진단(Latest Assessment)</span>
             <h2>{new Date(assessment.completed_at).toLocaleDateString("ko-KR")} 진단</h2>
             <p>{assessment.is_on_hold ? `확인이 필요한 선결 조건 ${gateMessages.length}건` : "현재 단계의 선결 조건을 모두 통과했습니다."}</p>
             <Link href="/assessment" className="button button--ghost button--full">응답 다시 보기</Link>
@@ -109,14 +109,14 @@ export default async function DashboardPage() {
         </section>
 
         {gateMessages.length > 0 && (
-          <section className="hold-banner"><div><span>GATE CHECK</span><h2>먼저 해결해야 할 선결 조건</h2></div><ul>{gateMessages.map((message) => <li key={message}>{message}</li>)}</ul></section>
+          <section className="hold-banner"><div><span>단계 통과 기준(Stage Gate) 확인</span><h2>먼저 해결해야 할 선결 조건</h2></div><ul>{gateMessages.map((message) => <li key={message}>{message}</li>)}</ul></section>
         )}
 
         <section className="dashboard-section">
           <div className="dashboard-section__heading">
             <span>
-              <span className="page-kicker">AI GTM PLAN</span>
-              <h2 className="plan-summary">{plan?.summary || "진단 결과를 30·60·90일 실행 계획으로 바꿔 보세요."}</h2>
+              <span className="page-kicker">AI GTM 계획(AI GTM Plan)</span>
+              <h2 className="plan-summary">{plan?.summary || "진단 결과를 단계별 실행계획(30·60·90 Day Plan)으로 바꿔 보세요."}</h2>
             </span>
             <Link href={`/assistant/${assessment.id}`} className="button button--primary">
               {plan ? "AI 계획 이어가기" : "AI 계획 만들기"} →
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
                 <article className="dashboard-action panel" key={item.id}>
                   <span className="action-index">{String(index + 1).padStart(2, "0")}</span>
                   <div>
-                    <span className={`priority priority--${item.priority}`}>{item.priority} · {item.horizon}일</span>
+                    <span className={`priority priority--${item.priority}`}>{item.priority === "P0" ? "우선순위 0(Priority 0)" : "우선순위 1(Priority 1)"} · {item.horizon}일</span>
                     <h3>{item.title}</h3>
                     <p>{item.owner_label} · {item.due_date}{item.expert_required ? " · 전문가 확인 필요" : ""}</p>
                   </div>
@@ -140,12 +140,12 @@ export default async function DashboardPage() {
         </section>
 
         <section className="dashboard-section">
-          <div className="dashboard-section__heading"><span><span className="page-kicker">PRIORITY ACTIONS</span><h2>이번 진단의 실행 액션</h2></span></div>
+          <div className="dashboard-section__heading"><span><span className="page-kicker">우선 실행항목(Priority Actions)</span><h2>이번 진단의 실행 액션</h2></span></div>
           <div className="dashboard-action-list">
             {(actions ?? []).map((action, index) => (
               <article className="dashboard-action panel" key={action.id}>
                 <span className="action-index">{String(index + 1).padStart(2, "0")}</span>
-                <div><span className={`priority priority--${action.urgency}`}>{action.urgency}</span><h3>{action.title}</h3><p>{action.owner_label} · {action.completion_evidence}{action.due_date ? ` · ${action.due_date}` : ""}</p></div>
+                <div><span className={`priority priority--${action.urgency}`}>{action.urgency === "P0" ? "우선순위 0(Priority 0)" : "우선순위 1(Priority 1)"}</span><h3>{action.title}</h3><p>{action.owner_label} · {action.completion_evidence}{action.due_date ? ` · ${action.due_date}` : ""}</p></div>
                 <strong>{action.completed_at ? "완료" : "진행 전"}</strong>
               </article>
             ))}
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
 
         {recommended.length > 0 && (
           <section className="dashboard-section">
-            <div className="dashboard-section__heading"><span><span className="page-kicker">RECOMMENDED</span><h2>현재 액션에 맞는 전문가 서비스</h2></span><Link href="/services" className="text-link">전체 보기 →</Link></div>
+            <div className="dashboard-section__heading"><span><span className="page-kicker">추천(Recommended)</span><h2>현재 액션에 맞는 전문가 서비스</h2></span><Link href="/services" className="text-link">전체 보기 →</Link></div>
             <div className="service-grid">{recommended.map((service) => <ServiceCard key={service.id} service={service} />)}</div>
           </section>
         )}

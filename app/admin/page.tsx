@@ -154,7 +154,7 @@ export default async function AdminPage({
         </section>
 
         <section className="admin-section">
-          <h2>진단 퍼널</h2>
+          <h2>진단 고객 전환 단계(Funnel)</h2>
           <div className="funnel-row">{funnel.map((step) => <div className="panel" key={step.label}><span>{step.label}</span><strong>{step.count}</strong></div>)}</div>
         </section>
 
@@ -163,7 +163,7 @@ export default async function AdminPage({
           <div className="admin-metrics">
             {[
               ["진단 완료율", `${operationalMetrics.assessmentCompletionRate}%`],
-              ["진단→주문 전환율", `${operationalMetrics.assessmentToOrderRate}%`],
+              ["진단→주문 전환율(Conversion Rate)", `${operationalMetrics.assessmentToOrderRate}%`],
               ["첫 주문까지", operationalMetrics.averageDaysToFirstOrder === null ? "-" : `${operationalMetrics.averageDaysToFirstOrder}일`],
               ["리뷰 평균", operationalMetrics.averageReviewRating === null ? "-" : `${operationalMetrics.averageReviewRating}점`]
             ].map(([label, value]) => <div className="panel" key={label}><span>{label}</span><strong>{value}</strong></div>)}
@@ -175,7 +175,7 @@ export default async function AdminPage({
           <form className="admin-filters">
             <input name="q" defaultValue={query.q} placeholder="회사명·담당자 검색" />
             <select name="stage" defaultValue={query.stage ?? ""}><option value="">전체 단계</option><option>극초기</option><option>준비중</option><option>준비완료</option><option>진출 실행 가능</option></select>
-            <select name="gate" defaultValue={query.gate ?? ""}><option value="">Gate 전체</option><option value="blocked">Gate 차단</option></select>
+            <select name="gate" defaultValue={query.gate ?? ""}><option value="">단계 통과 기준(Stage Gate) 전체</option><option value="blocked">단계 통과 기준(Stage Gate) 차단</option></select>
             <select name="order" defaultValue={query.order ?? ""}><option value="">주문 전체</option><option value="yes">주문 있음</option><option value="no">주문 없음</option></select>
             <input aria-label="진단 시작일" name="from" type="date" defaultValue={query.from} />
             <input aria-label="진단 종료일" name="to" type="date" defaultValue={query.to} />
@@ -183,7 +183,7 @@ export default async function AdminPage({
             <button className="button button--dark">조회</button>
           </form>
           <div className="table-scroll panel">
-            <table className="admin-table"><thead><tr><th>회사</th><th>담당자</th><th>최근 진단</th><th>점수</th><th>Gate</th><th>액션</th><th>주문</th><th>최근 활동</th></tr></thead><tbody>
+            <table className="admin-table"><thead><tr><th>회사</th><th>담당자</th><th>최근 진단</th><th>점수</th><th>단계 통과 기준(Stage Gate)</th><th>액션</th><th>주문</th><th>최근 활동</th></tr></thead><tbody>
               {shown.map((row) => <tr key={row.organizationId}>
                 <td><Link href={`/admin/companies/${row.organizationId}`}>{row.companyName}</Link></td>
                 <td>{row.contactName ?? "-"}{row.jobTitle ? ` · ${row.jobTitle}` : ""}</td>

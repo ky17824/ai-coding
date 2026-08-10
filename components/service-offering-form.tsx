@@ -61,7 +61,7 @@ export function ServiceOfferingForm() {
         </label>
       )}
       <label>
-        <span>결과물·마일스톤</span>
+        <span>결과물·단계별 실행목표(Milestone)</span>
         <textarea
           name="deliverables"
           rows={5}

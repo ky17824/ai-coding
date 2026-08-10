@@ -83,7 +83,7 @@ export function Landing({ locale }: { locale: Locale }) {
                     <small>{m.preview.actionEyebrow}</small>
                     <strong>{m.preview.actionLabel}</strong>
                   </span>
-                  <span className="pill">P0</span>
+                  <span className="pill">우선순위 0(Priority 0)</span>
                 </div>
               </div>
             </div>

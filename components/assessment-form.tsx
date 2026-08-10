@@ -230,7 +230,7 @@ export function AssessmentForm({
       <div className="assessment-result">
         <div className="result-hero panel">
           <div>
-            <span className="page-kicker">READINESS RESULT</span>
+            <span className="page-kicker">시장진입 준비도(Global Readiness) 결과</span>
             <h1>
               지금은 <em>{result.status}</em> 단계입니다.
             </h1>
@@ -268,7 +268,7 @@ export function AssessmentForm({
         {result.isOnHold && (
           <section className="hold-banner" aria-labelledby="hold-title">
             <div>
-              <span>GATE {current?.gate}</span>
+              <span>단계 통과 기준(Stage Gate) {current?.gate}</span>
               <h2 id="hold-title">
                 {current?.label} 단계를 아직 통과하지 못했습니다.
               </h2>
@@ -284,7 +284,7 @@ export function AssessmentForm({
         <section className="result-section">
           <div className="section-heading section-heading--row">
             <span>
-              <span className="page-kicker">PHASE GATES</span>
+              <span className="page-kicker">단계별 통과 기준(Stage Gate)</span>
               <h2>단계별 통과 현황</h2>
             </span>
             <button
@@ -299,7 +299,7 @@ export function AssessmentForm({
             {result.stages.map((entry) => (
               <div className="domain-score panel" key={entry.stageId}>
                 <span>
-                  {entry.label} · Gate {entry.gate}
+                  {entry.label} · 단계 통과 기준(Stage Gate) {entry.gate}
                 </span>
                 <strong>{result.domainScores[entry.stageId]}%</strong>
                 <div className="meter">
@@ -319,7 +319,7 @@ export function AssessmentForm({
 
         {result.actions.length > 0 && (
           <section className="result-section">
-            <span className="page-kicker">NEXT ACTIONS</span>
+            <span className="page-kicker">다음 실행항목(Next Actions)</span>
             <h2>{current?.label} 단계를 열기 위해 먼저 할 일</h2>
             <div className="action-list">
               {result.actions.map((action, index) => (
@@ -328,7 +328,9 @@ export function AssessmentForm({
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className={`priority priority--${action.urgency}`}>
-                    {action.urgency}
+                    {action.urgency === "P0"
+                      ? "우선순위 0(Priority 0)"
+                      : "우선순위 1(Priority 1)"}
                   </span>
                   <div>
                     <h3>{action.title}</h3>
@@ -343,7 +345,7 @@ export function AssessmentForm({
         )}
 
         <section className="result-section">
-          <span className="page-kicker">ROADMAP</span>
+          <span className="page-kicker">실행 일정표(Roadmap)</span>
           <h2>전체 준비 순서</h2>
           <div className="journey-overview panel">
             {result.stages.map((entry, index) => (
@@ -354,7 +356,7 @@ export function AssessmentForm({
                   {entry.passed ? "✓" : index + 1}
                 </span>
                 <div>
-                  <small>Gate {entry.gate} · 배점 {entry.totalScore}점</small>
+                  <small>단계 통과 기준(Stage Gate) {entry.gate} · 배점 {entry.totalScore}점</small>
                   <h3>{entry.label}</h3>
                   <p>{entry.unlocks}</p>
                 </div>
@@ -367,7 +369,7 @@ export function AssessmentForm({
         <section className="result-section">
           <div className="section-heading section-heading--row">
             <span>
-              <span className="page-kicker">EXPERT SERVICES</span>
+              <span className="page-kicker">전문가 서비스(Expert Services)</span>
               <h2>
                 {matched.length > 0
                   ? "현재 액션에 맞는 전문가"
@@ -391,8 +393,8 @@ export function AssessmentForm({
   return (
     <div className="assessment-layout">
       <aside className="assessment-sidebar panel">
-        <span className="page-kicker">GLOBAL READINESS</span>
-        <h1>해외 진출 준비도 진단</h1>
+        <span className="page-kicker">시장진입 준비도(Global Readiness)</span>
+        <h1>글로벌 진출 준비도 진단</h1>
         <p>
           {INTAKE_QUESTIONS.length}개 문항으로 극초기·준비중·준비완료 세 단계를
           진단합니다. 아직 하지 않은 항목을 고르셔도 불이익은 없습니다.
@@ -461,7 +463,7 @@ export function AssessmentForm({
         )}
         <div className="question-heading">
           <span>
-            단계 {activeStage + 1} / {STAGES.length} · Gate {stage.gate}
+            단계 {activeStage + 1} / {STAGES.length} · 단계 통과 기준(Stage Gate) {stage.gate}
           </span>
           <h2>{stage.label}</h2>
           <p>{stage.intro}</p>

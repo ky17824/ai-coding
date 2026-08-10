@@ -38,11 +38,11 @@ const ko = {
     signIn: "로그인"
   },
   hero: {
-    eyebrow: "Global GTM Journey",
+    eyebrow: "글로벌 GTM 여정(Global GTM Journey)",
     // 각 줄은 <span><em>{em}</em>{after}</span> 로 렌더된다. 3줄 stagger 애니메이션이
     // 이 구조에 의존하므로 줄 수를 바꾸지 말 것.
     headline: [
-      { em: "해외 진출", after: "," },
+      { em: "글로벌 진출", after: "," },
       { em: "준비", after: "된 만큼" },
       { em: "성공", after: "할 수 있습니다" }
     ],
@@ -54,12 +54,12 @@ const ko = {
   },
   preview: {
     ariaLabel: "준비도 대시보드 미리보기",
-    windowTitle: "Readiness overview",
-    scoreEyebrow: "GLOBAL READINESS",
+    windowTitle: "시장진입 준비도(Global Readiness) 개요",
+    scoreEyebrow: "시장진입 준비도(Global Readiness)",
     scoreLabel: "진출 준비도",
-    chartLabels: ["시장", "리더십", "선정", "현지화", "조직", "GTM"],
+    chartLabels: ["시장", "리더십", "선정", "현지화(Localization)", "조직", "GTM"],
     actionEyebrow: "가장 먼저 할 일",
-    actionLabel: "보안·컴플라이언스 갭 분석",
+    actionLabel: "보안·법규 준수(Compliance) 차이 분석(Gap Analysis)",
     evidenceTitle: "근거 기반 진단",
     evidenceNote: "완료하려면 증빙이 필요합니다",
     expertAvatar: "김",
@@ -69,20 +69,20 @@ const ko = {
   trust: {
     ariaLabel: "서비스 원칙",
     items: [
-      "실리콘밸리 현지화 방법론 기반",
-      "근거 중심 준비도(Readiness) 예비진단",
+      "실리콘밸리 현지화(Localization) 방법론 기반",
+      "근거 중심 시장진입 준비도(Global Readiness) 예비진단",
       "AI-GTM 어시스턴트 계획 작성 지원",
       "실전 경험을 갖춘 전문가 서비스"
     ]
   },
   steps: {
-    eyebrow: "HOW IT WORKS",
+    eyebrow: "이용 방법(How It Works)",
     // <br /> 위치를 코드가 아닌 데이터로 유지한다.
-    headingLines: ["막연한 해외 진출을", "실행 가능한 여정으로"],
+    headingLines: ["막연한 글로벌 진출을", "실행 가능한 여정으로"],
     items: [
       {
         number: "01",
-        title: "대표님 회사의 해외 진출 준비도를 확인하세요",
+        title: "대표님 회사의 글로벌 진출 준비도를 확인하세요",
         description:
           "55개 문항에 답하시면 극초기·준비중·준비완료 가운데 지금 어느 단계인지 알려드립니다."
       },
@@ -96,7 +96,7 @@ const ko = {
         number: "03",
         title: "AI-GTM 어시스턴트가 계획 작성을 돕습니다",
         description:
-          "진단 결과와 타깃 시장을 반영해 GTM 실행 계획 초안을 만들어 드리면, 대표님이 검토해 확정하십니다."
+          "진단 결과와 목표시장(Target Market)을 반영해 GTM 실행 계획 초안을 만들어 드리면, 대표님이 검토해 확정하십니다."
       },
       {
         number: "04",
