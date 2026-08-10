@@ -11,6 +11,7 @@ import {
   decidePlanHorizons,
   hasPassedStage,
   isCompleteStageAnswerSet,
+  normalizeGateMessage,
   questionsOfStage,
   validateAssessmentAnswers
 } from "@/lib/readiness";
@@ -77,6 +78,11 @@ describe("intake question set", () => {
 });
 
 describe("phase gate", () => {
+  it("removes the repeated legacy prerequisite prefix", () => {
+    expect(normalizeGateMessage("필수 선결 조건이 남았습니다 — 총 진입비용을 계산해 주세요."))
+      .toBe("총 진입비용을 계산해 주세요.");
+  });
+
   it("accepts only complete stage prefixes", () => {
     const early = new Set(questionsOfStage("early").map((question) => question.id));
     const earlyAnswers = answerAll(1).filter((answer) => early.has(answer.questionId));

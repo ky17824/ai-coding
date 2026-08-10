@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { GtmAssistant } from "@/components/gtm-assistant";
 import { SiteHeader } from "@/components/site-header";
+import { normalizeGateMessage } from "@/lib/readiness";
 import type { GtmMarketResearch, GtmPlanItem, StoredGtmPlan } from "@/lib/types";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 
@@ -101,7 +102,9 @@ export default async function AssistantPage({
           score: assessment.overall_score,
           status: assessment.status_label,
           isOnHold: assessment.is_on_hold,
-          gateMessages: (assessment.gate_messages as string[]) ?? [],
+          gateMessages: [...new Set(
+            ((assessment.gate_messages as string[]) ?? []).map(normalizeGateMessage)
+          )],
           targetCountry: assessment.target_country ?? "",
           targetCustomer: assessment.target_customer_segment ?? ""
         }}
