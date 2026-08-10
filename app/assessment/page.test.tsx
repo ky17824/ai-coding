@@ -21,7 +21,7 @@ vi.mock("@/lib/supabase/server", () => ({
           select: () => ({
             eq: () => ({
               single: async () => ({
-                data: { role: "startup", organization_id: "org-1" }
+                data: { organization_id: "org-1" }
               })
             })
           })
@@ -50,7 +50,7 @@ describe("returning founder assessment entry", () => {
     mocks.redirect.mockClear();
   });
 
-  it("sends a founder with a previous assessment to the dashboard", async () => {
+  it("sends an organization member with a previous assessment to the dashboard", async () => {
     mocks.assessment = { id: "assessment-1" };
 
     await expect(AssessmentPage({ searchParams: Promise.resolve({}) }))

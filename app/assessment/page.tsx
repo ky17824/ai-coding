@@ -18,11 +18,11 @@ export default async function AssessmentPage({
     const admin = createSupabaseAdminClient();
     const { data: profile } = admin
       ? await admin.from("profiles")
-          .select("role,organization_id")
+          .select("organization_id")
           .eq("id", user.id)
           .single()
       : { data: null };
-    const { data: previousAssessment } = profile?.role === "startup" && profile.organization_id
+    const { data: previousAssessment } = profile?.organization_id
       ? await admin!.from("assessments")
           .select("id")
           .eq("organization_id", profile.organization_id)
