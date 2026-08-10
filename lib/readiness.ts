@@ -7,6 +7,7 @@ import {
 import type {
   ActionRecommendation,
   ReadinessAnswer,
+  ReadinessLevel,
   ReadinessResult,
   ReadinessStatus,
   StageResult
@@ -18,11 +19,86 @@ export const GATE_THRESHOLD = 0.8;
 export const STAGES = INTAKE_STAGES;
 
 const ITEM = new Map(INTAKE_ITEMS.map((item) => [item.id, item]));
+const LEVEL_MEANING: Record<ReadinessLevel, string> = {
+  1: "아직 검토하거나 시작하지 않은 상태입니다.",
+  2: "필요성은 인지했지만 실행 또는 확인 가능한 증거가 부족합니다.",
+  3: "실행 사례가 있어 단계 통과 점수로 인정됩니다.",
+  4: "반복 실행 또는 외부 확인이 된 강점으로 단계 통과 점수에 인정됩니다."
+};
+type AnswerInsightStatus = "blocker" | "needs_work" | "passed" | "strength";
 
 export const questionsOfStage = (stageId: string) =>
   INTAKE_QUESTIONS.filter(
     (question) => ITEM.get(question.itemId)!.stageId === stageId
   );
+
+export function buildStageAnswerInsights(
+  submitted: ReadinessAnswer[],
+  stageId: string
+) {
+  const stage = INTAKE_STAGES.find((entry) => entry.id === stageId);
+  if (!stage) throw new Error(`Unknown readiness stage: ${stageId}`);
+
+  const answerById = new Map(submitted.map((answer) => [answer.questionId, answer]));
+  const stageQuestions = questionsOfStage(stageId);
+  const answers = stageQuestions.flatMap((question) => {
+    const answer = answerById.get(question.id);
+    if (!answer) return [];
+    const status: AnswerInsightStatus = answer.level < POSITIVE_LEVEL
+      ? question.critical ? "blocker" : "needs_work"
+      : answer.level === 4 ? "strength" : "passed";
+    const statusLabel = status === "blocker"
+      ? "필수 선결 조건"
+      : status === "needs_work"
+        ? "보완 필요"
+        : status === "strength" ? "강점" : "통과";
+
+    return [{
+      questionId: question.id,
+      number: INTAKE_QUESTIONS.indexOf(question) + 1,
+      question: question.question,
+      level: answer.level,
+      answerText: question.options[answer.level - 1],
+      meaning: LEVEL_MEANING[answer.level],
+      status,
+      statusLabel,
+      action: answer.level < POSITIVE_LEVEL ? question.action : null,
+      completionEvidence: answer.evidence?.value || question.followUp,
+      hasEvidence: Boolean(answer.evidence?.value)
+    }];
+  });
+  const counts: Record<AnswerInsightStatus, number> = {
+    blocker: 0,
+    needs_work: 0,
+    passed: 0,
+    strength: 0
+  };
+  for (const answer of answers) counts[answer.status] += 1;
+  const items = INTAKE_ITEMS.filter((item) => item.stageId === stageId).map((item) => {
+    const itemQuestions = stageQuestions.filter((question) => question.itemId === item.id);
+    return {
+      id: item.id,
+      label: item.label,
+      totalWeight: item.weight,
+      segments: ([1, 2, 3, 4] as ReadinessLevel[]).map((level) => {
+        const weight = itemQuestions
+          .filter((question) => answerById.get(question.id)?.level === level)
+          .reduce((sum, question) => sum + question.weight, 0);
+        return { level, weight, percent: (weight / item.weight) * 100 };
+      })
+    };
+  });
+
+  return {
+    stageId,
+    stageLabel: stage.label,
+    gate: stage.gate,
+    score: calculateReadiness(submitted).domainScores[stageId] ?? 0,
+    counts,
+    items,
+    answers
+  };
+}
 
 export function isCompleteStageAnswerSet(answers: ReadinessAnswer[]) {
   const answered = new Set(answers.map((answer) => answer.questionId));

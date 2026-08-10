@@ -6,6 +6,7 @@ import {
 } from "@/lib/intake-questions";
 import {
   GATE_THRESHOLD,
+  buildStageAnswerInsights,
   calculateReadiness,
   hasPassedStage,
   isCompleteStageAnswerSet,
@@ -169,5 +170,65 @@ describe("phase gate", () => {
     expect(result.achievedStageId).toBeNull();
     expect(result.currentStageId).toBe("early");
     expect(result.actions.every((a) => a.phase === "pre_entry")).toBe(true);
+  });
+});
+
+describe("dashboard answer insights", () => {
+  it("restores selected answers and classifies their meaning", () => {
+    const earlyQuestions = questionsOfStage("early");
+    const critical = earlyQuestions.find((question) => question.critical)!;
+    const ordinary = earlyQuestions.find((question) => !question.critical)!;
+    const answers: ReadinessAnswer[] = earlyQuestions.map((question) => ({
+      questionId: question.id,
+      level: question.id === critical.id
+        ? 2
+        : question.id === ordinary.id
+          ? 4
+          : 3
+    }));
+
+    const insight = buildStageAnswerInsights(answers, "early");
+    const criticalInsight = insight.answers.find(
+      (answer) => answer.questionId === critical.id
+    );
+    const strengthInsight = insight.answers.find(
+      (answer) => answer.questionId === ordinary.id
+    );
+
+    expect(criticalInsight).toMatchObject({
+      answerText: critical.options[1],
+      status: "blocker",
+      statusLabel: "필수 선결 조건"
+    });
+    expect(strengthInsight).toMatchObject({
+      answerText: ordinary.options[3],
+      status: "strength",
+      statusLabel: "강점"
+    });
+    expect(insight.counts.blocker).toBe(1);
+    expect(insight.counts.strength).toBe(1);
+  });
+
+  it("builds item distributions that preserve each item weight", () => {
+    const earlyQuestions = questionsOfStage("early");
+    const answers: ReadinessAnswer[] = earlyQuestions.map((question, index) => ({
+      questionId: question.id,
+      level: ((index % 4) + 1) as ReadinessLevel
+    }));
+    const insight = buildStageAnswerInsights(answers, "early");
+
+    for (const item of insight.items) {
+      expect(sum(item.segments.map((segment) => segment.weight))).toBeCloseTo(
+        item.totalWeight,
+        10
+      );
+      expect(sum(item.segments.map((segment) => segment.percent))).toBeCloseTo(
+        100,
+        1
+      );
+    }
+    expect(insight.score).toBe(
+      calculateReadiness(answers).domainScores.early
+    );
   });
 });
