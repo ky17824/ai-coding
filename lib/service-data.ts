@@ -1,4 +1,5 @@
 import type { ServiceOffering } from "@/lib/types";
+import type { Locale } from "@/lib/i18n";
 
 export const SAMPLE_SERVICES: ServiceOffering[] = [
   {
@@ -125,9 +126,59 @@ export const SAMPLE_SERVICES: ServiceOffering[] = [
   }
 ];
 
-export function recommendServices(tags: string[], limit = 3) {
+const ENGLISH_SERVICE_COPY: Record<string, Pick<ServiceOffering, "providerTitle" | "title" | "description" | "durationLabel" | "deliverables">> = {
+  "svc-unit-economics": {
+    providerTitle: "B2B SaaS Revenue Operations Partner",
+    title: "Unit Economics Review Before Global Expansion",
+    description: "Using your current customer data, we will validate how you calculate customer lifetime value, customer acquisition cost, CAC payback period, and net revenue retention, then set improvement priorities.",
+    durationLabel: "90 minutes",
+    deliverables: ["Core metrics diagnostic", "90-day improvement priorities"]
+  },
+  "svc-market-validation": {
+    providerTitle: "Former KOTRA Market Development PM",
+    title: "Beachhead Market Validation Sprint",
+    description: "Narrow your ideal customer profile and test bottom-up market size, customer interviews, and organic demand signals over three weeks.",
+    durationLabel: "3 weeks",
+    deliverables: ["Market priority matrix", "Interview guide", "Bottom-up market sizing"]
+  },
+  "svc-leadership": {
+    providerTitle: "Global Organization & Strategy Advisor",
+    title: "Executive Alignment for Global Expansion",
+    description: "Align leadership on a two- to three-year resource plan, headquarters and local decision rights, and clear stop criteria in a one-page operating agreement.",
+    durationLabel: "90 minutes",
+    deliverables: ["Leadership alignment checklist", "Draft decision-rights map"]
+  },
+  "svc-compliance": {
+    providerTitle: "Global Privacy & Security Consultant",
+    title: "Global B2B Security and Compliance Gap Analysis",
+    description: "Identify gaps between target-customer security, privacy, and procurement requirements and your current state, then build a practical roadmap.",
+    durationLabel: "4 weeks",
+    deliverables: ["Requirements gap analysis", "Owner and roadmap", "Expert-review scope"]
+  },
+  "svc-gtm-motion": {
+    providerTitle: "Global B2B GTM Lead",
+    title: "Design Your First International GTM Motion",
+    description: "Select one primary GTM motion based on price and buying complexity, then design the validation funnel and stop criteria.",
+    durationLabel: "3 weeks",
+    deliverables: ["One-page GTM canvas", "Experiment backlog", "Minimum viable dashboard"]
+  },
+  "svc-funding": {
+    providerTitle: "Export Support Program Mentor",
+    title: "Export Voucher and Global Support Program Matching",
+    description: "Shortlist only currently available programs that fit your company and organize the evidence and timeline needed before applying.",
+    durationLabel: "60 minutes",
+    deliverables: ["Program shortlist", "Application-readiness checklist"]
+  }
+};
+
+export function getSampleServices(locale: Locale = "ko") {
+  if (locale === "ko") return SAMPLE_SERVICES;
+  return SAMPLE_SERVICES.map((service) => ({ ...service, ...ENGLISH_SERVICE_COPY[service.id] }));
+}
+
+export function recommendServices(tags: string[], limit = 3, locale: Locale = "ko") {
   const wanted = new Set(tags);
-  return SAMPLE_SERVICES.filter(
+  return getSampleServices(locale).filter(
     (service) =>
       service.approved && service.tags.some((tag) => wanted.has(tag))
   )

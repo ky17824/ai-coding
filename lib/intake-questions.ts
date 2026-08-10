@@ -1,3 +1,6 @@
+import type { Locale } from "@/lib/i18n";
+import { EN_ITEM_COPY, EN_QUESTION_COPY, EN_STAGE_COPY } from "@/lib/intake-questions.en";
+
 /**
  * 창업자 자가진단 55문항.
  *
@@ -29,8 +32,11 @@ const PARTICLE_AFTER_BATCHIM: Record<string, string> = {
 };
 
 /** 문항·보기·액션 문구를 대표님이 파는 것에 맞춰 좁힌다. 모르면 그대로 둔다. */
-export function applyOffering(text: string, offering: OfferingType): string {
+export function applyOffering(text: string, offering: OfferingType, locale: Locale = "ko"): string {
   if (offering === "both") return text;
+  if (locale === "en") {
+    return text.replaceAll("product or service", offering);
+  }
   const word = offering === "product" ? "제품" : "서비스";
   return text.replace(/제품·서비스([가를는와])?/g, (_match, particle?: string) => {
     if (!particle) return word;
@@ -952,3 +958,21 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     source: "영역10 L2-3 Q2"
   }
 ];
+
+export function getIntakeStages(locale: Locale) {
+  if (locale === "ko") return INTAKE_STAGES.map((stage) => ({ ...stage }));
+  return INTAKE_STAGES.map((stage) => ({ ...stage, ...EN_STAGE_COPY[stage.id] }));
+}
+
+export function getIntakeItems(locale: Locale) {
+  if (locale === "ko") return INTAKE_ITEMS.map((item) => ({ ...item }));
+  return INTAKE_ITEMS.map((item) => ({ ...item, ...EN_ITEM_COPY[item.id] }));
+}
+
+export function getIntakeQuestions(locale: Locale): IntakeQuestion[] {
+  if (locale === "ko") return INTAKE_QUESTIONS;
+  return INTAKE_QUESTIONS.map((question) => ({
+    ...question,
+    ...EN_QUESTION_COPY[question.id]
+  }));
+}

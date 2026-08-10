@@ -16,6 +16,7 @@ const answerSchema = z.object({
 });
 const requestSchema = z.object({
   answers: z.array(answerSchema).min(1).max(55),
+  locale: z.enum(["ko", "en"]).default("ko"),
   offering: z.enum(["both", "product", "service"]).default("both"),
   targetMarket: z.object({
     targetCountry: z.string().trim().max(100).default(""),
@@ -26,16 +27,17 @@ const requestSchema = z.object({
 
 export async function POST(request: Request) {
   const parsed = requestSchema.safeParse(await request.json());
+  const locale = parsed.success ? parsed.data.locale : "ko";
   if (!parsed.success) {
     return NextResponse.json(
-      { message: "완료한 단계의 진단 응답을 확인해 주세요." },
+      { message: locale === "en" ? "Review the responses in the completed stage." : "완료한 단계의 진단 응답을 확인해 주세요." },
       { status: 400 }
     );
   }
-  const validation = validateAssessmentAnswers(parsed.data.answers);
+  const validation = validateAssessmentAnswers(parsed.data.answers, locale);
   if (!validation.valid) {
     return NextResponse.json(
-      { message: "응답 값을 확인해 주세요.", errors: validation.errors },
+      { message: locale === "en" ? "Review the selected responses." : "응답 값을 확인해 주세요.", errors: validation.errors },
       { status: 400 }
     );
   }
@@ -48,14 +50,14 @@ export async function POST(request: Request) {
   const result = calculateReadiness(parsed.data.answers, {
     ...targetMarket,
     confirmed: marketConfirmed
-  });
+  }, locale);
   const user = await requireUser();
   const supabase = await createSupabaseServerClient();
   if (!user || !supabase) {
     if (process.env.NODE_ENV === "development") {
       return NextResponse.json({ ...result, demo: true });
     }
-    return NextResponse.json({ message: "로그인이 필요합니다." }, { status: 401 });
+    return NextResponse.json({ message: locale === "en" ? "Please sign in." : "로그인이 필요합니다." }, { status: 401 });
   }
 
   const { data: profile } = await supabase
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
     .single();
   if (!profile?.organization_id) {
     return NextResponse.json(
-      { message: "조직 정보를 찾을 수 없습니다." },
+      { message: locale === "en" ? "We could not find your organization." : "조직 정보를 찾을 수 없습니다." },
       { status: 403 }
     );
   }
@@ -88,7 +90,7 @@ export async function POST(request: Request) {
     .single();
   if (error || !assessment) {
     return NextResponse.json(
-      { message: "진단 결과를 저장하지 못했습니다." },
+      { message: locale === "en" ? "We could not save the assessment results." : "진단 결과를 저장하지 못했습니다." },
       { status: 500 }
     );
   }
@@ -107,7 +109,7 @@ export async function POST(request: Request) {
   if (answerError) {
     await supabase.from("assessments").delete().eq("id", assessment.id);
     return NextResponse.json(
-      { message: "진단 응답을 저장하지 못했습니다." },
+      { message: locale === "en" ? "We could not save the assessment responses." : "진단 응답을 저장하지 못했습니다." },
       { status: 500 }
     );
   }
@@ -117,7 +119,7 @@ export async function POST(request: Request) {
       organization_id: profile.organization_id,
       assessment_id: assessment.id,
       question_id: action.questionId,
-      title: applyOffering(action.title, parsed.data.offering),
+      title: applyOffering(action.title, parsed.data.offering, locale),
       owner_label: action.owner,
       completion_evidence: action.completionEvidence,
       phase: action.phase,
@@ -132,7 +134,7 @@ export async function POST(request: Request) {
   );
   if (actionError) {
     return NextResponse.json(
-      { message: "진단은 저장됐지만 액션 생성에 실패했습니다." },
+      { message: locale === "en" ? "The assessment was saved, but the action items could not be created." : "진단은 저장됐지만 액션 생성에 실패했습니다." },
       { status: 500 }
     );
   }

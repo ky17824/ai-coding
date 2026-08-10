@@ -1,11 +1,45 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
+import { getRequestLocale } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "이용약관 초안" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getRequestLocale()) === "en" ? "Draft Terms of Service" : "이용약관 초안" };
+}
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const locale = await getRequestLocale();
+  if (locale === "en") {
+    return (
+      <LegalPage kicker="BETA DRAFT" title="Terms of Service" locale={locale}>
+        <section>
+          <h2>1. Our role</h2>
+          <p>
+            Borderless is an online marketplace that connects startups with mentors and consultants. Each expert is responsible for delivering the services they offer. The expert&apos;s identity and the scope of work are shown before an order is placed.
+          </p>
+        </section>
+        <section>
+          <h2>2. Private beta access</h2>
+          <p>
+            The private beta is available only to startups that have verified their email address and experts approved by our operations team. We do not share your account or organization data with other organizations.
+          </p>
+        </section>
+        <section>
+          <h2>3. Limits of assessments and recommendations</h2>
+          <p>
+            Readiness results and recommended actions are general business-planning resources. They are not legal, tax, investment, or other professional advice. Consult a qualified professional in the applicable jurisdiction before acting on matters that require professional judgment.
+          </p>
+        </section>
+        <section>
+          <h2>4. Accounts and account closure</h2>
+          <p>
+            You can update your profile and marketing preferences or close your account from My Account. Closing an account immediately ends sign-in access. Order and settlement records required to complete transactions or meet legal retention obligations remain associated only with an anonymized identifier.
+          </p>
+        </section>
+      </LegalPage>
+    );
+  }
   return (
-    <LegalPage kicker="BETA DRAFT" title="이용약관">
+    <LegalPage kicker="BETA DRAFT" title="이용약관" locale={locale}>
       <section>
         <h2>1. 서비스의 역할</h2>
         <p>

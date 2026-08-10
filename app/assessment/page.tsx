@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AssessmentForm } from "@/components/assessment-form";
 import { SiteHeader } from "@/components/site-header";
+import { localizedPath } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n-server";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import type { EvidenceInput, ReadinessAnswer, ReadinessLevel, TargetMarketContext } from "@/lib/types";
 
@@ -14,7 +16,7 @@ export default async function AssessmentPage({
 }: {
   searchParams: Promise<{ new?: string; resume?: string }>;
 }) {
-  const [user, query] = await Promise.all([requireUser(), searchParams]);
+  const [user, query, locale] = await Promise.all([requireUser(), searchParams, getRequestLocale()]);
   let initialAnswers: ReadinessAnswer[] = [];
   let initialTargetMarket: TargetMarketContext | undefined;
   const admin = user ? createSupabaseAdminClient() : null;
@@ -30,7 +32,7 @@ export default async function AssessmentPage({
           .limit(1)
           .maybeSingle()
       : { data: null };
-    if (previousAssessment) redirect("/dashboard");
+    if (previousAssessment) redirect(localizedPath("/dashboard", locale));
   }
   if (query.new === "1" && admin && profile?.organization_id) {
     const { data: previousAssessment } = await admin.from("assessments")
@@ -64,13 +66,14 @@ export default async function AssessmentPage({
   }
   return (
     <main className="app-page">
-      <SiteHeader compact />
+      <SiteHeader compact locale={locale} />
       <div className="app-container">
         <AssessmentForm
           isSignedIn={Boolean(user)}
           resume={query.resume === "1"}
           initialAnswers={initialAnswers}
           initialTargetMarket={initialTargetMarket}
+          locale={locale}
         />
       </div>
     </main>

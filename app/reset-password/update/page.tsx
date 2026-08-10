@@ -6,7 +6,9 @@ import { requireUser } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { localizedPath } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "새 비밀번호" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getRequestLocale()) === "en" ? "New Password" : "새 비밀번호" };
+}
 
 export default async function UpdatePasswordPage() {
   const locale = await getRequestLocale();

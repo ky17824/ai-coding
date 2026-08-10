@@ -2,8 +2,12 @@ import {
   INTAKE_ITEMS,
   INTAKE_QUESTIONS,
   INTAKE_STAGES,
-  POSITIVE_LEVEL
+  POSITIVE_LEVEL,
+  getIntakeItems,
+  getIntakeQuestions,
+  getIntakeStages
 } from "@/lib/intake-questions";
+import type { Locale } from "@/lib/i18n";
 import type {
   ActionRecommendation,
   ReadinessAnswer,
@@ -25,19 +29,26 @@ const LEGACY_STATUS_LABELS: Record<string, ReadinessStatus> = {
   "준비완료": "준비 3단계"
 };
 
-const ITEM = new Map(INTAKE_ITEMS.map((item) => [item.id, item]));
 const LEVEL_MEANING: Record<ReadinessLevel, string> = {
   1: "아직 검토하거나 시작하지 않은 상태입니다.",
   2: "필요성은 인지했지만 실행 또는 확인 가능한 증거가 부족합니다.",
   3: "실행 사례가 있어 단계 통과 점수로 인정됩니다.",
   4: "반복 실행 또는 외부 확인이 된 강점으로 단계 통과 점수에 인정됩니다."
 };
+const EN_LEVEL_MEANING: Record<ReadinessLevel, string> = {
+  1: "This area has not been reviewed or started yet.",
+  2: "The need is understood, but execution or verifiable evidence is still limited.",
+  3: "There is an execution example, so this response counts toward the stage gate.",
+  4: "This is a repeatable or externally verified strength that counts toward the stage gate."
+};
 type AnswerInsightStatus = "blocker" | "needs_work" | "passed" | "strength";
 
-export const questionsOfStage = (stageId: string) =>
-  INTAKE_QUESTIONS.filter(
-    (question) => ITEM.get(question.itemId)!.stageId === stageId
+export const questionsOfStage = (stageId: string, locale: Locale = "ko") => {
+  const items = new Map(getIntakeItems(locale).map((item) => [item.id, item]));
+  return getIntakeQuestions(locale).filter(
+    (question) => items.get(question.itemId)!.stageId === stageId
   );
+};
 
 export function normalizeGateMessage(message: string) {
   return Object.entries(LEGACY_STATUS_LABELS)
@@ -64,13 +75,17 @@ export function isTargetMarketConfirmed(targetMarket?: TargetMarketContext | nul
 
 export function buildStageAnswerInsights(
   submitted: ReadinessAnswer[],
-  stageId: string
+  stageId: string,
+  locale: Locale = "ko"
 ) {
-  const stage = INTAKE_STAGES.find((entry) => entry.id === stageId);
+  const stages = getIntakeStages(locale);
+  const questions = getIntakeQuestions(locale);
+  const itemsCatalog = getIntakeItems(locale);
+  const stage = stages.find((entry) => entry.id === stageId);
   if (!stage) throw new Error(`Unknown readiness stage: ${stageId}`);
 
   const answerById = new Map(submitted.map((answer) => [answer.questionId, answer]));
-  const stageQuestions = questionsOfStage(stageId);
+  const stageQuestions = questionsOfStage(stageId, locale);
   const answers = stageQuestions.flatMap((question) => {
     const answer = answerById.get(question.id);
     if (!answer) return [];
@@ -78,21 +93,29 @@ export function buildStageAnswerInsights(
     const status: AnswerInsightStatus = answer.level < POSITIVE_LEVEL || missingCriticalEvidence
       ? question.critical ? "blocker" : "needs_work"
       : answer.level === 4 ? "strength" : "passed";
-    const statusLabel = status === "blocker"
-      ? "필수 선결 조건"
-      : status === "needs_work"
-        ? "보완 필요"
-        : status === "strength" ? "강점" : "통과";
+    const statusLabel = locale === "en"
+      ? status === "blocker"
+        ? "Required prerequisite"
+        : status === "needs_work"
+          ? "Needs work"
+          : status === "strength" ? "Strength" : "Passed"
+      : status === "blocker"
+        ? "필수 선결 조건"
+        : status === "needs_work"
+          ? "보완 필요"
+          : status === "strength" ? "강점" : "통과";
 
     return [{
       questionId: question.id,
-      number: INTAKE_QUESTIONS.indexOf(question) + 1,
+      number: questions.findIndex((entry) => entry.id === question.id) + 1,
       question: question.question,
       level: answer.level,
       answerText: question.options[answer.level - 1],
       meaning: missingCriticalEvidence && answer.level >= POSITIVE_LEVEL
-        ? "긍정 응답이지만 필수 문항의 확인 근거가 없어 단계 통과 조건이 남았습니다."
-        : LEVEL_MEANING[answer.level],
+        ? locale === "en"
+          ? "The response is positive, but this required question still needs supporting evidence."
+          : "긍정 응답이지만 필수 문항의 확인 근거가 없어 단계 통과 조건이 남았습니다."
+        : (locale === "en" ? EN_LEVEL_MEANING : LEVEL_MEANING)[answer.level],
       status,
       statusLabel,
       action: answer.level < POSITIVE_LEVEL || missingCriticalEvidence ? question.action : null,
@@ -107,7 +130,7 @@ export function buildStageAnswerInsights(
     strength: 0
   };
   for (const answer of answers) counts[answer.status] += 1;
-  const items = INTAKE_ITEMS.filter((item) => item.stageId === stageId).map((item) => {
+  const items = itemsCatalog.filter((item) => item.stageId === stageId).map((item) => {
     const itemQuestions = stageQuestions.filter((question) => question.itemId === item.id);
     return {
       id: item.id,
@@ -126,7 +149,7 @@ export function buildStageAnswerInsights(
     stageId,
     stageLabel: stage.label,
     gate: stage.gate,
-    score: calculateReadiness(submitted).domainScores[stageId] ?? 0,
+    score: calculateReadiness(submitted, null, locale).domainScores[stageId] ?? 0,
     counts,
     items,
     answers
@@ -148,20 +171,22 @@ export function isCompleteStageAnswerSet(answers: ReadinessAnswer[]) {
   });
 }
 
-export function validateAssessmentAnswers(answers: ReadinessAnswer[]) {
+export function validateAssessmentAnswers(answers: ReadinessAnswer[], locale: Locale = "ko") {
   const errors: Record<string, string> = {};
   const valid = new Set(INTAKE_QUESTIONS.map((question) => question.id));
 
   for (const answer of answers) {
     if (!valid.has(answer.questionId)) {
-      errors[answer.questionId] = "알 수 없는 진단 문항입니다.";
+      errors[answer.questionId] = locale === "en" ? "Unknown assessment question." : "알 수 없는 진단 문항입니다.";
     } else if (![1, 2, 3, 4].includes(answer.level)) {
-      errors[answer.questionId] = "응답 단계가 올바르지 않습니다.";
+      errors[answer.questionId] = locale === "en" ? "The selected response level is invalid." : "응답 단계가 올바르지 않습니다.";
     }
   }
 
   if (!isCompleteStageAnswerSet(answers)) {
-    errors._form = "완료한 단계까지 모든 문항에 한 번씩 답해 주세요.";
+    errors._form = locale === "en"
+      ? "Please answer every question once through the completed stage."
+      : "완료한 단계까지 모든 문항에 한 번씩 답해 주세요.";
   }
 
   return { valid: Object.keys(errors).length === 0, errors };
@@ -170,24 +195,29 @@ export function validateAssessmentAnswers(answers: ReadinessAnswer[]) {
 export function hasPassedStage(
   submitted: ReadinessAnswer[],
   stageId: string,
-  targetMarket?: TargetMarketContext | null
+  targetMarket?: TargetMarketContext | null,
+  locale: Locale = "ko"
 ) {
   return (
-    calculateReadiness(submitted, targetMarket).stages.find((stage) => stage.stageId === stageId)
+    calculateReadiness(submitted, targetMarket, locale).stages.find((stage) => stage.stageId === stageId)
       ?.passed ?? false
   );
 }
 
 export function calculateReadiness(
   submitted: ReadinessAnswer[],
-  targetMarket?: TargetMarketContext | null
+  targetMarket?: TargetMarketContext | null,
+  locale: Locale = "ko"
 ): ReadinessResult {
+  const stagesCatalog = getIntakeStages(locale);
+  const itemsCatalog = getIntakeItems(locale);
+  const items = new Map(itemsCatalog.map((item) => [item.id, item]));
   const levels = new Map(submitted.map((a) => [a.questionId, a.level]));
   const evidence = new Map(submitted.map((a) => [a.questionId, a.evidence?.value.trim()]));
   const positive = (id: string) => (levels.get(id) ?? 0) >= POSITIVE_LEVEL;
 
-  const stages: StageResult[] = INTAKE_STAGES.map((stage) => {
-    const questions = questionsOfStage(stage.id);
+  const stages: StageResult[] = stagesCatalog.map((stage) => {
+    const questions = questionsOfStage(stage.id, locale);
     const positiveScore = questions
       .filter((question) => positive(question.id))
       .reduce((sum, question) => sum + question.weight, 0);
@@ -199,11 +229,15 @@ export function calculateReadiness(
       .map((question) => question.question);
     const prerequisiteBlockers = stage.id === "preparing" && !isTargetMarketConfirmed(targetMarket)
       ? [
-          ...(!targetMarket?.targetCountry.trim() ? ["초기 목표국가를 확정해 주세요."] : []),
-          ...(!targetMarket?.targetCustomerSegment.trim() ? ["초기 목표국가의 목표 고객군을 확정해 주세요."] : []),
+          ...(!targetMarket?.targetCountry.trim()
+            ? [locale === "en" ? "Confirm your initial target country." : "초기 목표국가를 확정해 주세요."]
+            : []),
+          ...(!targetMarket?.targetCustomerSegment.trim()
+            ? [locale === "en" ? "Confirm the initial customer segment in your target country." : "초기 목표국가의 목표 고객군을 확정해 주세요."]
+            : []),
           ...(targetMarket?.targetCountry.trim() && targetMarket.targetCustomerSegment.trim() &&
           !targetMarket.confirmed && !targetMarket.confirmedAt
-            ? ["초기 목표시장 정보를 확인해 주세요."]
+            ? [locale === "en" ? "Confirm the initial target-market information." : "초기 목표시장 정보를 확인해 주세요."]
             : [])
         ]
       : [];
@@ -244,14 +278,16 @@ export function calculateReadiness(
     }
     if (current.blockers.length === 0 && current.scoreToPass > 0) {
       gateMessages.push(
-        `${current.label} 통과까지 ${current.scoreToPass}점이 남았습니다.`
+        locale === "en"
+          ? `${current.scoreToPass} weighted points remain to pass ${current.label}.`
+          : `${current.label} 통과까지 ${current.scoreToPass}점이 남았습니다.`
       );
     }
   }
 
   // 액션은 현재 단계에서만 뽑는다. 통과하지 못한 단계를 두고 앞서가게 하지 않는다.
   const actions: ActionRecommendation[] = current
-    ? questionsOfStage(current.stageId)
+    ? questionsOfStage(current.stageId, locale)
         .filter(
           (question) =>
             !positive(question.id) || (question.critical && !evidence.get(question.id))
@@ -264,8 +300,8 @@ export function calculateReadiness(
         )
         .slice(0, 5)
         .map((question) => {
-          const item = ITEM.get(question.itemId)!;
-          const stage = INTAKE_STAGES.find((s) => s.id === item.stageId)!;
+          const item = items.get(question.itemId)!;
+          const stage = stagesCatalog.find((s) => s.id === item.stageId)!;
           return {
             questionId: question.id,
             title: question.action,
@@ -285,7 +321,7 @@ export function calculateReadiness(
     domainScores: Object.fromEntries(
       stages.map((stage) => [stage.stageId, Math.round(stage.ratio * 100)])
     ),
-    status: (current?.label ?? "진출 실행 가능") as ReadinessStatus,
+    status: (current?.label ?? (locale === "en" ? "Ready to Enter" : "진출 실행 가능")) as ReadinessStatus,
     isOnHold: gateMessages.length > 0,
     gateMessages,
     actions,

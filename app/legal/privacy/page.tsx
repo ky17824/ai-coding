@@ -1,11 +1,51 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
+import { getRequestLocale } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "개인정보처리방침 초안" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getRequestLocale()) === "en" ? "Draft Privacy Policy" : "개인정보처리방침 초안" };
+}
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const locale = await getRequestLocale();
+  if (locale === "en") {
+    return (
+      <LegalPage kicker="BETA DRAFT" title="Privacy Policy" locale={locale}>
+        <section>
+          <h2>Information we process</h2>
+          <p>
+            We process the information needed to provide the service, including your name, sign-in email, company, job title, phone number, assessment responses, evidence you submit, order and payment status, and expert credentials and settlement identifiers. Borderless does not store card details.
+          </p>
+        </section>
+        <section>
+          <h2>Retention and deletion</h2>
+          <p>
+            Phone numbers are encrypted at the application layer, and administrative access is logged. When you close your account, we anonymize your profile. Order, payment, and settlement records are segregated and retained only for the period required by applicable law, then deleted.
+          </p>
+        </section>
+        <section>
+          <h2>How we use and protect information</h2>
+          <p>
+            We use this information to provide organization-specific dashboards, approve experts, fulfill transactions, and handle refunds and disputes. Evidence is stored privately and is available only to its owner and authorized operators through expiring links.
+          </p>
+        </section>
+        <section>
+          <h2>Social sign-in</h2>
+          <p>
+            If you sign in with Google or Kakao, Supabase Authentication processes the provider account identifier and the email address and basic profile information you authorize. Borderless uses a separate user UUID internally. When a Kakao-linked account is closed, we first request that Kakao disconnect the service from that account.
+          </p>
+        </section>
+        <section>
+          <h2>AI-GTM Assistant</h2>
+          <p>
+            We send the AI only calculated scores, response levels, selected actions, goals, resources, deadlines and constraints you enter, and approved source material. Email addresses and phone numbers are removed before transmission. Original evidence, payment details, and settlement information are not sent. External web research is used only when current information is needed, such as regulations in a target country. Generated content, sources, and usage records are stored with your organization&apos;s plan history.
+          </p>
+        </section>
+      </LegalPage>
+    );
+  }
   return (
-    <LegalPage kicker="BETA DRAFT" title="개인정보처리방침">
+    <LegalPage kicker="BETA DRAFT" title="개인정보처리방침" locale={locale}>
       <section>
         <h2>수집하는 정보</h2>
         <p>

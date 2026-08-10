@@ -2,7 +2,15 @@ export type UserRole = "startup" | "provider" | "admin";
 export type JourneyPhase = "pre_entry" | "initial_entry" | "scale";
 /** 1 미인지 · 2 인지·계획 · 3 실행·사례 · 4 반복·확인 */
 export type ReadinessLevel = 1 | 2 | 3 | 4;
-export type ReadinessStatus = "준비 1단계" | "준비 2단계" | "준비 3단계" | "진출 실행 가능";
+export type ReadinessStatus =
+  | "준비 1단계"
+  | "준비 2단계"
+  | "준비 3단계"
+  | "진출 실행 가능"
+  | "Readiness Stage 1"
+  | "Readiness Stage 2"
+  | "Readiness Stage 3"
+  | "Ready to Enter";
 export type ServiceType = "mentoring" | "consulting";
 export type OrderStatus =
   | "pending"

@@ -1,4 +1,5 @@
 import type { OrderStatus } from "@/lib/types";
+import type { Locale } from "@/lib/i18n";
 
 export interface CompanyRow {
   organizationId: string;
@@ -24,7 +25,8 @@ export interface WorklistItem {
   label: string;
 }
 
-export function buildWorklist(rows: CompanyRow[], now: Date): WorklistItem[] {
+export function buildWorklist(rows: CompanyRow[], now: Date, locale: Locale = "ko"): WorklistItem[] {
+  const en = locale === "en";
   const items: WorklistItem[] = [];
   for (const row of rows) {
     const base = { organizationId: row.organizationId, companyName: row.companyName };
@@ -33,27 +35,28 @@ export function buildWorklist(rows: CompanyRow[], now: Date): WorklistItem[] {
       now.getTime() - new Date(row.latestAssessment.completedAt).getTime() > 7 * 86400000 &&
       row.orders.length === 0
     ) {
-      items.push({ ...base, kind: "no-order", label: "진단 후 7일 넘게 주문 없음" });
+      items.push({ ...base, kind: "no-order", label: en ? "No order more than 7 days after assessment" : "진단 후 7일 넘게 주문 없음" });
     }
     if (row.latestAssessment?.gateMessages.length) {
-      items.push({ ...base, kind: "gate-blocked", label: "필수 단계 통과 기준(Stage Gate) 차단" });
+      items.push({ ...base, kind: "gate-blocked", label: en ? "Required stage gate blocked" : "필수 단계 통과 기준(Stage Gate) 차단" });
     }
     if (row.orders.some((order) => order.status === "paid")) {
-      items.push({ ...base, kind: "paid-not-started", label: "결제 후 서비스 미시작" });
+      items.push({ ...base, kind: "paid-not-started", label: en ? "Service not started after payment" : "결제 후 서비스 미시작" });
     }
   }
   return items;
 }
 
-export function buildFunnel(rows: CompanyRow[]) {
+export function buildFunnel(rows: CompanyRow[], locale: Locale = "ko") {
+  const en = locale === "en";
   const assessed = rows.filter((row) => row.latestAssessment);
   const status = (row: CompanyRow) => row.latestAssessment?.statusLabel;
   return [
-    { label: "가입", count: rows.length },
-    { label: "진단 완료", count: assessed.length },
-    { label: "준비 1단계 통과", count: assessed.filter((row) => status(row) !== "준비 1단계").length },
-    { label: "준비 2단계 통과", count: assessed.filter((row) => ["준비 3단계", "진출 실행 가능"].includes(status(row) ?? "")).length },
-    { label: "준비 3단계 통과", count: assessed.filter((row) => status(row) === "진출 실행 가능").length }
+    { label: en ? "Signed up" : "가입", count: rows.length },
+    { label: en ? "Assessment complete" : "진단 완료", count: assessed.length },
+    { label: en ? "Stage 1 passed" : "준비 1단계 통과", count: assessed.filter((row) => status(row) !== "준비 1단계").length },
+    { label: en ? "Stage 2 passed" : "준비 2단계 통과", count: assessed.filter((row) => ["준비 3단계", "진출 실행 가능"].includes(status(row) ?? "")).length },
+    { label: en ? "Stage 3 passed" : "준비 3단계 통과", count: assessed.filter((row) => status(row) === "진출 실행 가능").length }
   ];
 }
 

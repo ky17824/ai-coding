@@ -4,10 +4,14 @@ import { GtmAssistant } from "@/components/gtm-assistant";
 import { getPendingFounderQuestion } from "@/lib/gtm-assistant";
 import { SiteHeader } from "@/components/site-header";
 import { normalizeGateMessage, normalizeReadinessStatus } from "@/lib/readiness";
+import { localizedPath } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n-server";
 import type { GtmMarketResearch, GtmPlanItem, StoredGtmPlan } from "@/lib/types";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "AI GTM 어시스턴트" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getRequestLocale()) === "en" ? "AI GTM Assistant" : "AI GTM 어시스턴트" };
+}
 export const dynamic = "force-dynamic";
 
 function mapItem(row: Record<string, unknown>): GtmPlanItem {
@@ -38,9 +42,9 @@ export default async function AssistantPage({
 }: {
   params: Promise<{ assessmentId: string }>;
 }) {
-  const user = await requireUser();
+  const [user, locale] = await Promise.all([requireUser(), getRequestLocale()]);
   const admin = createSupabaseAdminClient();
-  if (!user) redirect("/signin");
+  if (!user) redirect(localizedPath("/signin", locale));
   if (!admin) throw new Error("Supabase admin client is not configured");
   const { assessmentId } = await params;
   const { data: profile } = await admin
@@ -48,14 +52,14 @@ export default async function AssistantPage({
     .select("organization_id")
     .eq("id", user.id)
     .single();
-  if (!profile?.organization_id) redirect("/account/onboarding");
+  if (!profile?.organization_id) redirect(localizedPath("/account/onboarding", locale));
   const { data: assessment } = await admin
     .from("assessments")
     .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,target_country,target_customer_segment")
     .eq("id", assessmentId)
     .eq("organization_id", profile.organization_id)
     .maybeSingle();
-  if (!assessment) redirect("/dashboard");
+  if (!assessment) redirect(localizedPath("/dashboard", locale));
   const [{ data: actions }, { data: plan }] = await Promise.all([
     admin
       .from("action_items")
@@ -94,12 +98,12 @@ export default async function AssistantPage({
     };
   }
   const initialQuestion = initialPlan && initialPlan.items.length === 0
-    ? getPendingFounderQuestion(initialPlan.founderContext, initialPlan.recentMessages)
+    ? getPendingFounderQuestion(initialPlan.founderContext, initialPlan.recentMessages, locale)
     : null;
 
   return (
     <main className="app-page">
-      <SiteHeader compact />
+      <SiteHeader compact locale={locale} />
       <GtmAssistant
         assessment={{
           id: assessment.id,
@@ -120,6 +124,7 @@ export default async function AssistantPage({
         }))}
         initialPlan={initialPlan}
         initialQuestion={initialQuestion}
+        locale={locale}
       />
     </main>
   );

@@ -1,17 +1,20 @@
 import Link from "next/link";
 import type { ServiceOffering } from "@/lib/types";
 import { ArrowIcon } from "@/components/icons";
+import { localizedPath, type Locale } from "@/lib/i18n";
 
 const won = new Intl.NumberFormat("ko-KR");
 
-export function ServiceCard({ service }: { service: ServiceOffering }) {
+export function ServiceCard({ service, locale = "ko" }: { service: ServiceOffering; locale?: Locale }) {
   return (
     <article className="service-card">
       <div className="service-card__topline">
         <span className={`pill pill--${service.type}`}>
-          {service.type === "mentoring" ? "1:1 멘토링" : "컨설팅 패키지"}
+          {service.type === "mentoring"
+            ? locale === "en" ? "1:1 Mentoring" : "1:1 멘토링"
+            : locale === "en" ? "Consulting Package" : "컨설팅 패키지"}
         </span>
-        <span className="rating" aria-label={`평점 ${service.rating}`}>
+        <span className="rating" aria-label={`${locale === "en" ? "Rating" : "평점"} ${service.rating}`}>
           ★ {service.rating} <small>({service.reviewCount})</small>
         </span>
       </div>
@@ -26,13 +29,13 @@ export function ServiceCard({ service }: { service: ServiceOffering }) {
       </div>
       <div className="service-card__footer">
         <span>
-          <strong>{won.format(service.price)}원</strong>
+          <strong>{locale === "en" ? `₩${won.format(service.price)}` : `${won.format(service.price)}원`}</strong>
           <small>{service.durationLabel}</small>
         </span>
         <Link
-          href={`/services/${service.id}`}
+          href={localizedPath(`/services/${service.id}`, locale)}
           className="icon-button"
-          aria-label={`${service.title} 상세 보기`}
+          aria-label={`${service.title} ${locale === "en" ? "details" : "상세 보기"}`}
         >
           <ArrowIcon />
         </Link>

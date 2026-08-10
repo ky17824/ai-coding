@@ -13,13 +13,17 @@ import {
 } from "@/lib/admin-metrics";
 import { normalizeReadinessStatus } from "@/lib/readiness";
 import type { OrderStatus } from "@/lib/types";
+import { localizedPath } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n-server";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
   requireUser
 } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "운영 관리자" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getRequestLocale()) === "en" ? "Operations Admin" : "운영 관리자" };
+}
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage({
@@ -36,14 +40,16 @@ export default async function AdminPage({
     page?: string;
   }>;
 }) {
-  const user = await requireUser();
+  const [user, locale] = await Promise.all([requireUser(), getRequestLocale()]);
+  const en = locale === "en";
+  const statusText = (value: string) => en ? ({ "준비 1단계": "Readiness Stage 1", "준비 2단계": "Readiness Stage 2", "준비 3단계": "Readiness Stage 3", "진출 실행 가능": "Ready to Enter" }[value] ?? value) : value;
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
   const { data: profile } = user && supabase
     ? await supabase.from("profiles").select("role").eq("id", user.id).single()
     : { data: null };
   const isDemo = !supabase && process.env.NODE_ENV === "development";
-  if (profile?.role !== "admin" && !isDemo) redirect("/dashboard");
+  if (profile?.role !== "admin" && !isDemo) redirect(localizedPath("/dashboard", locale));
   if (!admin) throw new Error("Supabase admin client is not configured");
 
   const [organizationsResult, profilesResult, assessmentsResult, actionsResult, ordersResult, providersResult, reviewsResult] = await Promise.all([
@@ -85,7 +91,7 @@ export default async function AdminPage({
         const account = Array.isArray(provider?.profiles) ? provider.profiles[0] : provider?.profiles;
         return {
           status: entry.status as OrderStatus,
-          providerName: account?.display_name ?? "전문가 미지정",
+          providerName: account?.display_name ?? (en ? "Expert unassigned" : "전문가 미지정"),
           createdAt: entry.created_at
         };
       })
@@ -97,8 +103,8 @@ export default async function AdminPage({
   for (const provider of providers.filter((entry) => entry.approval_status === "approved")) {
     for (const tag of provider.expertise) approvedByTag[tag] = (approvedByTag[tag] ?? 0) + 1;
   }
-  const worklist = buildWorklist(rows, new Date());
-  const funnel = buildFunnel(rows);
+  const worklist = buildWorklist(rows, new Date(), locale);
+  const funnel = buildFunnel(rows, locale);
   const expertDemand = buildExpertDemand(rows, approvedByTag);
   const operationalMetrics = buildOperationalMetrics(rows, (reviewsResult.data ?? []).map((review) => review.rating));
   const disputeCount = orders.filter((order) => ["disputed", "refunded"].includes(order.status)).length;
@@ -125,88 +131,88 @@ export default async function AdminPage({
 
   return (
     <main className="app-page">
-      <SiteHeader compact />
+      <SiteHeader compact locale={locale} />
       <div className="app-container admin-dashboard">
         <span className="page-kicker">OPERATIONS</span>
-        <h1 className="page-title">운영 관리자</h1>
-        <p className="page-description">오늘 처리할 기업과 전문가 수급 병목을 실제 데이터로 확인합니다.</p>
+        <h1 className="page-title">{en ? "Operations Admin" : "운영 관리자"}</h1>
+        <p className="page-description">{en ? "Use live data to find the companies and expert-supply bottlenecks that need attention today." : "오늘 처리할 기업과 전문가 수급 병목을 실제 데이터로 확인합니다."}</p>
 
         <div className="admin-metrics">
           {[
-            ["처리할 기업", String(worklist.length)],
-            ["전문가 승인 대기", String(pendingProviders.length)],
-            ["환불·분쟁", String(disputeCount)],
-            ["전체 기업", String(rows.length)]
+            [en ? "Companies to review" : "처리할 기업", String(worklist.length)],
+            [en ? "Expert approvals pending" : "전문가 승인 대기", String(pendingProviders.length)],
+            [en ? "Refunds & disputes" : "환불·분쟁", String(disputeCount)],
+            [en ? "Total companies" : "전체 기업", String(rows.length)]
           ].map(([label, value]) => <div className="panel" key={label}><span>{label}</span><strong>{value}</strong></div>)}
         </div>
 
         <section className="admin-section">
-          <h2>지금 처리할 일</h2>
+          <h2>{en ? "Work queue" : "지금 처리할 일"}</h2>
           <div className="admin-worklist">
             {worklist.slice(0, 12).map((item, index) => (
-              <Link className="panel" href={`/admin/companies/${item.organizationId}`} key={`${item.organizationId}-${item.kind}-${index}`}>
+              <Link className="panel" href={localizedPath(`/admin/companies/${item.organizationId}`, locale)} key={`${item.organizationId}-${item.kind}-${index}`}>
                 <strong>{item.companyName}</strong><span>{item.label}</span>
               </Link>
             ))}
-            {pendingProviders.length > 0 && <a className="panel" href="#provider-review"><strong>전문가 승인 대기 {pendingProviders.length}건</strong><span>신청서 검토</span></a>}
-            {disputeOrders.slice(0, 4).map((order) => <Link className="panel" href={`/orders/${order.id}`} key={order.id}><strong>환불·분쟁 주문</strong><span>{order.status}</span></Link>)}
-            {!worklist.length && !pendingProviders.length && !disputeOrders.length && <div className="empty-state panel"><strong>지금 처리할 이슈가 없습니다.</strong></div>}
+            {pendingProviders.length > 0 && <a className="panel" href="#provider-review"><strong>{en ? `${pendingProviders.length} expert approvals pending` : `전문가 승인 대기 ${pendingProviders.length}건`}</strong><span>{en ? "Review applications" : "신청서 검토"}</span></a>}
+            {disputeOrders.slice(0, 4).map((order) => <Link className="panel" href={localizedPath(`/orders/${order.id}`, locale)} key={order.id}><strong>{en ? "Refund or disputed order" : "환불·분쟁 주문"}</strong><span>{order.status}</span></Link>)}
+            {!worklist.length && !pendingProviders.length && !disputeOrders.length && <div className="empty-state panel"><strong>{en ? "No issues need attention right now." : "지금 처리할 이슈가 없습니다."}</strong></div>}
           </div>
         </section>
 
         <section className="admin-section">
-          <h2>진단 고객 전환 단계(Funnel)</h2>
+          <h2>{en ? "Assessment funnel" : "진단 고객 전환 단계(Funnel)"}</h2>
           <div className="funnel-row">{funnel.map((step) => <div className="panel" key={step.label}><span>{step.label}</span><strong>{step.count}</strong></div>)}</div>
         </section>
 
         <section className="admin-section">
-          <h2>운영 지표</h2>
+          <h2>{en ? "Operating metrics" : "운영 지표"}</h2>
           <div className="admin-metrics">
             {[
-              ["진단 완료율", `${operationalMetrics.assessmentCompletionRate}%`],
-              ["진단→주문 전환율(Conversion Rate)", `${operationalMetrics.assessmentToOrderRate}%`],
-              ["첫 주문까지", operationalMetrics.averageDaysToFirstOrder === null ? "-" : `${operationalMetrics.averageDaysToFirstOrder}일`],
-              ["리뷰 평균", operationalMetrics.averageReviewRating === null ? "-" : `${operationalMetrics.averageReviewRating}점`]
+              [en ? "Assessment completion" : "진단 완료율", `${operationalMetrics.assessmentCompletionRate}%`],
+              [en ? "Assessment-to-order conversion" : "진단→주문 전환율(Conversion Rate)", `${operationalMetrics.assessmentToOrderRate}%`],
+              [en ? "Time to first order" : "첫 주문까지", operationalMetrics.averageDaysToFirstOrder === null ? "-" : `${operationalMetrics.averageDaysToFirstOrder} ${en ? "days" : "일"}`],
+              [en ? "Average review rating" : "리뷰 평균", operationalMetrics.averageReviewRating === null ? "-" : `${operationalMetrics.averageReviewRating}${en ? "/5" : "점"}`]
             ].map(([label, value]) => <div className="panel" key={label}><span>{label}</span><strong>{value}</strong></div>)}
           </div>
         </section>
 
         <section className="admin-section">
-          <div className="section-heading section-heading--row"><span><h2>기업 목록</h2></span><span>{filtered.length}개</span></div>
+          <div className="section-heading section-heading--row"><span><h2>{en ? "Companies" : "기업 목록"}</h2></span><span>{filtered.length}{en ? "" : "개"}</span></div>
           <form className="admin-filters">
-            <input name="q" defaultValue={query.q} placeholder="회사명·담당자 검색" />
-            <select name="stage" defaultValue={query.stage ?? ""}><option value="">전체 단계</option><option>준비 1단계</option><option>준비 2단계</option><option>준비 3단계</option><option>진출 실행 가능</option></select>
-            <select name="gate" defaultValue={query.gate ?? ""}><option value="">단계 통과 기준(Stage Gate) 전체</option><option value="blocked">단계 통과 기준(Stage Gate) 차단</option></select>
-            <select name="order" defaultValue={query.order ?? ""}><option value="">주문 전체</option><option value="yes">주문 있음</option><option value="no">주문 없음</option></select>
-            <input aria-label="진단 시작일" name="from" type="date" defaultValue={query.from} />
-            <input aria-label="진단 종료일" name="to" type="date" defaultValue={query.to} />
-            <select name="sort" defaultValue={query.sort ?? "recent"}><option value="recent">최근 진단순</option><option value="score">총점순</option><option value="activity">최근 활동순</option></select>
-            <button className="button button--dark">조회</button>
+            <input name="q" defaultValue={query.q} placeholder={en ? "Search company or contact" : "회사명·담당자 검색"} />
+            <select name="stage" defaultValue={query.stage ?? ""}><option value="">{en ? "All stages" : "전체 단계"}</option><option value="준비 1단계">{en ? "Readiness Stage 1" : "준비 1단계"}</option><option value="준비 2단계">{en ? "Readiness Stage 2" : "준비 2단계"}</option><option value="준비 3단계">{en ? "Readiness Stage 3" : "준비 3단계"}</option><option value="진출 실행 가능">{en ? "Ready to Enter" : "진출 실행 가능"}</option></select>
+            <select name="gate" defaultValue={query.gate ?? ""}><option value="">{en ? "All gate results" : "단계 통과 기준(Stage Gate) 전체"}</option><option value="blocked">{en ? "Gate blocked" : "단계 통과 기준(Stage Gate) 차단"}</option></select>
+            <select name="order" defaultValue={query.order ?? ""}><option value="">{en ? "All orders" : "주문 전체"}</option><option value="yes">{en ? "Has orders" : "주문 있음"}</option><option value="no">{en ? "No orders" : "주문 없음"}</option></select>
+            <input aria-label={en ? "Assessment start date" : "진단 시작일"} name="from" type="date" defaultValue={query.from} />
+            <input aria-label={en ? "Assessment end date" : "진단 종료일"} name="to" type="date" defaultValue={query.to} />
+            <select name="sort" defaultValue={query.sort ?? "recent"}><option value="recent">{en ? "Most recent assessment" : "최근 진단순"}</option><option value="score">{en ? "Highest score" : "총점순"}</option><option value="activity">{en ? "Most recent activity" : "최근 활동순"}</option></select>
+            <button className="button button--dark">{en ? "Apply" : "조회"}</button>
           </form>
           <div className="table-scroll panel">
-            <table className="admin-table"><thead><tr><th>회사</th><th>담당자</th><th>최근 진단</th><th>점수</th><th>단계 통과 기준(Stage Gate)</th><th>액션</th><th>주문</th><th>최근 활동</th></tr></thead><tbody>
+            <table className="admin-table"><thead><tr><th>{en ? "Company" : "회사"}</th><th>{en ? "Contact" : "담당자"}</th><th>{en ? "Latest assessment" : "최근 진단"}</th><th>{en ? "Score" : "점수"}</th><th>{en ? "Gate issues" : "단계 통과 기준(Stage Gate)"}</th><th>{en ? "Actions" : "액션"}</th><th>{en ? "Orders" : "주문"}</th><th>{en ? "Last activity" : "최근 활동"}</th></tr></thead><tbody>
               {shown.map((row) => <tr key={row.organizationId}>
-                <td><Link href={`/admin/companies/${row.organizationId}`}>{row.companyName}</Link></td>
+                <td><Link href={localizedPath(`/admin/companies/${row.organizationId}`, locale)}>{row.companyName}</Link></td>
                 <td>{row.contactName ?? "-"}{row.jobTitle ? ` · ${row.jobTitle}` : ""}</td>
-                <td>{row.latestAssessment ? <>{row.latestAssessment.statusLabel}<small>{new Date(row.latestAssessment.completedAt).toLocaleDateString("ko-KR")}</small></> : "미진단"}</td><td>{row.latestAssessment?.overallScore ?? "-"}</td>
+                <td>{row.latestAssessment ? <>{statusText(row.latestAssessment.statusLabel)}<small>{new Date(row.latestAssessment.completedAt).toLocaleDateString(en ? "en-US" : "ko-KR")}</small></> : en ? "Not assessed" : "미진단"}</td><td>{row.latestAssessment?.overallScore ?? "-"}</td>
                 <td>{row.latestAssessment?.gateMessages.length ?? 0}</td>
-                <td>{row.actions.filter((action) => action.completedAt).length}/{row.actions.length}</td><td>{row.orders[0] ? `${row.orders[0].status} · ${row.orders[0].providerName}` : "없음"}</td>
-                <td>{lastActivityAt(row) ? new Date(lastActivityAt(row)!).toLocaleDateString("ko-KR") : "-"}</td>
+                <td>{row.actions.filter((action) => action.completedAt).length}/{row.actions.length}</td><td>{row.orders[0] ? `${row.orders[0].status} · ${row.orders[0].providerName}` : en ? "None" : "없음"}</td>
+                <td>{lastActivityAt(row) ? new Date(lastActivityAt(row)!).toLocaleDateString(en ? "en-US" : "ko-KR") : "-"}</td>
               </tr>)}
             </tbody></table>
           </div>
-          <div className="pagination">{page > 1 && <Link className="button button--ghost" href={`?${new URLSearchParams({ ...query, page: String(page - 1) }).toString()}`}>이전</Link>}{page * pageSize < filtered.length && <Link className="button button--ghost" href={`?${new URLSearchParams({ ...query, page: String(page + 1) }).toString()}`}>다음</Link>}</div>
+          <div className="pagination">{page > 1 && <Link className="button button--ghost" href={`?${new URLSearchParams({ ...query, page: String(page - 1) }).toString()}`}>{en ? "Previous" : "이전"}</Link>}{page * pageSize < filtered.length && <Link className="button button--ghost" href={`?${new URLSearchParams({ ...query, page: String(page + 1) }).toString()}`}>{en ? "Next" : "다음"}</Link>}</div>
         </section>
 
         <section className="admin-section">
-          <h2>전문가 수급</h2>
-          <div className="table-scroll panel"><table className="admin-table"><thead><tr><th>태그</th><th>미완료 액션 수요</th><th>승인 전문가</th></tr></thead><tbody>{expertDemand.map((item) => <tr key={item.tag}><td>{item.tag}</td><td>{item.demand}</td><td>{item.supply}</td></tr>)}</tbody></table></div>
+          <h2>{en ? "Expert supply" : "전문가 수급"}</h2>
+          <div className="table-scroll panel"><table className="admin-table"><thead><tr><th>{en ? "Tag" : "태그"}</th><th>{en ? "Open action demand" : "미완료 액션 수요"}</th><th>{en ? "Approved experts" : "승인 전문가"}</th></tr></thead><tbody>{expertDemand.map((item) => <tr key={item.tag}><td>{item.tag}</td><td>{item.demand}</td><td>{item.supply}</td></tr>)}</tbody></table></div>
         </section>
 
         <section className="admin-section" id="provider-review">
-          <h2>전문가 승인 대기</h2>
-          {!pendingProviders.length ? <div className="empty-state panel"><strong>검토할 신청이 없습니다.</strong></div> : <div className="provider-review-list">{pendingProviders.map((provider) => (
-            <article className="provider-review panel" key={provider.id}><div><span className="page-kicker">PENDING EXPERT</span><h3>{provider.headline}</h3><p>{provider.biography}</p><small>{provider.expertise.join(" · ")}</small><blockquote>{provider.verification_note}</blockquote></div><form action={approveProvider}><input type="hidden" name="providerId" value={provider.id} /><button className="button button--ghost" name="decision" value="rejected">보완 요청</button><button className="button button--primary" name="decision" value="approved">승인</button></form></article>
+          <h2>{en ? "Expert approvals pending" : "전문가 승인 대기"}</h2>
+          {!pendingProviders.length ? <div className="empty-state panel"><strong>{en ? "No applications to review." : "검토할 신청이 없습니다."}</strong></div> : <div className="provider-review-list">{pendingProviders.map((provider) => (
+            <article className="provider-review panel" key={provider.id}><div><span className="page-kicker">PENDING EXPERT</span><h3>{provider.headline}</h3><p>{provider.biography}</p><small>{provider.expertise.join(" · ")}</small><blockquote>{provider.verification_note}</blockquote></div><form action={approveProvider}><input type="hidden" name="providerId" value={provider.id} /><button className="button button--ghost" name="decision" value="rejected">{en ? "Request changes" : "보완 요청"}</button><button className="button button--primary" name="decision" value="approved">{en ? "Approve" : "승인"}</button></form></article>
           ))}</div>}
         </section>
       </div>

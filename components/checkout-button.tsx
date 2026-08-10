@@ -3,6 +3,7 @@
 import { useState } from "react";
 import * as PortOne from "@portone/browser-sdk/v2";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { localizedPath } from "@/lib/i18n";
 
 interface CheckoutButtonProps {
   serviceId: string;
@@ -10,6 +11,7 @@ interface CheckoutButtonProps {
   amount: number;
   type: "mentoring" | "consulting";
   availableSlots?: { id: string; startsAt: string; endsAt: string }[];
+  locale?: "ko" | "en";
 }
 
 export function CheckoutButton({
@@ -17,8 +19,10 @@ export function CheckoutButton({
   title,
   amount,
   type,
-  availableSlots = []
+  availableSlots = [],
+  locale = "ko"
 }: CheckoutButtonProps) {
+  const en = locale === "en";
   const [status, setStatus] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,15 +38,15 @@ export function CheckoutButton({
         ? await supabase.auth.getUser()
         : { data: { user: null } };
       if (!user) {
-        window.location.href = `/signin?returnTo=${encodeURIComponent(`/services/${serviceId}`)}`;
+        window.location.href = `${localizedPath("/signin", locale)}?returnTo=${encodeURIComponent(localizedPath(`/services/${serviceId}`, locale))}`;
         return;
       }
       if (!agreed) {
-        setStatus("서비스 범위와 취소·환불 정책에 동의해 주세요.");
+        setStatus(en ? "Agree to the service scope and cancellation and refund policy." : "서비스 범위와 취소·환불 정책에 동의해 주세요.");
         return;
       }
       if (type === "mentoring" && !slotId) {
-        setStatus("예약 가능한 멘토링 일정을 선택해 주세요.");
+        setStatus(en ? "Select an available mentoring time." : "예약 가능한 멘토링 일정을 선택해 주세요.");
         return;
       }
 
@@ -56,7 +60,8 @@ export function CheckoutButton({
             type === "mentoring"
               ? availableSlots.find((slot) => slot.id === slotId)?.startsAt
               : null,
-          termsAccepted: true
+          termsAccepted: true,
+          locale
         })
       });
       const order = (await orderResponse.json()) as {
@@ -67,14 +72,14 @@ export function CheckoutButton({
         demo?: boolean;
       };
       if (!orderResponse.ok || !order.orderId || !order.paymentId) {
-        throw new Error(order.message ?? "주문을 생성하지 못했습니다.");
+        throw new Error(order.message ?? (en ? "We couldn't create the order." : "주문을 생성하지 못했습니다."));
       }
 
       const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
       const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
       if (!storeId || !channelKey || order.demo) {
         setStatus(
-          `테스트 주문 ${order.orderId}이 생성되었습니다. PortOne 키를 연결하면 실제 결제창이 열립니다.`
+          en ? `Test order ${order.orderId} was created. Configure PortOne to open live checkout.` : `테스트 주문 ${order.orderId}이 생성되었습니다. PortOne 키를 연결하면 실제 결제창이 열립니다.`
         );
         return;
       }
@@ -87,20 +92,20 @@ export function CheckoutButton({
         totalAmount: order.amount ?? amount,
         currency: "CURRENCY_KRW",
         payMethod: "CARD",
-        redirectUrl: `${window.location.origin}/orders/${order.orderId}`,
+        redirectUrl: `${window.location.origin}${localizedPath(`/orders/${order.orderId}`, locale)}`,
         customData: { orderId: order.orderId }
       });
 
       if (!response) {
-        setStatus("결제창을 열지 못했습니다.");
+        setStatus(en ? "We couldn't open checkout." : "결제창을 열지 못했습니다.");
       } else if (response.code) {
-        setStatus(response.message ?? "결제가 완료되지 않았습니다. 다시 시도해 주세요.");
+        setStatus(response.message ?? (en ? "Payment was not completed. Try again." : "결제가 완료되지 않았습니다. 다시 시도해 주세요."));
       } else {
-        window.location.href = `/orders/${order.orderId}`;
+        window.location.href = localizedPath(`/orders/${order.orderId}`, locale);
       }
     } catch (error) {
       setStatus(
-        error instanceof Error ? error.message : "결제를 시작하지 못했습니다."
+        error instanceof Error ? error.message : en ? "We couldn't start checkout." : "결제를 시작하지 못했습니다."
       );
     } finally {
       setLoading(false);
@@ -111,17 +116,17 @@ export function CheckoutButton({
     <div className="checkout-box">
       {type === "mentoring" && (
         <label className="slot-field">
-          <span>예약 일정</span>
+          <span>{en ? "Booking slot" : "예약 일정"}</span>
           <select
             value={slotId}
             onChange={(event) => setSlotId(event.target.value)}
           >
             {!availableSlots.length && (
-              <option value="">예약 가능한 일정이 없습니다</option>
+              <option value="">{en ? "No available slots" : "예약 가능한 일정이 없습니다"}</option>
             )}
             {availableSlots.map((slot) => (
               <option value={slot.id} key={slot.id}>
-                {new Intl.DateTimeFormat("ko-KR", {
+                {new Intl.DateTimeFormat(en ? "en-US" : "ko-KR", {
                   dateStyle: "long",
                   timeStyle: "short"
                 }).format(new Date(slot.startsAt))}
@@ -137,8 +142,7 @@ export function CheckoutButton({
           onChange={(event) => setAgreed(event.target.checked)}
         />
         <span>
-          서비스 범위, 판매자 정보, 서비스 시작 전 전액 환불 정책에
-          동의합니다.
+          {en ? "I agree to the service scope, seller information, and full refund policy before service starts." : "서비스 범위, 판매자 정보, 서비스 시작 전 전액 환불 정책에 동의합니다."}
         </span>
       </label>
       <button
@@ -147,7 +151,7 @@ export function CheckoutButton({
         onClick={checkout}
         disabled={loading}
       >
-        {loading ? "결제 준비 중…" : "예약 및 결제하기"}
+        {loading ? (en ? "Preparing payment…" : "결제 준비 중…") : (en ? "Book and pay" : "예약 및 결제하기")}
       </button>
       {status && (
         <p className="checkout-status" role="status">
@@ -155,8 +159,7 @@ export function CheckoutButton({
         </p>
       )}
       <small>
-        Borderless는 통신판매중개자이며, 서비스 제공 당사자는 해당
-        전문가입니다. 카드정보는 PortOne·결제대행 서비스(Payment Gateway) 결제창에서 처리됩니다.
+        {en ? "Borderless is a marketplace intermediary; the expert provides the service. Card details are handled in the PortOne payment window." : "Borderless는 통신판매중개자이며, 서비스 제공 당사자는 해당 전문가입니다. 카드정보는 PortOne·결제대행 서비스(Payment Gateway) 결제창에서 처리됩니다."}
       </small>
     </div>
   );

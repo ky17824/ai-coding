@@ -7,6 +7,7 @@ import {
   createSupabaseServerClient,
   requireUser
 } from "@/lib/supabase/server";
+import { localizedPath, type Locale } from "@/lib/i18n";
 
 export interface ProviderActionState {
   ok: boolean;
@@ -24,9 +25,11 @@ export async function applyProvider(
   _state: ProviderActionState,
   formData: FormData
 ): Promise<ProviderActionState> {
+  const locale: Locale = formData.get("locale") === "en" ? "en" : "ko";
+  const en = locale === "en";
   const user = await requireUser();
   const admin = createSupabaseAdminClient();
-  if (!user || !admin) return { ok: false, message: "로그인이 필요합니다." };
+  if (!user || !admin) return { ok: false, message: en ? "Please sign in." : "로그인이 필요합니다." };
   const parsed = providerSchema.safeParse({
     headline: formData.get("headline"),
     biography: formData.get("biography"),
@@ -34,7 +37,7 @@ export async function applyProvider(
     verificationNote: formData.get("verificationNote")
   });
   if (!parsed.success) {
-    return { ok: false, message: "경력과 검증 자료를 더 구체적으로 작성해 주세요." };
+    return { ok: false, message: en ? "Provide more detail about your experience and verification evidence." : "경력과 검증 자료를 더 구체적으로 작성해 주세요." };
   }
 
   const { error } = await admin.from("provider_profiles").insert({
@@ -48,12 +51,12 @@ export async function applyProvider(
     verification_note: parsed.data.verificationNote
   });
   if (error?.code === "23505") {
-    return { ok: false, message: "이미 전문가 신청서를 제출했습니다." };
+    return { ok: false, message: en ? "You have already submitted an expert application." : "이미 전문가 신청서를 제출했습니다." };
   }
-  if (error) return { ok: false, message: "신청서를 저장하지 못했습니다." };
+  if (error) return { ok: false, message: en ? "We couldn't save the application." : "신청서를 저장하지 못했습니다." };
   await admin.from("profiles").update({ role: "provider" }).eq("id", user.id);
-  revalidatePath("/provider");
-  return { ok: true, message: "신청이 접수되었습니다. 관리자 검토를 기다려 주세요." };
+  revalidatePath(localizedPath("/provider", locale));
+  return { ok: true, message: en ? "Application received. Our operations team will review it." : "신청이 접수되었습니다. 관리자 검토를 기다려 주세요." };
 }
 
 export async function approveProvider(formData: FormData) {
@@ -97,9 +100,11 @@ export async function createServiceOffering(
   _state: ProviderActionState,
   formData: FormData
 ): Promise<ProviderActionState> {
+  const locale: Locale = formData.get("locale") === "en" ? "en" : "ko";
+  const en = locale === "en";
   const user = await requireUser();
   const admin = createSupabaseAdminClient();
-  if (!user || !admin) return { ok: false, message: "로그인이 필요합니다." };
+  if (!user || !admin) return { ok: false, message: en ? "Please sign in." : "로그인이 필요합니다." };
   const parsed = serviceSchema.safeParse({
     type: formData.get("type"),
     title: formData.get("title"),
@@ -111,13 +116,13 @@ export async function createServiceOffering(
     firstSlot: formData.get("firstSlot")
   });
   if (!parsed.success) {
-    return { ok: false, message: "서비스 범위, 가격, 기간을 확인해 주세요." };
+    return { ok: false, message: en ? "Review the service scope, price, and duration." : "서비스 범위, 가격, 기간을 확인해 주세요." };
   }
   if (
     parsed.data.type === "mentoring" &&
     ![60, 90].includes(parsed.data.duration)
   ) {
-    return { ok: false, message: "멘토링은 60분 또는 90분만 등록할 수 있습니다." };
+    return { ok: false, message: en ? "Mentoring sessions must be 60 or 90 minutes." : "멘토링은 60분 또는 90분만 등록할 수 있습니다." };
   }
   const { data: provider } = await admin
     .from("provider_profiles")
@@ -125,7 +130,7 @@ export async function createServiceOffering(
     .eq("user_id", user.id)
     .single();
   if (!provider || provider.approval_status !== "approved") {
-    return { ok: false, message: "승인된 전문가만 서비스를 등록할 수 있습니다." };
+    return { ok: false, message: en ? "Only approved experts can publish services." : "승인된 전문가만 서비스를 등록할 수 있습니다." };
   }
   const { error } = await admin.from("service_offerings").insert({
     provider_id: provider.id,
@@ -154,7 +159,7 @@ export async function createServiceOffering(
       .filter(Boolean),
     is_published: true
   });
-  if (error) return { ok: false, message: "서비스를 등록하지 못했습니다." };
+  if (error) return { ok: false, message: en ? "We couldn't publish the service." : "서비스를 등록하지 못했습니다." };
 
   if (parsed.data.type === "mentoring" && parsed.data.firstSlot) {
     const startsAt = new Date(parsed.data.firstSlot);
@@ -168,7 +173,7 @@ export async function createServiceOffering(
       });
     }
   }
-  revalidatePath("/provider");
-  revalidatePath("/services");
-  return { ok: true, message: "서비스가 등록되었습니다." };
+  revalidatePath(localizedPath("/provider", locale));
+  revalidatePath(localizedPath("/services", locale));
+  return { ok: true, message: en ? "Service published." : "서비스가 등록되었습니다." };
 }

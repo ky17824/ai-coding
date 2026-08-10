@@ -1,11 +1,39 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
+import { getRequestLocale } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "취소·환불정책 초안" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getRequestLocale()) === "en" ? "Draft Cancellation & Refund Policy" : "취소·환불정책 초안" };
+}
 
-export default function RefundsPage() {
+export default async function RefundsPage() {
+  const locale = await getRequestLocale();
+  if (locale === "en") {
+    return (
+      <LegalPage kicker="BETA DRAFT" title="Cancellation & Refund Policy" locale={locale}>
+        <section>
+          <h2>Before the service begins</h2>
+          <p>
+            A buyer may request a full refund before the scheduled mentoring session or before consulting work begins. We will cancel both the payment and any expert payout that has not yet been released.
+          </p>
+        </section>
+        <section>
+          <h2>After the service begins</h2>
+          <p>
+            Cancellations, no-shows, and disputes about deliverable quality are not decided automatically. Our operations team reviews the service scope, schedule, agreed milestones, and relevant records from both parties before making a decision.
+          </p>
+        </section>
+        <section>
+          <h2>If the expert does not perform</h2>
+          <p>
+            If an expert cannot provide the service or does not complete the agreed scope, our operations team may issue a full refund or a refund for the unperformed portion after review.
+          </p>
+        </section>
+      </LegalPage>
+    );
+  }
   return (
-    <LegalPage kicker="BETA DRAFT" title="취소·환불정책">
+    <LegalPage kicker="BETA DRAFT" title="취소·환불정책" locale={locale}>
       <section>
         <h2>서비스 시작 전</h2>
         <p>

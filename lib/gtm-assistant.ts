@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Locale } from "@/lib/i18n";
 import type {
   GtmAssistantMessage,
   GtmAssistantQuestion,
@@ -169,13 +170,27 @@ const FOUNDER_QUESTIONS: {
     inputType: "text"
   }
 ];
+const EN_FOUNDER_QUESTIONS: typeof FOUNDER_QUESTIONS = [
+  { key: "offeringName", question: "What is the name of the product, service, or solution you plan to launch globally?", reason: "A fixed offering keeps the market research and action plan focused.", inputType: "text" },
+  { key: "offeringSummary", question: "In one or two sentences, what does the offering provide and when is it used?", reason: "This defines the product scope and real-world use case for the plan.", inputType: "text" },
+  { key: "customerProblem", question: "What is the most important cost, delay, or risk your initial target customer faces today?", reason: "Validation work should start with the problem the customer is trying to solve.", inputType: "text" },
+  { key: "coreValue", question: "What is one measurable result that improves on the customer’s current approach?", reason: "This makes the initial sales proposition and completion criteria concrete.", inputType: "text" },
+  { key: "targetCountry", question: "Which country will you enter first?", reason: "The plan needs a country context for market, regulatory, and channel conditions.", inputType: "text" },
+  { key: "targetCustomer", question: "Which customer segment will you validate first in that country?", reason: "This narrows the people and organizations to interview and sell to.", inputType: "text" },
+  { key: "resources", question: "What people, time, budget, or inventory can you commit? If you do not know yet, enter “Needs confirmation.”", reason: "Available resources set the feasible scope of the plan.", inputType: "text" },
+  { key: "deadline", question: "What is the target completion date for this plan?", reason: "This sets the completion date for the 30- or 60-day plan.", inputType: "date" },
+  { key: "constraints", question: "Are there any regulatory, cost, or operating constraints you must observe? If unknown, enter “Needs confirmation.”", reason: "The plan should separate constraints from items that still need verification.", inputType: "text" }
+];
+const questionsFor = (locale: Locale) => locale === "en" ? EN_FOUNDER_QUESTIONS : FOUNDER_QUESTIONS;
 
 export function classifyFounderContextValue(
   value: string | undefined
 ): "missing" | "answered" | "unknown_confirmed" {
   const normalized = value?.trim() ?? "";
   if (!normalized) return "missing";
-  return UNKNOWN_ANSWER.test(normalized) ? "unknown_confirmed" : "answered";
+  return (UNKNOWN_ANSWER.test(normalized) || /^(?:unknown|not sure|needs? confirmation|to be determined|tbd)[\s.!]*$/i.test(normalized))
+    ? "unknown_confirmed"
+    : "answered";
 }
 
 function askedQuestionKeys(messages: GtmAssistantMessage[]) {
@@ -193,10 +208,12 @@ export function isFounderQuestionKey(value: string): value is FounderQuestionKey
 function buildFounderQuestion(
   key: FounderQuestionKey,
   context: Partial<GtmFounderContext>,
-  messages: GtmAssistantMessage[]
+  messages: GtmAssistantMessage[],
+  locale: Locale = "ko"
 ): GtmAssistantQuestion {
-  const definition = FOUNDER_QUESTIONS.find((question) => question.key === key)!;
-  const completedFields = FOUNDER_QUESTIONS.filter(
+  const questions = questionsFor(locale);
+  const definition = questions.find((question) => question.key === key)!;
+  const completedFields = questions.filter(
     (question) => classifyFounderContextValue(context[question.key]) !== "missing"
   ).length;
   return {
@@ -207,7 +224,7 @@ function buildFounderQuestion(
     inputType: definition.inputType,
     options: [],
     completedFields,
-    totalFields: FOUNDER_QUESTIONS.length,
+    totalFields: questions.length,
     clarificationCount: askedQuestionKeys(messages).size + 1,
     clarificationLimit: MAX_CLARIFICATION_QUESTIONS,
     generatedBy: "system"
@@ -216,21 +233,24 @@ function buildFounderQuestion(
 
 export function selectFounderQuestion(
   context: Partial<GtmFounderContext>,
-  messages: GtmAssistantMessage[]
+  messages: GtmAssistantMessage[],
+  locale: Locale = "ko"
 ) {
+  const questions = questionsFor(locale);
   const asked = askedQuestionKeys(messages);
   if (asked.size >= MAX_CLARIFICATION_QUESTIONS) return null;
-  const next = FOUNDER_QUESTIONS.find(
+  const next = questions.find(
     (question) =>
       classifyFounderContextValue(context[question.key]) === "missing" &&
       !asked.has(question.key)
   );
-  return next ? buildFounderQuestion(next.key, context, messages) : null;
+  return next ? buildFounderQuestion(next.key, context, messages, locale) : null;
 }
 
 export function getPendingFounderQuestion(
   context: Partial<GtmFounderContext>,
-  messages: GtmAssistantMessage[]
+  messages: GtmAssistantMessage[],
+  locale: Locale = "ko"
 ) {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
@@ -241,7 +261,7 @@ export function getPendingFounderQuestion(
       (entry) => entry.role === "user" && entry.questionKey === key
     );
     if (answeredAfter || classifyFounderContextValue(context[key]) !== "missing") return null;
-    return buildFounderQuestion(key, context, messages.slice(0, index));
+    return buildFounderQuestion(key, context, messages.slice(0, index), locale);
   }
   return null;
 }
@@ -279,11 +299,12 @@ function dateAfter(base: Date, days: number) {
 export function buildDeterministicPlan(
   actions: SavedAction[],
   now = new Date(),
-  allowedHorizons: (30 | 60 | 90)[] = [30, 60, 90]
+  allowedHorizons: (30 | 60 | 90)[] = [30, 60, 90],
+  locale: Locale = "ko"
 ): GtmPlanDraft {
   const source: GtmPlanSource = {
     kind: "diagnosis",
-    title: "55문항 준비도 진단",
+    title: locale === "en" ? "55-question readiness assessment" : "55문항 준비도 진단",
     url: null,
     checkedAt: now.toISOString().slice(0, 10)
   };
@@ -301,18 +322,20 @@ export function buildDeterministicPlan(
       horizon,
       priority: action.urgency,
       title: action.title,
-      rationale: "진단에서 확인된 준비도 격차를 완료 근거가 남는 실행으로 바꿉니다.",
+      rationale: locale === "en" ? "Convert the readiness gap into a concrete action with verifiable completion evidence." : "진단에서 확인된 준비도 격차를 완료 근거가 남는 실행으로 바꿉니다.",
       ownerLabel: action.owner_label,
       dueDate: dateAfter(now, horizon),
       completionEvidence: action.completion_evidence,
       dependencies: [],
-      riskNote: expertRequired ? "현지 규정과 계약 조건은 실행 전에 전문가 확인이 필요합니다." : "전제가 바뀌면 일정과 완료 기준을 다시 확인해 주세요.",
+      riskNote: expertRequired
+        ? locale === "en" ? "Have a qualified expert review local regulations and contract terms before execution." : "현지 규정과 계약 조건은 실행 전에 전문가 확인이 필요합니다."
+        : locale === "en" ? "Revisit the schedule and completion criteria if the assumptions change." : "전제가 바뀌면 일정과 완료 기준을 다시 확인해 주세요.",
       status: "not_started",
       expertRequired,
-      expertReason: expertRequired ? "법률·세무·규제 판단이 포함될 수 있습니다." : "",
+      expertReason: expertRequired ? (locale === "en" ? "This action may require legal, tax, or regulatory judgment." : "법률·세무·규제 판단이 포함될 수 있습니다.") : "",
       serviceTag: action.service_tag,
       handoffBrief: expertRequired
-        ? `${action.title}의 현지 적용 조건과 완료 근거를 검토해 주세요.`
+        ? locale === "en" ? `Review the local requirements and completion evidence for: ${action.title}` : `${action.title}의 현지 적용 조건과 완료 근거를 검토해 주세요.`
         : "",
       sources: [source]
     };
@@ -320,8 +343,8 @@ export function buildDeterministicPlan(
 
   return {
     kind: "plan_draft",
-    summary: "진단에서 확인된 우선 격차를 단계별 실행계획(30·60·90 Day Plan) 순서로 정리해 드렸습니다.",
-    assumptions: ["현재 진단 응답과 저장된 실행 액션을 기준으로 작성했습니다."],
+    summary: locale === "en" ? "The highest-priority readiness gaps have been organized into a 30-, 60-, and 90-day action plan." : "진단에서 확인된 우선 격차를 단계별 실행계획(30·60·90 Day Plan) 순서로 정리해 드렸습니다.",
+    assumptions: [locale === "en" ? "This plan is based on the current assessment responses and saved action items." : "현재 진단 응답과 저장된 실행 액션을 기준으로 작성했습니다."],
     items,
     generatedBy: "deterministic-fallback"
   };
@@ -329,19 +352,20 @@ export function buildDeterministicPlan(
 
 export function validatePlanDraft(
   output: AssistantModelOutput,
-  allowedHorizons: (30 | 60 | 90)[] = [30, 60, 90]
+  allowedHorizons: (30 | 60 | 90)[] = [30, 60, 90],
+  locale: Locale = "ko"
 ) {
   if (output.items.some((item) => !allowedHorizons.includes(item.horizon))) {
-    throw new Error("현재 단계에 허용되지 않은 계획 기간입니다.");
+    throw new Error(locale === "en" ? "The plan includes a horizon that is not allowed at the current readiness stage." : "현재 단계에 허용되지 않은 계획 기간입니다.");
   }
   if (output.items.some((item) => item.sources.length === 0)) {
-    throw new Error("모든 계획 항목에는 근거가 필요합니다.");
+    throw new Error(locale === "en" ? "Every plan item must include at least one source." : "모든 계획 항목에는 근거가 필요합니다.");
   }
   for (const source of output.items.flatMap((item) => item.sources)) {
     if (!source.url) continue;
     const url = new URL(source.url);
     if (!["http:", "https:"].includes(url.protocol)) {
-      throw new Error("근거 URL은 HTTP(S) 주소여야 합니다.");
+      throw new Error(locale === "en" ? "Source URLs must use HTTP or HTTPS." : "근거 URL은 HTTP(S) 주소여야 합니다.");
     }
   }
   return output;
@@ -349,7 +373,8 @@ export function validatePlanDraft(
 
 export function finalizeMarketResearch(
   output: z.infer<typeof marketResearchOutputSchema>,
-  now = new Date()
+  now = new Date(),
+  locale: Locale = "ko"
 ): GtmMarketResearch {
   for (const url of [
     ...output.trends.map((entry) => entry.url),
@@ -358,12 +383,12 @@ export function finalizeMarketResearch(
     if (!url) continue;
     const parsed = new URL(url);
     if (!["http:", "https:"].includes(parsed.protocol)) {
-      throw new Error("시장 조사 근거 URL은 HTTP(S) 주소여야 합니다.");
+      throw new Error(locale === "en" ? "Market-research source URLs must use HTTP or HTTPS." : "시장 조사 근거 URL은 HTTP(S) 주소여야 합니다.");
     }
   }
   if (output.scope === "market_preresearch" &&
       (output.sellability.available || output.sellability.verdict !== "not_assessed")) {
-    throw new Error("준비 3단계 전에는 실제 판매 가능성을 판정할 수 없습니다.");
+    throw new Error(locale === "en" ? "Sellability cannot be assessed before Readiness Stage 3 is complete." : "준비 3단계 전에는 실제 판매 가능성을 판정할 수 없습니다.");
   }
   return {
     kind: "market_research",
