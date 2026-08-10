@@ -37,7 +37,7 @@ export default async function DashboardPage() {
           {incomplete && <IncompleteProfile />}
           <div className="empty-state panel">
             <strong>{organization?.name ?? "우리 회사"}의 첫 진단을 시작하세요.</strong>
-            <p>55문항을 모두 마치시면 준비 단계와 실행 액션이 여기에 저장됩니다.</p>
+            <p>현재 단계의 문항을 마치면 Gate 결과와 실행 액션이 여기에 저장됩니다.</p>
             <Link href="/assessment" className="button button--primary">무료 준비도 진단</Link>
           </div>
         </div>

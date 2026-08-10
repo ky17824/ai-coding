@@ -24,6 +24,21 @@ export const questionsOfStage = (stageId: string) =>
     (question) => ITEM.get(question.itemId)!.stageId === stageId
   );
 
+export function isCompleteStageAnswerSet(answers: ReadinessAnswer[]) {
+  const answered = new Set(answers.map((answer) => answer.questionId));
+  if (answered.size !== answers.length) return false;
+
+  return STAGES.some((_, stageIndex) => {
+    const expected = STAGES.slice(0, stageIndex + 1).flatMap((stage) =>
+      questionsOfStage(stage.id).map((question) => question.id)
+    );
+    return (
+      answered.size === expected.length &&
+      expected.every((questionId) => answered.has(questionId))
+    );
+  });
+}
+
 export function validateAssessmentAnswers(answers: ReadinessAnswer[]) {
   const errors: Record<string, string> = {};
   const valid = new Set(INTAKE_QUESTIONS.map((question) => question.id));
@@ -36,7 +51,21 @@ export function validateAssessmentAnswers(answers: ReadinessAnswer[]) {
     }
   }
 
+  if (!isCompleteStageAnswerSet(answers)) {
+    errors._form = "완료한 단계까지 모든 문항에 한 번씩 답해 주세요.";
+  }
+
   return { valid: Object.keys(errors).length === 0, errors };
+}
+
+export function hasPassedStage(
+  submitted: ReadinessAnswer[],
+  stageId: string
+) {
+  return (
+    calculateReadiness(submitted).stages.find((stage) => stage.stageId === stageId)
+      ?.passed ?? false
+  );
 }
 
 export function calculateReadiness(

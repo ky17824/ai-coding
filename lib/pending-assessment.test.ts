@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { INTAKE_QUESTIONS } from "@/lib/intake-questions";
+import { questionsOfStage } from "@/lib/readiness";
 import {
   PENDING_KEY,
   clearPending,
@@ -34,6 +35,13 @@ describe("pending assessment", () => {
     expect(loadPending()).toEqual(answers());
     clearPending();
     expect(loadPending()).toBeNull();
+  });
+
+  it("keeps a completed early Gate while signup finishes", () => {
+    const early = new Set(questionsOfStage("early").map((question) => question.id));
+    const earlyAnswers = answers().filter((answer) => early.has(answer.questionId));
+    savePending(earlyAnswers);
+    expect(loadPending()).toEqual(earlyAnswers);
   });
 
   it("rejects incomplete answers", () => {

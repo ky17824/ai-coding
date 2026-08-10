@@ -7,6 +7,8 @@ import {
 import {
   GATE_THRESHOLD,
   calculateReadiness,
+  hasPassedStage,
+  isCompleteStageAnswerSet,
   questionsOfStage,
   validateAssessmentAnswers
 } from "@/lib/readiness";
@@ -62,6 +64,42 @@ describe("intake question set", () => {
 });
 
 describe("phase gate", () => {
+  it("accepts only complete stage prefixes", () => {
+    const early = new Set(questionsOfStage("early").map((question) => question.id));
+    const earlyAnswers = answerAll(1).filter((answer) => early.has(answer.questionId));
+    expect(isCompleteStageAnswerSet(earlyAnswers)).toBe(true);
+    expect(validateAssessmentAnswers(earlyAnswers).valid).toBe(true);
+    expect(isCompleteStageAnswerSet(earlyAnswers.slice(1))).toBe(false);
+    expect(isCompleteStageAnswerSet(answerAll(1))).toBe(true);
+  });
+
+  it("does not unlock preparing when the completed early Gate fails", () => {
+    const early = new Set(questionsOfStage("early").map((question) => question.id));
+    const earlyAnswers = answerAll(1).filter((answer) => early.has(answer.questionId));
+    expect(earlyAnswers).toHaveLength(18);
+    expect(hasPassedStage(earlyAnswers, "early")).toBe(false);
+    expect(hasPassedStage(earlyAnswers.map((answer) => ({ ...answer, level: 4 })), "early"))
+      .toBe(true);
+  });
+
+  it("stops at preparing after early passes and preparing fails", () => {
+    const throughPreparing = new Set(
+      ["early", "preparing"].flatMap((stageId) =>
+        questionsOfStage(stageId).map((question) => question.id)
+      )
+    );
+    const answers = answerAll(1)
+      .filter((answer) => throughPreparing.has(answer.questionId))
+      .map((answer) => ({
+        ...answer,
+        level: questionsOfStage("early").some(
+          (question) => question.id === answer.questionId
+        ) ? 4 as const : answer.level
+      }));
+    expect(hasPassedStage(answers, "early")).toBe(true);
+    expect(hasPassedStage(answers, "preparing")).toBe(false);
+  });
+
   it("holds the first stage and scores 0 when nothing is positive", () => {
     const result = calculateReadiness(answerAll(1));
     expect(result.overallScore).toBe(0);

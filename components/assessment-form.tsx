@@ -13,6 +13,7 @@ import {
   GATE_THRESHOLD,
   STAGES,
   calculateReadiness,
+  hasPassedStage,
   questionsOfStage,
   validateAssessmentAnswers
 } from "@/lib/readiness";
@@ -47,6 +48,7 @@ export function AssessmentForm({
   const [offering, setOffering] = useState<OfferingType>("both");
   const [evidence, setEvidence] = useState<Record<string, EvidenceInput>>({});
   const [activeStage, setActiveStage] = useState(0);
+  const [unlockedStage, setUnlockedStage] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ReadinessResult | null>(null);
   const [saving, setSaving] = useState(false);
@@ -92,7 +94,16 @@ export function AssessmentForm({
     return pool.find((question) => answers[question.id] === undefined);
   }
 
-  function goNext() {
+  function answersThroughStage(stageIndex: number) {
+    const questionIds = new Set(
+      STAGES.slice(0, stageIndex + 1).flatMap((entry) =>
+        questionsOfStage(entry.id).map((question) => question.id)
+      )
+    );
+    return submittedAnswers.filter((answer) => questionIds.has(answer.questionId));
+  }
+
+  async function goNext() {
     const missing = firstUnanswered(questionsOfStage(stage.id));
     if (missing) {
       setErrors((current) => ({
@@ -104,15 +115,23 @@ export function AssessmentForm({
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    setActiveStage((current) => Math.min(current + 1, STAGES.length - 1));
+    const completedAnswers = answersThroughStage(activeStage);
+    if (!hasPassedStage(completedAnswers, stage.id)) {
+      await finishAssessment(completedAnswers);
+      return;
+    }
+    const nextStage = Math.min(activeStage + 1, STAGES.length - 1);
+    setUnlockedStage(nextStage);
+    setActiveStage(nextStage);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function submitAnswers(
     answersToSubmit: ReadinessAnswer[],
-    restoredAnswers = false
+    restoredAnswers = false,
+    openDashboard = false
   ) {
-    setResult(calculateReadiness(answersToSubmit));
+    if (!openDashboard) setResult(calculateReadiness(answersToSubmit));
     setSaving(true);
     setSaved(false);
     try {
@@ -121,16 +140,39 @@ export function AssessmentForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ answers: answersToSubmit, offering })
       });
-      const payload = (await response.json()) as { assessmentId?: string };
+      const payload = (await response.json()) as {
+        assessmentId?: string;
+        message?: string;
+      };
       setSaved(response.ok);
       setAssessmentId(response.ok ? (payload.assessmentId ?? null) : null);
-      if (response.ok && restoredAnswers) clearPending();
+      if (response.ok) {
+        if (restoredAnswers) clearPending();
+        if (openDashboard) window.location.href = "/dashboard";
+      } else {
+        setRestoreMessage(payload.message ?? "진단 결과를 저장하지 못했습니다.");
+      }
     } catch {
       setSaved(false);
+      setRestoreMessage("진단 결과를 저장하지 못했습니다.");
     } finally {
       setSaving(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  }
+
+  async function finishAssessment(answersToSubmit: ReadinessAnswer[]) {
+    const validation = validateAssessmentAnswers(answersToSubmit);
+    if (!validation.valid) {
+      setErrors(validation.errors);
+      return;
+    }
+    if (!isSignedIn) {
+      savePending(answersToSubmit);
+      window.location.href = "/signup?next=/assessment%3Fresume%3D1";
+      return;
+    }
+    await submitAnswers(answersToSubmit, false, true);
   }
 
   async function submit() {
@@ -144,19 +186,7 @@ export function AssessmentForm({
       }));
       return;
     }
-    const validation = validateAssessmentAnswers(submittedAnswers);
-    if (!validation.valid) {
-      setErrors(validation.errors);
-      return;
-    }
-
-    if (!isSignedIn) {
-      savePending(submittedAnswers);
-      window.location.href = "/signup?next=/assessment%3Fresume%3D1";
-      return;
-    }
-
-    await submitAnswers(submittedAnswers);
+    await finishAssessment(answersThroughStage(activeStage));
   }
 
   useEffect(() => {
@@ -181,7 +211,7 @@ export function AssessmentForm({
           .map((answer) => [answer.questionId, answer.evidence!])
       )
     );
-    void submitAnswers(pending, true);
+    void submitAnswers(pending, true, true);
   }, [isSignedIn, resume]);
 
   if (result) {
@@ -410,6 +440,7 @@ export function AssessmentForm({
                 <button
                   type="button"
                   className={index === activeStage ? "active" : ""}
+                  disabled={index > unlockedStage}
                   onClick={() => setActiveStage(index)}
                 >
                   <span>{index + 1}</span>
@@ -524,17 +555,19 @@ export function AssessmentForm({
             <button
               type="button"
               className="button button--primary"
+              disabled={saving}
               onClick={goNext}
             >
-              다음 단계
+              {saving ? "단계를 저장하는 중" : "다음 단계"}
             </button>
           ) : (
             <button
               type="button"
               className="button button--primary"
+              disabled={saving}
               onClick={submit}
             >
-              진단 결과 보기
+              {saving ? "진단을 저장하는 중" : "진단 결과 보기"}
             </button>
           )}
         </div>

@@ -15,7 +15,7 @@ const answerSchema = z.object({
     .optional()
 });
 const requestSchema = z.object({
-  answers: z.array(answerSchema).length(55),
+  answers: z.array(answerSchema).min(1).max(55),
   offering: z.enum(["both", "product", "service"]).default("both")
 });
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   const parsed = requestSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { message: "55개 진단 응답을 확인해 주세요." },
+      { message: "완료한 단계의 진단 응답을 확인해 주세요." },
       { status: 400 }
     );
   }
