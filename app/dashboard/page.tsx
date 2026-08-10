@@ -114,6 +114,13 @@ export default async function DashboardPage({
   const answerInsights = selectedStageId
     ? buildStageAnswerInsights(readinessAnswers, selectedStageId)
     : null;
+  const planStatus = plan?.status === "active"
+    ? "승인되어 실행 중인 계획이 있습니다."
+    : plan ? "AI와 작성 중인 계획이 있습니다." : "아직 AI GTM 계획이 없습니다.";
+  const planHref = plan?.status === "active" ? "/journey" : `/assistant/${assessment.id}`;
+  const planCta = plan?.status === "active"
+    ? "실행 계획 보기"
+    : plan ? "AI 계획 이어가기" : "AI 계획 만들기";
 
   return (
     <main className="app-page">
@@ -126,7 +133,7 @@ export default async function DashboardPage({
             <h1 className="page-title">{profile.display_name}님, 이어서 진출 준비를 진행하세요.</h1>
             <p className="page-description">최근 진단 결과와 아직 완료하지 않은 액션을 기준으로 정리해 드렸습니다.</p>
           </span>
-          <Link href="/assessment" className="button button--primary">진단 업데이트</Link>
+          <Link href="/assessment?new=1" className="button button--primary">재진단 시작</Link>
         </div>
 
         <section className="dashboard-overview">
@@ -148,7 +155,7 @@ export default async function DashboardPage({
             <span className="page-kicker">최근 진단(Latest Assessment)</span>
             <h2>{new Date(assessment.completed_at).toLocaleDateString("ko-KR")} 진단</h2>
             <p>{assessment.is_on_hold ? `확인이 필요한 선결 조건 ${gateMessages.length}건` : "현재 단계의 선결 조건을 모두 통과했습니다."}</p>
-            <Link href="/assessment" className="button button--ghost button--full">응답 다시 보기</Link>
+            <Link href="/dashboard#answer-insights" className="button button--ghost button--full">지난 응답 보기</Link>
           </article>
         </section>
 
@@ -248,7 +255,7 @@ export default async function DashboardPage({
 
               <div className="answer-insights__cta panel">
                 <span><strong>보완이 필요한 답변을 실행 계획으로 전환하세요.</strong><small>현재 진단 결과를 바탕으로 AI GTM 어시스턴트와 계획을 만듭니다.</small></span>
-                <Link href={`/assistant/${assessment.id}`} className="button button--primary">AI GTM 계획 만들기 →</Link>
+                <Link href={planHref} className="button button--primary">{planCta} →</Link>
               </div>
             </>
           )}
@@ -259,10 +266,9 @@ export default async function DashboardPage({
             <span>
               <span className="page-kicker">AI GTM 계획(AI GTM Plan)</span>
               <h2 className="plan-summary">{plan?.summary || "진단 결과를 단계별 실행계획(30·60·90 Day Plan)으로 바꿔 보세요."}</h2>
+              <p className="page-description">{planStatus}</p>
             </span>
-            <Link href={`/assistant/${assessment.id}`} className="button button--primary">
-              {plan ? "AI 계획 이어가기" : "AI 계획 만들기"} →
-            </Link>
+            <Link href={planHref} className="button button--primary">{planCta} →</Link>
           </div>
           {planItems && planItems.length > 0 && (
             <div className="dashboard-action-list">
