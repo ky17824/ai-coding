@@ -3,11 +3,15 @@ import { zodTextFormat } from "openai/helpers/zod";
 import {
   assistantResponseSchema,
   buildDeterministicPlan,
+  classifyFounderContextValue,
   finalizeMarketResearch,
+  getPendingFounderQuestion,
   sanitizeFounderText,
+  selectFounderQuestion,
   shouldUseWebSearch,
   validatePlanDraft
 } from "./gtm-assistant";
+import type { GtmAssistantMessage, GtmFounderContext } from "./types";
 import type { SavedAction } from "./gtm-assistant";
 
 const actions: SavedAction[] = Array.from({ length: 5 }, (_, index) => ({
@@ -20,12 +24,31 @@ const actions: SavedAction[] = Array.from({ length: 5 }, (_, index) => ({
   urgency: index < 2 ? "P0" : "P1"
 }));
 
+const completeContext: GtmFounderContext = {
+  offeringType: "product",
+  offeringName: "제품 A",
+  offeringSummary: "제조 현장의 불량을 줄이는 제품",
+  customerProblem: "불량 원인을 늦게 발견합니다.",
+  coreValue: "불량 탐지 시간을 줄입니다.",
+  currentAlternative: "수기 검사",
+  differentiation: "실시간 분석",
+  deliveryModel: "수출",
+  revenueModel: "제품 판매",
+  validationEvidence: "고객 인터뷰",
+  targetCountry: "싱가포르",
+  targetCustomer: "현지 중견 제조사",
+  resources: "대표 1명, 제품 100개",
+  deadline: "2026-10-30",
+  constraints: "예산은 확인 필요"
+};
+
 describe("AI GTM assistant safeguards", () => {
   it("uses an object root required by OpenAI structured outputs", () => {
     const format = zodTextFormat(assistantResponseSchema, "gtm_assistant_turn");
 
     expect(format.schema).toMatchObject({ type: "object" });
     expect(JSON.stringify(format.schema)).not.toContain('"format":"uri"');
+    expect(JSON.stringify(format.schema)).not.toContain("next_question");
   });
 
   it("turns saved diagnostic actions into a bounded 30·60·90 day plan", () => {
@@ -82,5 +105,58 @@ describe("AI GTM assistant safeguards", () => {
     expect(shouldUseWebSearch("일본", "최신 인증 규정과 세율을 확인해줘")).toBe(true);
     expect(shouldUseWebSearch("일본", "우리 팀의 목표를 정리해줘")).toBe(false);
     expect(shouldUseWebSearch("", "최신 인증 규정")).toBe(false);
+  });
+
+  it("treats an explicit unknown as resolved so it is not asked again", () => {
+    expect(classifyFounderContextValue("확인필요")).toBe("unknown_confirmed");
+    expect(classifyFounderContextValue("아직 모릅니다.")).toBe("unknown_confirmed");
+    expect(classifyFounderContextValue("대표 1명, 제품 100개")).toBe("answered");
+    expect(classifyFounderContextValue(" ")).toBe("missing");
+  });
+
+  it("asks only the first missing field and never repeats an answered key", () => {
+    const context = { ...completeContext, resources: "", deadline: "" };
+    const first = selectFounderQuestion(context, []);
+
+    expect(first?.questionKey).toBe("resources");
+
+    const messages: GtmAssistantMessage[] = [
+      { role: "assistant", questionKey: "resources", content: first!.question, status: "asked" },
+      { role: "user", questionKey: "resources", content: "확인 필요", status: "unknown_confirmed" }
+    ];
+    const second = selectFounderQuestion({ ...context, resources: "확인 필요" }, messages);
+
+    expect(second?.questionKey).toBe("deadline");
+  });
+
+  it("stops clarification after three unique questions and proceeds with assumptions", () => {
+    const context = {
+      ...completeContext,
+      offeringSummary: "",
+      customerProblem: "",
+      coreValue: "",
+      resources: ""
+    };
+    const messages: GtmAssistantMessage[] = ["offeringSummary", "customerProblem", "coreValue"].map(
+      (questionKey) => ({
+        role: "assistant" as const,
+        questionKey,
+        content: `질문 ${questionKey}`,
+        status: "asked" as const
+      })
+    );
+
+    expect(selectFounderQuestion(context, messages)).toBeNull();
+  });
+
+  it("restores only a structured unanswered question", () => {
+    const messages: GtmAssistantMessage[] = [
+      { role: "assistant", content: "예전 자유 질문" },
+      { role: "assistant", questionKey: "resources", content: "가용 자원을 알려주세요.", status: "asked" }
+    ];
+
+    expect(getPendingFounderQuestion({ ...completeContext, resources: "" }, messages)?.questionKey)
+      .toBe("resources");
+    expect(getPendingFounderQuestion(completeContext, messages)).toBeNull();
   });
 });

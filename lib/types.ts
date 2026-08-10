@@ -197,7 +197,18 @@ export interface GtmAssistantQuestion {
   reason: string;
   inputType: "text" | "date" | "select";
   options: string[];
-  generatedBy: "gpt-5.6-luna";
+  completedFields: number;
+  totalFields: number;
+  clarificationCount: number;
+  clarificationLimit: number;
+  generatedBy: "system";
+}
+
+export interface GtmAssistantMessage {
+  role: "assistant" | "user";
+  content: string;
+  questionKey?: string;
+  status?: "asked" | "answered" | "unknown_confirmed";
 }
 
 export interface StoredGtmPlan {
@@ -209,7 +220,7 @@ export interface StoredGtmPlan {
   founderContext: Partial<GtmFounderContext>;
   marketResearch: GtmMarketResearch | null;
   marketResearchConfirmedAt: string | null;
-  recentMessages: { role: "assistant" | "user"; content: string }[];
+  recentMessages: GtmAssistantMessage[];
   turnCount: number;
   generationCount: number;
   generatedBy: string;

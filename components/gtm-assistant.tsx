@@ -28,29 +28,15 @@ interface Props {
     completionEvidence: string;
   }[];
   initialPlan: StoredGtmPlan | null;
+  initialQuestion: GtmAssistantQuestion | null;
 }
 
-export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
-  const pendingQuestion = initialPlan?.items.length === 0
-    ? initialPlan.recentMessages.filter((entry) => entry.role === "assistant").at(-1)?.content
-    : undefined;
+export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion }: Props) {
   const [planId, setPlanId] = useState(initialPlan?.id ?? "");
   const [planStatus, setPlanStatus] = useState(initialPlan?.status ?? "draft");
   const [summary, setSummary] = useState(initialPlan?.summary ?? "");
   const [items, setItems] = useState<GtmPlanItem[]>(initialPlan?.items ?? []);
-  const [question, setQuestion] = useState<GtmAssistantQuestion | null>(
-    pendingQuestion
-      ? {
-          kind: "next_question",
-          questionKey: "resume",
-          question: pendingQuestion,
-          reason: "이 답변을 반영해 실행 계획을 이어서 작성합니다.",
-          inputType: "text",
-          options: [],
-          generatedBy: "gpt-5.6-luna"
-        }
-      : null
-  );
+  const [question, setQuestion] = useState<GtmAssistantQuestion | null>(initialQuestion);
   const [message, setMessage] = useState("");
   const [context, setContext] = useState<GtmFounderContext>({
     offeringType: initialPlan?.founderContext.offeringType ?? "",
@@ -77,6 +63,7 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
   );
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [workshopFailed, setWorkshopFailed] = useState(false);
   const researchMatchesContext = Boolean(
     marketResearch &&
       marketResearch.offeringName === context.offeringName.trim() &&
@@ -84,18 +71,34 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
       marketResearch.targetCustomer === context.targetCustomer.trim()
   );
 
-  async function runWorkshop() {
+  async function runWorkshop(answerOverride?: string, forcePlan = false) {
     if (!researchMatchesContext || !researchConfirmed) {
       setNotice("시장·경쟁 사전조사를 만들고 확인한 뒤 실행 계획을 작성해 주세요.");
       return;
     }
+    const answer = (answerOverride ?? message).trim();
+    if (question && !answer && !forcePlan) {
+      setNotice("답변하거나 ‘확인 필요’를 선택해 주세요.");
+      return;
+    }
+    const nextContext = question && answer
+      ? { ...context, [question.questionKey]: answer } as GtmFounderContext
+      : context;
+    if (nextContext !== context) setContext(nextContext);
     setBusy(true);
     setNotice("");
+    setWorkshopFailed(false);
     try {
       const response = await fetch("/api/gtm-assistant/turn", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ assessmentId: assessment.id, message, founderContext: context })
+        body: JSON.stringify({
+          assessmentId: assessment.id,
+          message: answer,
+          questionKey: question?.questionKey ?? "",
+          forcePlan,
+          founderContext: nextContext
+        })
       });
       const payload = (await response.json()) as {
         message?: string;
@@ -122,6 +125,7 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
       setMessage("");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "오류가 발생했습니다.");
+      setWorkshopFailed(true);
     } finally {
       setBusy(false);
     }
@@ -273,14 +277,43 @@ export function GtmAssistant({ assessment, actions, initialPlan }: Props) {
         )}
 
         <div className="assistant-prompt panel">
-          {question && <p className="assistant-question"><strong>{question.question}</strong><span>{question.reason}</span></p>}
+          {question && (
+            <>
+              <div className="assistant-question-progress" aria-label="추가 확인 진행 상황">
+                <span>필수 정보 {question.completedFields}/{question.totalFields} 완료</span>
+                <span>추가 확인 {question.clarificationCount}/{question.clarificationLimit}</span>
+              </div>
+              <p className="assistant-question"><strong>{question.question}</strong><span>{question.reason}</span></p>
+            </>
+          )}
           <label>
             {question ? "답변" : "추가로 반영할 조건"}
-            <textarea rows={3} value={message} onChange={(event) => setMessage(event.target.value)} placeholder="선택 사항입니다. 비워 두시면 지금 정보만으로 계획을 만듭니다." />
+            {question?.inputType === "date" ? (
+              <input type="date" value={message} onChange={(event) => setMessage(event.target.value)} />
+            ) : (
+              <textarea
+                rows={3}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                placeholder={question ? "부족한 정보만 답해 주세요." : "선택 사항입니다. 비워 두시면 지금 정보만으로 계획을 만듭니다."}
+              />
+            )}
           </label>
-          <button className="button button--primary" type="button" onClick={runWorkshop} disabled={busy}>
-            {busy ? "계획을 작성하고 있습니다…" : question ? "답변하고 계속" : "AI GTM 계획 만들기"}
-          </button>
+          <div className="assistant-prompt-actions">
+            <button className="button button--primary" type="button" onClick={() => runWorkshop()} disabled={busy}>
+              {busy ? "계획을 작성하고 있습니다…" : question ? "답변하고 계속" : "AI GTM 계획 만들기"}
+            </button>
+            {question && (
+              <button className="button button--ghost" type="button" onClick={() => runWorkshop("확인 필요")} disabled={busy}>
+                확인 필요
+              </button>
+            )}
+            {workshopFailed && (
+              <button className="button button--ghost" type="button" onClick={() => runWorkshop(undefined, true)} disabled={busy}>
+                현재 정보로 계획 만들기
+              </button>
+            )}
+          </div>
         </div>
         {notice && <p className="notice-banner" role="status">{notice}</p>}
 

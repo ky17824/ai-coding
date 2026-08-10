@@ -3077,6 +3077,7 @@ svg {
 .assistant-context input,
 .assistant-context select,
 .assistant-context textarea,
+.assistant-prompt input,
 .assistant-prompt textarea,
 .assistant-plan-fields input,
 .assistant-plan-fields select {
@@ -3105,6 +3106,22 @@ svg {
 
 .assistant-prompt .button {
   justify-self: start;
+}
+
+.assistant-prompt-actions,
+.assistant-question-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.assistant-question-progress span {
+  border-radius: 999px;
+  background: #eef8f1;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 10px;
 }
 
 .assistant-context > .button {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { GtmAssistant } from "@/components/gtm-assistant";
+import { getPendingFounderQuestion } from "@/lib/gtm-assistant";
 import { SiteHeader } from "@/components/site-header";
 import { normalizeGateMessage } from "@/lib/readiness";
 import type { GtmMarketResearch, GtmPlanItem, StoredGtmPlan } from "@/lib/types";
@@ -92,6 +93,9 @@ export default async function AssistantPage({
       items: (itemRows ?? []).map((row) => mapItem(row as Record<string, unknown>))
     };
   }
+  const initialQuestion = initialPlan && initialPlan.items.length === 0
+    ? getPendingFounderQuestion(initialPlan.founderContext, initialPlan.recentMessages)
+    : null;
 
   return (
     <main className="app-page">
@@ -115,6 +119,7 @@ export default async function AssistantPage({
           completionEvidence: action.completion_evidence
         }))}
         initialPlan={initialPlan}
+        initialQuestion={initialQuestion}
       />
     </main>
   );

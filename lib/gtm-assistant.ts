@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type {
+  GtmAssistantMessage,
   GtmAssistantQuestion,
+  GtmFounderContext,
   GtmMarketResearch,
   GtmPlanDraft,
   GtmPlanItem,
@@ -36,22 +38,12 @@ const itemSchema = z.object({
   sources: z.array(sourceSchema).min(1).max(5)
 });
 
-export const assistantOutputSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("next_question"),
-    questionKey: z.string().min(1).max(80),
-    question: z.string().min(1).max(300),
-    reason: z.string().min(1).max(300),
-    inputType: z.enum(["text", "date", "select"]),
-    options: z.array(z.string().max(100)).max(6)
-  }),
-  z.object({
-    kind: z.literal("plan_draft"),
-    summary: z.string().min(1).max(800),
-    assumptions: z.array(z.string().max(300)).max(8),
-    items: z.array(itemSchema).min(1).max(8)
-  })
-]);
+export const assistantOutputSchema = z.object({
+  kind: z.literal("plan_draft"),
+  summary: z.string().min(1).max(800),
+  assumptions: z.array(z.string().max(300)).max(8),
+  items: z.array(itemSchema).min(1).max(8)
+});
 
 export const assistantResponseSchema = z.object({
   result: assistantOutputSchema
@@ -100,6 +92,159 @@ export const marketResearchResponseSchema = z.object({
 });
 
 export type AssistantModelOutput = z.infer<typeof assistantOutputSchema>;
+
+type FounderQuestionKey = keyof Pick<
+  GtmFounderContext,
+  | "offeringName"
+  | "offeringSummary"
+  | "customerProblem"
+  | "coreValue"
+  | "targetCountry"
+  | "targetCustomer"
+  | "resources"
+  | "deadline"
+  | "constraints"
+>;
+
+const MAX_CLARIFICATION_QUESTIONS = 3;
+const UNKNOWN_ANSWER = /^(?:모름|모르겠습니다|확인\s*필요|미정|아직\s*(?:모릅니다|없습니다|정하지\s*않았습니다))[\s.!]*$/;
+const FOUNDER_QUESTIONS: {
+  key: FounderQuestionKey;
+  question: string;
+  reason: string;
+  inputType: "text" | "date";
+}[] = [
+  {
+    key: "offeringName",
+    question: "글로벌 시장에 론칭할 제품·서비스·솔루션의 이름을 알려주세요.",
+    reason: "계획의 대상을 하나로 고정해야 시장 조사와 실행 항목이 흔들리지 않습니다.",
+    inputType: "text"
+  },
+  {
+    key: "offeringSummary",
+    question: "론칭 대상이 무엇을 제공하고 언제 사용되는지 한두 문장으로 설명해 주세요.",
+    reason: "제품 범위와 실제 사용 상황을 계획에 반영하기 위한 정보입니다.",
+    inputType: "text"
+  },
+  {
+    key: "customerProblem",
+    question: "초기 목표고객이 지금 겪는 가장 큰 비용·시간·위험은 무엇인가요?",
+    reason: "고객이 해결하려는 문제를 기준으로 검증 과제를 정하기 위한 정보입니다.",
+    inputType: "text"
+  },
+  {
+    key: "coreValue",
+    question: "기존 방식보다 나아지는 측정 가능한 결과 한 가지를 알려주세요.",
+    reason: "초기 판매 제안과 완료 기준을 구체화하기 위한 정보입니다.",
+    inputType: "text"
+  },
+  {
+    key: "targetCountry",
+    question: "가장 먼저 진출할 초기 목표국가를 알려주세요.",
+    reason: "국가별 시장·규제·채널 조건을 계획에 반영하기 위한 정보입니다.",
+    inputType: "text"
+  },
+  {
+    key: "targetCustomer",
+    question: "초기 목표국가에서 가장 먼저 검증할 고객군을 알려주세요.",
+    reason: "누구에게 인터뷰하고 판매할지 범위를 좁히기 위한 정보입니다.",
+    inputType: "text"
+  },
+  {
+    key: "resources",
+    question: "현재 계획에 사용할 수 있는 인력·시간·예산 또는 보유 재고를 알려주세요. 모르면 ‘확인 필요’라고 답해 주세요.",
+    reason: "실행 가능한 계획의 범위를 정하기 위한 정보입니다.",
+    inputType: "text"
+  },
+  {
+    key: "deadline",
+    question: "이번 계획의 목표 기한을 알려주세요.",
+    reason: "30일 또는 60일 계획의 완료일을 정하기 위한 정보입니다.",
+    inputType: "date"
+  },
+  {
+    key: "constraints",
+    question: "반드시 지켜야 할 규제·비용·운영 제약이 있나요? 없거나 모르면 ‘확인 필요’라고 답해 주세요.",
+    reason: "실행 계획에서 피해야 할 조건과 확인 과제를 분리하기 위한 정보입니다.",
+    inputType: "text"
+  }
+];
+
+export function classifyFounderContextValue(
+  value: string | undefined
+): "missing" | "answered" | "unknown_confirmed" {
+  const normalized = value?.trim() ?? "";
+  if (!normalized) return "missing";
+  return UNKNOWN_ANSWER.test(normalized) ? "unknown_confirmed" : "answered";
+}
+
+function askedQuestionKeys(messages: GtmAssistantMessage[]) {
+  return new Set(
+    messages.flatMap((message) =>
+      message.role === "assistant" && message.questionKey ? [message.questionKey] : []
+    )
+  );
+}
+
+export function isFounderQuestionKey(value: string): value is FounderQuestionKey {
+  return FOUNDER_QUESTIONS.some((question) => question.key === value);
+}
+
+function buildFounderQuestion(
+  key: FounderQuestionKey,
+  context: Partial<GtmFounderContext>,
+  messages: GtmAssistantMessage[]
+): GtmAssistantQuestion {
+  const definition = FOUNDER_QUESTIONS.find((question) => question.key === key)!;
+  const completedFields = FOUNDER_QUESTIONS.filter(
+    (question) => classifyFounderContextValue(context[question.key]) !== "missing"
+  ).length;
+  return {
+    kind: "next_question",
+    questionKey: definition.key,
+    question: definition.question,
+    reason: definition.reason,
+    inputType: definition.inputType,
+    options: [],
+    completedFields,
+    totalFields: FOUNDER_QUESTIONS.length,
+    clarificationCount: askedQuestionKeys(messages).size + 1,
+    clarificationLimit: MAX_CLARIFICATION_QUESTIONS,
+    generatedBy: "system"
+  };
+}
+
+export function selectFounderQuestion(
+  context: Partial<GtmFounderContext>,
+  messages: GtmAssistantMessage[]
+) {
+  const asked = askedQuestionKeys(messages);
+  if (asked.size >= MAX_CLARIFICATION_QUESTIONS) return null;
+  const next = FOUNDER_QUESTIONS.find(
+    (question) =>
+      classifyFounderContextValue(context[question.key]) === "missing" &&
+      !asked.has(question.key)
+  );
+  return next ? buildFounderQuestion(next.key, context, messages) : null;
+}
+
+export function getPendingFounderQuestion(
+  context: Partial<GtmFounderContext>,
+  messages: GtmAssistantMessage[]
+) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role !== "assistant" || !message.questionKey) continue;
+    const key = message.questionKey as FounderQuestionKey;
+    if (!FOUNDER_QUESTIONS.some((question) => question.key === key)) return null;
+    const answeredAfter = messages.slice(index + 1).some(
+      (entry) => entry.role === "user" && entry.questionKey === key
+    );
+    if (answeredAfter || classifyFounderContextValue(context[key]) !== "missing") return null;
+    return buildFounderQuestion(key, context, messages.slice(0, index));
+  }
+  return null;
+}
 
 export interface SavedAction {
   id: string | null;
@@ -186,7 +331,6 @@ export function validatePlanDraft(
   output: AssistantModelOutput,
   allowedHorizons: (30 | 60 | 90)[] = [30, 60, 90]
 ) {
-  if (output.kind !== "plan_draft") return output;
   if (output.items.some((item) => !allowedHorizons.includes(item.horizon))) {
     throw new Error("현재 단계에 허용되지 않은 계획 기간입니다.");
   }
@@ -231,8 +375,6 @@ export function finalizeMarketResearch(
 
 export function withGeneratedBy(
   output: AssistantModelOutput
-): GtmAssistantQuestion | GtmPlanDraft {
-  return { ...output, generatedBy: ASSISTANT_MODEL } as
-    | GtmAssistantQuestion
-    | GtmPlanDraft;
+): GtmPlanDraft {
+  return { ...output, generatedBy: ASSISTANT_MODEL };
 }
