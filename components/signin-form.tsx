@@ -7,11 +7,19 @@ import {
   signInWithPassword,
   type SignInState
 } from "@/app/signin/actions";
-import { GoogleButton } from "@/components/google-button";
+import { SocialLoginButton } from "@/components/social-login-button";
 
 const initialState: SignInState = { ok: false, message: "" };
 
-export function SignInForm({ next, googleEnabled }: { next: string; googleEnabled: boolean }) {
+export function SignInForm({
+  next,
+  googleEnabled,
+  kakaoEnabled
+}: {
+  next: string;
+  googleEnabled: boolean;
+  kakaoEnabled: boolean;
+}) {
   const [passwordState, passwordAction, passwordPending] = useActionState(
     signInWithPassword,
     initialState
@@ -23,9 +31,10 @@ export function SignInForm({ next, googleEnabled }: { next: string; googleEnable
 
   return (
     <div className="signin-form">
-      {googleEnabled && (
+      {(googleEnabled || kakaoEnabled) && (
         <>
-          <GoogleButton next={next} />
+          {kakaoEnabled && <SocialLoginButton provider="kakao" next={next} />}
+          {googleEnabled && <SocialLoginButton provider="google" next={next} />}
           <div className="form-divider"><span>또는</span></div>
         </>
       )}

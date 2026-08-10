@@ -31,6 +31,15 @@ export default function PrivacyPage() {
         </p>
       </section>
       <section>
+        <h2>소셜 로그인</h2>
+        <p>
+          Google 또는 카카오 로그인을 선택하면 해당 제공자의 계정 식별정보와
+          동의한 이메일·기본 프로필을 Supabase 인증을 통해 처리합니다. 내부
+          서비스 식별자는 별도의 사용자 UUID를 사용하며, 계정 탈퇴 시 연결된
+          카카오 계정의 서비스 연결 해제를 먼저 요청합니다.
+        </p>
+      </section>
+      <section>
         <h2>AI GTM 어시스턴트</h2>
         <p>
           AI에는 계산된 점수, 진단 응답 단계, 선택된 액션, 사용자가 직접 적은

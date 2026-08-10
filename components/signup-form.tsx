@@ -3,12 +3,20 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { signUpWithPassword, type SignUpState } from "@/app/signup/actions";
-import { GoogleButton } from "@/components/google-button";
+import { SocialLoginButton } from "@/components/social-login-button";
 import { loadPending } from "@/lib/pending-assessment";
 
 const initialState: SignUpState = { ok: false, message: "" };
 
-export function SignupForm({ next, googleEnabled }: { next: string; googleEnabled: boolean }) {
+export function SignupForm({
+  next,
+  googleEnabled,
+  kakaoEnabled
+}: {
+  next: string;
+  googleEnabled: boolean;
+  kakaoEnabled: boolean;
+}) {
   const [state, action, pending] = useActionState(signUpWithPassword, initialState);
   const [assessmentAnswerCount, setAssessmentAnswerCount] = useState(0);
   useEffect(() => setAssessmentAnswerCount(loadPending()?.length ?? 0), []);
@@ -20,9 +28,10 @@ export function SignupForm({ next, googleEnabled }: { next: string; googleEnable
           이 탭에 진단 응답 {assessmentAnswerCount}개를 보관하고 있습니다.
         </p>
       )}
-      {googleEnabled && (
+      {(googleEnabled || kakaoEnabled) && (
         <>
-          <GoogleButton next={next} />
+          {kakaoEnabled && <SocialLoginButton provider="kakao" next={next} />}
+          {googleEnabled && <SocialLoginButton provider="google" next={next} />}
           <div className="form-divider"><span>또는</span></div>
         </>
       )}

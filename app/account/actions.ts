@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { safeNextPath } from "@/lib/auth";
 import { encryptPhone } from "@/lib/pii";
+import { ensureKakaoUnlinked, kakaoServiceUserId } from "@/lib/kakao";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -112,6 +113,17 @@ export async function deleteAccount(
   const confirmation = String(formData.get("email") ?? "").trim().toLowerCase();
   if (confirmation !== user.email.toLowerCase()) {
     return { ok: false, message: "현재 계정 이메일을 정확히 입력해 주세요." };
+  }
+  const kakaoIdentity = user.identities?.find((identity) => identity.provider === "kakao");
+  if (kakaoIdentity) {
+    const serviceUserId = kakaoServiceUserId([kakaoIdentity]);
+    if (!serviceUserId) {
+      return { ok: false, message: "카카오 연결 정보를 확인하지 못해 탈퇴를 중단했습니다." };
+    }
+    const unlink = await ensureKakaoUnlinked(serviceUserId, process.env.KAKAO_ADMIN_KEY);
+    if (!unlink.ok) {
+      return { ok: false, message: "카카오 연결을 해제하지 못해 탈퇴를 중단했습니다. 잠시 후 다시 시도해 주세요." };
+    }
   }
   const { error: anonymizeError } = await admin.from("profiles").update({
     display_name: "탈퇴한 사용자",

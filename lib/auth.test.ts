@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   appOrigin,
+  authErrorMessage,
   dashboardPathForRole,
   passwordResetErrorMessage,
   safeNextPath
 } from "@/lib/auth";
+
+it("maps OAuth errors to safe Korean messages", () => {
+  expect(authErrorMessage("oauth_cancelled")).toContain("완료되지 않았습니다");
+  expect(authErrorMessage("email_required")).toContain("이메일 제공");
+  expect(authErrorMessage("raw-provider-message")).not.toContain("raw-provider-message");
+});
 
 it("reports actionable password reset email failures", () => {
   expect(passwordResetErrorMessage({ status: 429 })).toContain("한도");

@@ -22,6 +22,19 @@ export function passwordResetErrorMessage(
   return "비밀번호 재설정 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.";
 }
 
+export function authErrorMessage(code?: string | null) {
+  if (!code) return null;
+  const messages: Record<string, string> = {
+    oauth_cancelled: "소셜 인증이 완료되지 않았습니다. 다시 시도하거나 이메일로 로그인해 주세요.",
+    email_required: "소셜 계정에서 이메일 제공에 동의한 뒤 다시 시도하거나 이메일로 가입해 주세요.",
+    configuration: "현재 소셜 로그인을 사용할 수 없습니다. 이메일 로그인을 이용해 주세요.",
+    deleted: "탈퇴한 계정입니다. 다른 이메일로 가입해 주세요.",
+    onboarding: "계정 정보를 준비하지 못했습니다. 잠시 후 다시 로그인해 주세요.",
+    callback: "인증을 완료하지 못했습니다. 다시 시도하거나 이메일로 로그인해 주세요."
+  };
+  return messages[code] ?? messages.callback;
+}
+
 export function safeNextPath(value?: string | null, fallback = "/dashboard") {
   if (
     !value ||

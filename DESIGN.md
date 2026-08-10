@@ -3,15 +3,19 @@
 ## Source of truth
 
 - Status: Active
-- Last refreshed: 2026-08-10
+- Last refreshed: 2026-08-11
 - Primary product surfaces: 랜딩, 인증·온보딩, 단계별 준비도 진단, Gate 판정, 론칭 대상 정의, AI 시장·경쟁 사전조사, 준비 3단계 후 실제 판매 가능성 예비검증, AI GTM 공동계획, 대시보드·여정, 계획 보고서, 전문가 서비스
-- Evidence reviewed: `app/page.tsx`, `app/globals.css`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `app/api/gtm-assistant/turn/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`
+- Evidence reviewed: `app/page.tsx`, `app/globals.css`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `components/google-button.tsx`, `components/signin-form.tsx`, `components/signup-form.tsx`, `app/auth/callback/route.ts`, `app/account/actions.ts`, `app/api/gtm-assistant/turn/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`, `.omx/plans/2026-08-11-kakao-login-integration.md`
 - Observed fact: 기존 UI는 `--ink`, `--green`, `--green-dark`, `--mint`, `--paper` 토큰과 흰색 panel, 12px 내외 radius, 짧은 상태 문구를 공통으로 사용한다.
 - Observed fact: 현재 AI GTM 어시스턴트는 목표국가·목표고객·자원·기한·제약만 받고 바로 계획을 만들며, 론칭할 제품·서비스·솔루션과 시장규모·경쟁사 조사 결과를 수집·검토·저장하는 단계가 없다.
 - Observed fact: 대시보드의 단계 통과 카드가 `gate_messages`의 공통 접두문 `필수 선결 조건이 남았습니다 —`를 항목마다 그대로 출력해 같은 상태 문장이 반복된다.
 - Observed fact: 55문항에는 목표국가와 고객군 관련 질문이 있지만, 진단 시점의 실제 `초기 목표국가(Target Country)`와 `목표 고객군(Target Customer Segment)`을 구조화해 확인·저장하는 값은 없다.
+- Observed fact: Google 로그인은 Supabase `signInWithOAuth`와 공통 `/auth/callback`을 사용하므로 Kakao도 같은 인증 경로를 재사용할 수 있다.
+- Observed fact: `profiles.email`은 필수지만 OAuth 콜백은 이메일이 없는 사용자를 조직 생성 전에 차단하지 않고, 로그인 화면은 콜백 오류 query를 사용자 문장으로 표시하지 않는다.
+- Observed fact: 현재 계정 탈퇴는 Supabase 계정만 익명화·삭제하고 외부 OAuth provider 연결 해제는 수행하지 않는다.
 - Product decision: `준비 1단계`와 `준비 2단계`에서는 후속 고객 행동·지불·반복 구매 증거가 아직 충분하지 않으므로 실제 판매 가능성을 판정하지 않는다. `준비 3단계`까지 55문항을 모두 답한 진단에서만 실제 판매 가능성 예비검증을 제공한다.
 - Product decision: 초기 목표국가와 그 국가의 목표 고객군은 준비 1단계에서 정하기 시작하되, 준비 2단계 통과 기준(Stage Gate) B를 통과해 준비 3단계로 이동하기 전에는 창업자가 직접 입력하고 확정해야 한다. AI가 질문 답변에서 추정한 값은 확정값으로 인정하지 않는다.
+- Product decision: 카카오 로그인은 Supabase의 기본 Kakao provider와 기존 PKCE callback을 재사용한다. 첫 버전은 `account_email`을 제공한 계정만 허용하며 신규 OAuth 사용자는 기존 회사 정보·연락처·필수 동의 온보딩을 완료한다. 기존 계정 이력은 Supabase가 동일 identity로 실제 연결한 경우에만 이어진다.
 - Design inference: AI 화면도 별도 챗봇 브랜드가 아니라 Borderless 실행 여정의 한 단계로 보여야 한다.
 
 ## Brand
@@ -22,7 +26,7 @@
 
 ## Product goals
 
-- Goals: 창업자가 현재 통과 가능한 단계까지만 답하고 즉시 가치를 받도록 하며, 첫 미통과 Gate의 질문별 격차를 계획·실행·증거·재진단으로 닫아 다음 단계로 이동하게 한다. 준비 2단계까지 초기 목표국가와 목표 고객군을 직접 확정하고, 계획을 만들기 전에는 `무엇을·누구에게·어디에서` 론칭하는지 정의하며, 출처가 있는 시장·경쟁 사전조사와 창업자 확인을 거친다. 실제 판매 가능성 예비검증은 준비 3단계까지 55문항이 모두 응답된 경우에만 제공한다.
+- Goals: 창업자가 이메일·Google·카카오 중 익숙한 인증 수단으로 같은 진단·계획 이력에 안전하게 접근하고, 현재 통과 가능한 단계까지만 답해 즉시 가치를 받도록 한다. 첫 미통과 Gate의 질문별 격차를 계획·실행·증거·재진단으로 닫아 다음 단계로 이동하게 한다. 준비 2단계까지 초기 목표국가와 목표 고객군을 직접 확정하고, 계획을 만들기 전에는 `무엇을·누구에게·어디에서` 론칭하는지 정의하며, 출처가 있는 시장·경쟁 사전조사와 창업자 확인을 거친다. 실제 판매 가능성 예비검증은 준비 3단계까지 55문항이 모두 응답된 경우에만 제공한다.
 - Non-goals: 자유 채팅, AI 재채점, 자동 예약·결제, 법률·세무·규제 확정 판단
 - Success signals: 단계별 완료율, 론칭 정의 완료율, 사전조사 검토·보고서 포함률, 준비 3단계 진단의 실제 판매 가능성 예비검증 확인률, 첫 Gate 판정 후 AI 계획 시작률, 계획 승인·30일 실행률, 재진단 통과율, 보고서 다운로드율, 전문가 brief 확인률
 
@@ -36,7 +40,7 @@
 ## Information architecture
 
 - Primary navigation: 대시보드 / 준비도 진단 / GTM 여정 / 전문가 서비스 / 계정
-- Core routes/screens: `/assessment` 현재 Gate 문항과 준비 2단계 목표시장 확인 → 단계 판정 → `/assistant/[assessmentId]` 론칭 대상 정의 → 시장·경쟁 사전조사 검토 → 준비 3단계 55문항 완료 시 실제 판매 가능성 예비검증 → 공동계획 또는 다음 Gate → `/dashboard` 목표시장·질문별 실행·증거 현황 → `/assessment/[assessmentId]/recheck` Gate 재확인 → `/journey` 실행 보드 → 계획 보고서 → `/services` 전문가 연결
+- Core routes/screens: `/signin`·`/signup` 이메일·Google·카카오 인증 → `/auth/callback` 공통 OAuth 처리 → `/account/onboarding` 신규 OAuth 사용자 정보·동의 보완 → `/assessment` 현재 Gate 문항과 준비 2단계 목표시장 확인 → 단계 판정 → `/assistant/[assessmentId]` 론칭 대상 정의 → 시장·경쟁 사전조사 검토 → 준비 3단계 55문항 완료 시 실제 판매 가능성 예비검증 → 공동계획 또는 다음 Gate → `/dashboard` 목표시장·질문별 실행·증거 현황 → `/assessment/[assessmentId]/recheck` Gate 재확인 → `/journey` 실행 보드 → 계획 보고서 → `/services` 전문가 연결
 - Content hierarchy: 현재 단계 문항 → 준비 2단계의 초기 목표국가·목표 고객군 확인 → 결정론적 Gate 판정 → 공통 상태 요약 1회와 개별 보완 항목 → 질문별 충족·근거 상태 → 론칭 대상 정의 → 시장·경쟁 사전조사와 가정 확인 → 준비 3단계 55문항 완료 여부에 따른 판매 가능성 예비검증 또는 검증 보류 안내 → 허용된 기간 범위의 계획 초안 → 질문과 연결된 실행 → 증거 제출 → Gate 재확인 → 다음 단계 해제 → 다운로드·전문가 handoff
 - The assistant is entered from a saved assessment only; it is not a global chat entry in primary navigation.
 - Later-stage questions are not visible or navigable until the immediately preceding Gate passes.
@@ -55,6 +59,8 @@
 - 긴 조사 결과도 영역을 침범하지 않는다: 시장동향과 주요 경쟁사는 각각 경계가 있는 카드로 구분하고, 긴 출처·URL은 카드 안에서 줄바꿈한다.
 - 시장 정의는 추정하지 않는다: 목표국가와 목표 고객군은 창업자가 명시적으로 확인한 구조화 값만 Gate B와 AI 조사 입력에 사용한다.
 - AI와 사람의 경계를 보인다: 내부 근거, 외부 사실, AI 가정, 전문가 확인을 라벨로 구분한다.
+- 인증 수단이 달라도 계정은 하나다: 확인 이메일이 같은 OAuth identity는 같은 사용자 이력으로 연결하고 provider별로 별도 제품 경험을 만들지 않는다.
+- 인증 실패는 복구 행동을 말한다: callback 코드나 provider 오류를 노출하지 않고 재시도·이메일 로그인의 다음 행동을 안내한다.
 - 실패해도 진단은 남는다: AI·검색 장애 시 결정론적 액션을 사용할 수 있어야 한다.
 - Tradeoffs: 전체 55문항 비교 가능성보다 단계별 완주와 조기 가치, 화려한 채팅 경험보다 긴 계획의 가독성, 자동화보다 통제 가능성을 우선한다.
 
@@ -70,10 +76,31 @@
 ## Components
 
 - Existing components to reuse: `SiteHeader`, `.panel`, `.button` variants, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, `.offering-picker`, 서비스 카드
-- New/changed components: 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `MarketSizingTable`, `CompetitorTable`, `SourceList`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드
+- New/changed components: provider별 설정을 받는 `SocialLoginButton`, 허용된 callback 오류를 설명하는 `AuthErrorNotice`, 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `MarketSizingTable`, `CompetitorTable`, `SourceList`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드
 - Variants and states: Gate locked/active/passed/stopped, target market missing/partial/confirmed, question satisfied/evidence_needed/improvement_needed/locked, assistant context_draft/researching/review_required/confirmed/plan_draft/active, market source/assumption/estimate/confirmation_needed, offering validation deferred/preliminary_reviewed, plan draft/active/superseded/completed, item not_started/in_progress/blocked/completed, founder/vault/web/deterministic source
 - Token/component ownership: 전역 토큰과 공통 상태는 `app/globals.css`; assistant 전용 레이아웃도 같은 파일의 기존 토큰을 사용한다.
 - Do not add a component library, Tailwind layer, icon package, or design-token abstraction.
+
+### 카카오 로그인
+
+- 로그인·가입 화면은 `카카오로 계속하기`, `Google로 계속하기`, 단일 `또는` 구분선, 이메일 인증 순으로 표시한다. 활성화된 provider가 없으면 소셜 영역과 구분선을 모두 숨긴다.
+- 카카오 버튼은 공식 식별이 가능한 노란 배경과 짙은 글자를 사용하되 accessible name에 `카카오`를 포함해 색에만 의존하지 않는다. 기존 button 크기·radius·focus-visible을 유지한다.
+- 버튼을 누르면 `카카오로 이동 중…`으로 바꾸고 중복 제출을 막는다. 시작 실패, 동의 취소, callback 실패, 이메일 미제공, 설정 누락은 각각 재시도 또는 이메일 로그인으로 복구할 수 있는 한국어 문장으로 표시한다.
+- 카카오 인증 뒤에는 기존 `/auth/callback`에서 session을 교환한다. 이메일이 없으면 조직·프로필을 만들기 전에 로그아웃하고 `카카오 계정에서 이메일 제공에 동의한 뒤 다시 시도하거나 이메일로 가입해 주세요.`를 표시한다.
+- 신규 사용자는 기존 온보딩에서 회사명·직위·휴대전화·필수 동의를 입력한다. 기존 이력 연결은 `account_email`이 제공되고 Supabase identities에 기존 provider와 Kakao가 같은 사용자 UUID로 연결된 경우에만 허용한다. 이메일 문자열만으로 직접 계정을 합치지 않는다.
+- callback에 OAuth 오류 query가 있으면 기존 session fallback보다 먼저 취소·실패로 처리한다. 이미 로그인된 사용자가 카카오 동의를 취소해도 성공한 것처럼 보이지 않아야 한다.
+- 서비스 탈퇴 시 카카오 identity가 있으면 `identity_data.sub`의 숫자형 Kakao Service user ID를 검증해 서버에서 먼저 카카오 unlink를 완료하고 그 뒤에만 프로필 익명화와 Supabase 계정 삭제를 진행한다. Supabase identity UUID는 카카오 API에 보내지 않는다.
+- unlink 성공 후 로컬 삭제가 실패한 재시도에서는 Kakao 관리자 사용자 조회를 사용한다. 조회 `200`은 아직 연결된 상태이므로 unlink를 다시 호출하고, HTTP `400`과 Kakao 오류 코드 `-101`만 이미 연결 해제됨으로 인정한다. `-401`·기타 4xx·timeout·5xx는 로컬 삭제를 중단한다.
+- 현재 Supabase soft delete 뒤에도 복구 가능한 카카오 식별자가 남는지는 스테이징에서 확인해야 한다. 잔존 여부가 불명확하거나 정책에 맞지 않으면 카카오 운영 flag를 켜지 않는다.
+
+```text
+카카오로 계속하기
+Google로 계속하기
+──────── 또는 ────────
+이메일
+비밀번호
+로그인
+```
 
 ### 대시보드 단계 통과 선결 조건
 
@@ -116,6 +143,7 @@
 - Keyboard/focus behavior: 질문, 편집, 승인, 상태 변경 전부 Tab/Enter/Space로 가능하고 기존 `:focus-visible`을 유지한다.
 - Contrast/readability: muted text도 흰 panel에서 읽히는 기존 대비 이상을 유지하고, 출처 유형을 색만으로 구분하지 않는다.
 - Screen-reader semantics: 진행상황은 `role=status`, 오류는 `role=alert`, 질문 묶음은 heading/fieldset, 출처는 list, 비동기 버튼은 `disabled`와 상태 문구를 제공한다.
+- Auth semantics: 소셜 버튼의 accessible name에 provider 이름을 포함하고, 처리 중에는 `disabled`와 화면에 보이는 상태 문구를 함께 제공한다. OAuth 오류는 `role=alert`로 한 번만 알린다.
 - Gate prerequisite semantics: 남은 수는 제목과 연결하고, 시장 정의와 질문 blocker는 각각 제목이 있는 목록으로 구분한다. 상태 아이콘에는 `미확정`, `확정`, `보완 필요` 텍스트를 병기한다.
 - Market research semantics: 시장규모는 시각적 막대만 사용하지 않고 실제 `<table>` 또는 정의목록으로 동일 정보를 제공한다. 작업 단계에는 `aria-current="step"`, 조사 진행에는 `aria-busy`, 경쟁사 표에는 caption을 제공한다. 판매 가능성 차원은 색만 있는 방사형 그래프 대신 제목·상태·근거가 있는 목록과 `role="meter"` 막대를 함께 제공한다.
 - Reduced motion and sensory considerations: `prefers-reduced-motion`에서는 새 애니메이션을 끈다. 로딩은 회전 애니메이션 없이 텍스트로도 전달한다.
@@ -129,8 +157,10 @@
 ## Interaction states
 
 - Loading: `시장 자료를 확인하고 있습니다` 또는 `계획을 준비하고 있습니다`와 현재 단계 표시, 중복 제출 방지. 조사 중 기존 입력과 직전 조사 결과는 유지한다.
+- Auth loading: 카카오 또는 Google 인증을 시작한 버튼만 비활성화하고 `카카오로 이동 중…`, `Google로 이동 중…`을 표시한다.
 - Empty: 저장된 진단이 없으면 준비 1단계 진단 CTA, 계획이 없으면 현재 Gate에 맞는 AI 계획 시작 CTA
 - Error: 오류 원인과 재시도 또는 결정론적 계획 계속 사용을 함께 제공. 웹 조사가 실패하면 시장 수치·경쟁사를 만들지 않고 `조사 자료를 확인하지 못했습니다`를 표시한다. 준비 3단계 전에는 증거 부족을 오류로 표시하지 않고 `검증 보류` 상태로 설명한다.
+- Auth error: provider callback 원문을 노출하지 않는다. 카카오 인증 미완료에는 재시도·이메일 로그인을, 이메일 미제공에는 카카오 동의항목 확인·이메일 가입을 안내한다. OAuth 취소 query가 있으면 기존 session이 있어도 성공 callback으로 진행하지 않는다.
 - Success: 론칭 정의 저장, 시장·경쟁 사전조사 완료·창업자 확인, 준비 3단계 시 판매 가능성 예비검증 확인, 실행 항목 완료·증거 저장·Gate 재확인·다음 단계 해제, 계획 초안 생성·승인·다운로드를 각각 짧은 `role=status`로 확인
 - Disabled: 뒤 단계는 잠금 아이콘과 `앞 단계를 통과하면 열립니다` 문구를 제공하고 클릭할 수 없게 한다. 처리 중·권한 없음도 비활성 이유를 인접 문구로 표시한다.
 - Gate B blocked: 점수와 질문 Critical blocker를 모두 충족했어도 목표국가 또는 목표 고객군이 미확정이면 `준비 3단계` CTA를 비활성화하고 `초기 목표시장 2개 항목을 먼저 확정해 주세요`를 표시한다.
@@ -146,6 +176,7 @@
 - Gate microcopy: `실패` 대신 `이번에는 여기서 준비합니다`, `탈락` 대신 `다음 단계보다 먼저 보완할 항목`을 사용한다.
 - Prerequisite microcopy: `필수 선결 조건이 남았습니다`는 목록 항목마다 반복하지 않는다. 카드 제목에서 `준비 3단계로 넘어가기 전 확인할 항목`으로 한 번만 설명하고, 목록에는 조건 자체만 쓴다.
 - Question status microcopy: `통과 질문`, `실패 질문` 대신 `충족`, `근거 보완`, `보완 필요`, `잠김`을 사용한다.
+- Auth microcopy: `카카오 로그인`보다 동작이 분명한 `카카오로 계속하기`를 사용한다. `계정 오류` 대신 `카카오 인증이 완료되지 않았습니다`처럼 현재 상태와 다음 행동을 함께 쓴다.
 
 ## Implementation constraints
 
@@ -154,7 +185,9 @@
 - Performance constraints: 최초 페이지 렌더에 AI 호출 금지, 상태 변경에 AI 호출 금지, 클라이언트 번들에 OpenAI/Supabase service key 코드 금지
 - Research constraints: 기존 Responses API의 `file_search`와 `web_search`만 사용하고 새 검색 SDK를 추가하지 않는다. 공개 웹 검색에는 고객명·연락처·계약서·기밀 수치를 보내지 않는다. 공식 통계·규제기관·기업 공식 자료를 우선하고 모든 외부 사실에 URL·게시자·확인일을 저장한다.
 - Compatibility constraints: 55문항의 문구·배점·Critical 규칙은 유지하되 한 진단 세션에서 통과한 단계까지만 저장하며, Supabase RLS와 비로그인 진단 후 인증 복귀 흐름을 유지한다. 초기 목표국가·목표 고객군은 질문 답변에서 추론하지 않고 assessment의 구조화된 확정값으로 저장하며 Gate B에만 추가 선결 조건으로 사용한다. 미응답·잠김 문항을 판매 가능성의 부정 근거로 사용하지 않으며 `readiness_answers` 55개가 모두 있을 때만 실제 판매 가능성 예비검증을 계산한다.
+- Auth constraints: Supabase Kakao provider와 기존 PKCE callback을 재사용하고 Kakao JavaScript SDK·별도 callback·신규 인증 dependency는 추가하지 않는다. 첫 버전은 확인 이메일을 필수로 하며 `Allow users without an email`을 켜지 않는다. Kakao REST key와 Client Secret은 Supabase에, 탈퇴용 Admin Key는 Vercel server-only 변수에만 저장한다. 카카오 unlink의 `target_id`는 스테이징에서 확인된 숫자형 `identity_data.sub`만 사용한다. 동일 이메일 계정 연결, unlink 재시도, soft delete 뒤 식별자 잔존, 개인정보 처리방침 검토가 끝나기 전에는 공개 feature flag를 활성화하지 않는다. 제한 베타를 넘어 공개 운영할 때는 카카오 외부 unlink callback도 처리한다.
 - Test/screenshot expectations: 단계별 미통과·통과·최종 부분통과 화면, 반복 접두문이 없는 선결 조건 카드, Gate A에서 목표시장 미확정 허용, Gate B에서 목표국가·목표 고객군 중 0/1/2개 확정 상태와 준비 3단계 잠금, 확정값의 AI 어시스턴트 재사용, 목표시장 변경 후 조사 재확인 상태, 준비 1단계·준비 2단계의 검증 보류와 사전조사 보고서, 준비 3단계 55문항 완료 후 판매 가능성 예비검증, 론칭 정의 필수값, 조사 로딩·성공·근거부족·실패, 시장규모 산식과 출처, 경쟁사 카드·표, 창업자 확인 전 계획 차단, 질문 상태 필터, 계획-질문 연결, 증거 제출, Gate 재확인, 잠금 해제, AI 기간 범위, HTML 다운로드를 typecheck/build와 수동 브라우저로 확인한다. 새 UI·검색·PDF 의존성은 추가하지 않는다.
+- Auth test expectations: Kakao·Google·이메일·magic link의 조건부 표시와 회귀, 신규 카카오 사용자 온보딩, 동일 확인 이메일 로그인 뒤 identities·사용자 UUID·기존 이력 유지, 기존 session이 있는 상태의 동의 취소, callback 실패·이메일 없음 안내, `next` 복귀, 키보드·모바일, 숫자형 Kakao Service user ID 사용, unlink 성공·실패, unlink 성공 후 로컬 삭제 실패 재시도에서 관리자 사용자 조회 `-101`·`200`·`-401`·timeout·5xx 분기, soft delete 뒤 카카오 식별자 잔존 여부를 기존 Vitest 순수 로직 테스트와 수동 브라우저 검증으로 확인한다. 저장소에 없는 lint·DOM 테스트 도구나 새 의존성을 전제로 하지 않는다.
 
 ## Open questions
 
@@ -165,3 +198,5 @@
 - [ ] 비로그인 사용자가 첫 Gate 통과 후 가입하기 전 다음 Gate를 계속할지 / 제품 운영 / 구현 전
 - [ ] 초기 공략 가능 시장(Launchable Addressable Market)의 기본 기간을 12개월로 고정할지 조직별로 6·12·24개월 중 선택하게 할지 / 제품 운영 / 베타 조사 전
 - [ ] 시장규모가 금액보다 고객 수가 더 적절한 업종의 기본 단위를 어떻게 제시할지 / 제품·콘텐츠 운영 / 베타 조사 전
+- [ ] 공개 운영용 카카오 외부 연결 해제 callback에서 incoming Service user ID를 내부 사용자와 최소 정보로 연결하는 방식을 확정 / 인증·개인정보 / 공개 출시 전
+- [ ] 개인정보 처리방침의 카카오 제공·Supabase 국외 처리 문구에 대한 법률 검토 / 운영·법무 / 카카오 feature flag 활성화 전

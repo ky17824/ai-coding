@@ -9,6 +9,11 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const requestedNext = url.searchParams.get("next");
+  const oauthError = url.searchParams.get("error") ?? url.searchParams.get("error_code");
+  if (oauthError) {
+    const error = oauthError === "access_denied" ? "oauth_cancelled" : "callback";
+    return NextResponse.redirect(new URL(`/signin?error=${error}`, url.origin));
+  }
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
     return NextResponse.redirect(
@@ -21,6 +26,10 @@ export async function GET(request: Request) {
   const user = authentication.data.user;
   if (authentication.error || !user) {
     return NextResponse.redirect(new URL("/signin?error=callback", url.origin));
+  }
+  if (!user.email) {
+    await supabase.auth.signOut();
+    return NextResponse.redirect(new URL("/signin?error=email_required", url.origin));
   }
 
   const admin = createSupabaseAdminClient();
@@ -47,6 +56,14 @@ export async function GET(request: Request) {
   let profile = existing;
   if (!existing?.organization_id) {
     const meta = user.user_metadata;
+    const displayName = [
+      meta.display_name,
+      meta.full_name,
+      meta.name,
+      meta.nickname,
+      meta.preferred_username,
+      user.email
+    ].find((value): value is string => typeof value === "string" && value.trim().length > 0);
     const companyName =
       meta.company_name ??
       user.email?.split("@")[1]?.split(".")[0]?.toUpperCase() ??
@@ -70,7 +87,7 @@ export async function GET(request: Request) {
           id: user.id,
           organization_id: organization.id,
           email: user.email,
-          display_name: meta.display_name ?? meta.full_name ?? user.email,
+          display_name: displayName,
           job_title: meta.job_title ?? null,
           phone_enc: meta.phone_enc ?? null,
           marketing_opt_in: meta.marketing_opt_in === true,
