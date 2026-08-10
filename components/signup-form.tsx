@@ -10,13 +10,15 @@ const initialState: SignUpState = { ok: false, message: "" };
 
 export function SignupForm({ next, googleEnabled }: { next: string; googleEnabled: boolean }) {
   const [state, action, pending] = useActionState(signUpWithPassword, initialState);
-  const [hasAssessment, setHasAssessment] = useState(false);
-  useEffect(() => setHasAssessment(Boolean(loadPending())), []);
+  const [assessmentAnswerCount, setAssessmentAnswerCount] = useState(0);
+  useEffect(() => setAssessmentAnswerCount(loadPending()?.length ?? 0), []);
 
   return (
     <div className="signin-form">
-      {hasAssessment && (
-        <p className="notice-banner" role="status">이 탭에 진단 응답 55개를 보관하고 있습니다.</p>
+      {assessmentAnswerCount > 0 && (
+        <p className="notice-banner" role="status">
+          이 탭에 진단 응답 {assessmentAnswerCount}개를 보관하고 있습니다.
+        </p>
       )}
       {googleEnabled && (
         <>
