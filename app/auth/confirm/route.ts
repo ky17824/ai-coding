@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { safeNextPath } from "@/lib/auth";
+import { localeFromPath, localizedPath } from "@/lib/i18n";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type");
+  const next = safeNextPath(url.searchParams.get("next"));
+  const locale = localeFromPath(next);
   const allowed: EmailOtpType[] = ["signup", "recovery", "magiclink", "email"];
   if (!tokenHash || !allowed.includes(type as EmailOtpType)) {
-    return NextResponse.redirect(new URL("/signin?error=confirmation", url.origin));
+    return NextResponse.redirect(new URL(`${localizedPath("/signin", locale)}?error=confirmation`, url.origin));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -22,8 +25,8 @@ export async function GET(request: Request) {
   return NextResponse.redirect(
     new URL(
       error
-        ? "/signin?error=confirmation"
-        : `/auth/callback?next=${encodeURIComponent(safeNextPath(url.searchParams.get("next")))}`,
+        ? `${localizedPath("/signin", locale)}?error=confirmation`
+        : `/auth/callback?next=${encodeURIComponent(next)}`,
       url.origin
     )
   );

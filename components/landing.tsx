@@ -5,7 +5,7 @@ import { CountUp } from "@/components/count-up";
 import { ArrowIcon, CheckIcon, LockIcon } from "@/components/icons";
 import { SiteHeader } from "@/components/site-header";
 import { MobileAutoScroll } from "@/components/mobile-autoscroll";
-import { t, type Locale } from "@/lib/i18n";
+import { localizedPath, t, type Locale } from "@/lib/i18n";
 
 export function Landing({ locale }: { locale: Locale }) {
   const m = t(locale);
@@ -32,11 +32,11 @@ export function Landing({ locale }: { locale: Locale }) {
             </h1>
             <p>{m.hero.body}</p>
             <div className="hero__actions">
-              <Link href="/assessment" className="button button--primary">
+              <Link href={localizedPath("/assessment", locale)} className="button button--primary">
                 {m.hero.primaryCta}
                 <ArrowIcon />
               </Link>
-              <Link href="/dashboard" className="text-link">
+              <Link href={localizedPath("/dashboard", locale)} className="text-link">
                 {m.hero.secondaryCta}
               </Link>
             </div>
@@ -83,7 +83,7 @@ export function Landing({ locale }: { locale: Locale }) {
                     <small>{m.preview.actionEyebrow}</small>
                     <strong>{m.preview.actionLabel}</strong>
                   </span>
-                  <span className="pill">우선순위 0(Priority 0)</span>
+                  <span className="pill">{m.preview.priority}</span>
                 </div>
               </div>
             </div>
@@ -149,7 +149,7 @@ export function Landing({ locale }: { locale: Locale }) {
           <small>{m.ctaBand.eyebrow}</small>
           <h2>{m.ctaBand.heading}</h2>
         </span>
-        <Link href="/assessment" className="button button--light">
+        <Link href={localizedPath("/assessment", locale)} className="button button--light">
           {m.ctaBand.button} <ArrowIcon />
         </Link>
       </section>

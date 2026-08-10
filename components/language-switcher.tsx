@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { LOCALES, LOCALE_HOME, t, type Locale } from "@/lib/i18n";
+import { usePathname } from "next/navigation";
+import { LOCALES, localizedPath, t, type Locale } from "@/lib/i18n";
 
 /**
  * 두 정적 경로 사이 이동일 뿐이라 클라이언트 상태가 필요 없다.
@@ -7,6 +10,7 @@ import { LOCALES, LOCALE_HOME, t, type Locale } from "@/lib/i18n";
  */
 export function LanguageSwitcher({ locale }: { locale: Locale }) {
   const m = t(locale);
+  const pathname = usePathname();
   return (
     <nav className="lang-switch" aria-label={m.language.label}>
       {LOCALES.map((code) => {
@@ -14,7 +18,7 @@ export function LanguageSwitcher({ locale }: { locale: Locale }) {
         return (
           <Link
             key={code}
-            href={LOCALE_HOME[code]}
+            href={localizedPath(pathname, code)}
             hrefLang={code}
             className={current ? "lang-switch__item is-active" : "lang-switch__item"}
             aria-current={current ? "true" : undefined}

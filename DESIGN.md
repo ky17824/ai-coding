@@ -200,3 +200,17 @@ Google로 계속하기
 - [ ] 시장규모가 금액보다 고객 수가 더 적절한 업종의 기본 단위를 어떻게 제시할지 / 제품·콘텐츠 운영 / 베타 조사 전
 - [ ] 공개 운영용 카카오 외부 연결 해제 callback에서 incoming Service user ID를 내부 사용자와 최소 정보로 연결하는 방식을 확정 / 인증·개인정보 / 공개 출시 전
 - [ ] 개인정보 처리방침의 카카오 제공·Supabase 국외 처리 문구에 대한 법률 검토 / 운영·법무 / 카카오 feature flag 활성화 전
+
+## English localization
+
+- Product model: 영어판은 별도 제품이나 별도 데이터가 아니다. 한국어 무접두 경로와 영어 `/en/*` 경로가 같은 페이지·권한·레코드·점수 로직을 사용한다.
+- Route behavior: 영어 화면의 내부 링크와 인증 복귀는 `/en/*`를 유지한다. 언어 전환은 가능한 한 현재 화면과 record ID를 보존하며, 존재하지 않는 공개 경로만 locale 홈으로 돌아간다.
+- Language metadata: 각 화면은 실제 표시 언어와 일치하는 `<html lang>`·metadata·accessible name을 제공한다. 언어 전환은 로그인 전후 모든 header에서 보여야 한다.
+- Voice: 미국 스타트업 창업자에게 직접 말하는 간결하고 evidence-led한 문장을 사용한다. 한국어 존댓말을 직역하지 않고 행동, 근거, 제약, 다음 결정을 먼저 쓴다.
+- Terminology: 한국어 `준비 1단계·2단계·3단계`는 `Readiness Stage 1·2·3`으로 표시한다. GTM, TAM, SAM, SOM, LAM처럼 시장에서 통용되는 약어는 유지하고 첫 설명에서 정식 명칭을 제공한다.
+- Content invariants: 질문 ID, 점수, Critical 여부, 단계 통과 기준, 서비스·주문 ID, source ID는 번역하지 않는다. locale별 표시 문구만 달라진다.
+- Generated content: AI 질문·조사·계획·보고서는 세션 locale로 생성하고 locale을 요청 context에 포함한다. 기존 한국어 산출물을 자동 번역하지 않으며 필요하면 원문 언어를 표시하고 영어로 재생성한다.
+- User-authored content: DB의 회사명, 상품 설명, 증거, 운영자가 입력한 서비스 설명은 원문을 보존한다. 영어 번역 필드가 없으면 번역된 것처럼 표시하지 않는다.
+- Legal content: 영어 약관·개인정보·환불 문서는 별도 본문으로 제공하고 법률 검토 전에는 한국어 원문 우선 고지를 포함한다.
+- Formatting: 영어의 긴 단어·URL·표 제목이 panel 밖으로 넘치지 않도록 wrapping을 허용한다. 날짜·숫자·통화는 선택 locale과 조사 기준 통화를 명시한다.
+- QA: `/en`에서 가입·로그인, 55문항, Gate 중단, 대시보드, AI 조사·계획, 서비스·주문, 보고서 다운로드까지 한글 잔존과 무접두 경로 이탈이 없어야 한다.

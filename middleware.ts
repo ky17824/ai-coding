@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { localeFromPath, localizedPath, stripLocalePath } from "@/lib/i18n";
 
 const protectedPrefixes = [
   "/assessment",
@@ -12,25 +13,35 @@ const protectedPrefixes = [
 ];
 
 export async function middleware(request: NextRequest) {
+  const locale = localeFromPath(request.nextUrl.pathname);
+  const appPath = stripLocalePath(request.nextUrl.pathname);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-borderless-locale", locale);
+  const rewriteUrl = locale === "en" && request.nextUrl.pathname !== "/en"
+    ? new URL(`${appPath}${request.nextUrl.search}`, request.url)
+    : null;
+  const createResponse = () => rewriteUrl
+    ? NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } })
+    : NextResponse.next({ request: { headers: requestHeaders } });
   const isProtected = protectedPrefixes.some((prefix) =>
-    request.nextUrl.pathname.startsWith(prefix)
+    appPath.startsWith(prefix)
   );
-  if (!isProtected) return NextResponse.next();
+  if (!isProtected) return createResponse();
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    if (process.env.NODE_ENV === "development") return NextResponse.next();
-    return NextResponse.redirect(new URL("/signin", request.url));
+    if (process.env.NODE_ENV === "development") return createResponse();
+    return NextResponse.redirect(new URL(localizedPath("/signin", locale), request.url));
   }
 
-  let response = NextResponse.next({ request });
+  let response = createResponse();
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (cookies) => {
         cookies.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = createResponse();
         cookies.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options)
         );
@@ -41,7 +52,7 @@ export async function middleware(request: NextRequest) {
     data: { user }
   } = await supabase.auth.getUser();
   if (!user) {
-    const signIn = new URL("/signin", request.url);
+    const signIn = new URL(localizedPath("/signin", locale), request.url);
     signIn.searchParams.set(
       "returnTo",
       `${request.nextUrl.pathname}${request.nextUrl.search}`
@@ -52,13 +63,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/assessment/:path*",
-    "/dashboard/:path*",
-    "/journey/:path*",
-    "/orders/:path*",
-    "/provider/:path*",
-    "/admin/:path*",
-    "/account/:path*"
-  ]
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"]
 };

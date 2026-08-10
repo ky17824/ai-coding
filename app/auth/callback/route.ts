@@ -4,20 +4,24 @@ import {
   createSupabaseServerClient
 } from "@/lib/supabase/server";
 import { dashboardPathForRole, safeNextPath } from "@/lib/auth";
+import { localeFromPath, localizedPath } from "@/lib/i18n";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const requestedNext = url.searchParams.get("next");
+  const locale = localeFromPath(requestedNext ?? "");
+  const signInPath = localizedPath("/signin", locale);
+  const failure = (error: string) => new URL(`${signInPath}?error=${error}`, url.origin);
   const oauthError = url.searchParams.get("error") ?? url.searchParams.get("error_code");
   if (oauthError) {
     const error = oauthError === "access_denied" ? "oauth_cancelled" : "callback";
-    return NextResponse.redirect(new URL(`/signin?error=${error}`, url.origin));
+    return NextResponse.redirect(failure(error));
   }
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
     return NextResponse.redirect(
-      new URL("/signin?error=configuration", url.origin)
+      failure("configuration")
     );
   }
   const authentication = code
@@ -25,17 +29,17 @@ export async function GET(request: Request) {
     : await supabase.auth.getUser();
   const user = authentication.data.user;
   if (authentication.error || !user) {
-    return NextResponse.redirect(new URL("/signin?error=callback", url.origin));
+    return NextResponse.redirect(failure("callback"));
   }
   if (!user.email) {
     await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/signin?error=email_required", url.origin));
+    return NextResponse.redirect(failure("email_required"));
   }
 
   const admin = createSupabaseAdminClient();
   if (!admin) {
     return NextResponse.redirect(
-      new URL("/signin?error=configuration", url.origin)
+      failure("configuration")
     );
   }
   const { data: existing, error: profileError } = await admin
@@ -45,12 +49,12 @@ export async function GET(request: Request) {
     .maybeSingle();
   if (profileError) {
     return NextResponse.redirect(
-      new URL("/signin?error=onboarding", url.origin)
+      failure("onboarding")
     );
   }
   if (existing?.deleted_at) {
     await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/signin?error=deleted", url.origin));
+    return NextResponse.redirect(failure("deleted"));
   }
 
   let profile = existing;
@@ -67,7 +71,7 @@ export async function GET(request: Request) {
     const companyName =
       meta.company_name ??
       user.email?.split("@")[1]?.split(".")[0]?.toUpperCase() ??
-      "새 스타트업";
+      (locale === "en" ? "New startup" : "새 스타트업");
     const { data: organization, error: organizationError } = await admin
       .from("organizations")
       .insert({ name: companyName })
@@ -75,7 +79,7 @@ export async function GET(request: Request) {
       .single();
     if (organizationError || !organization) {
       return NextResponse.redirect(
-        new URL("/signin?error=onboarding", url.origin)
+        failure("onboarding")
       );
     }
     const { error: writeError } = existing
@@ -98,7 +102,7 @@ export async function GET(request: Request) {
     if (writeError) {
       await admin.from("organizations").delete().eq("id", organization.id);
       return NextResponse.redirect(
-        new URL("/signin?error=onboarding", url.origin)
+        failure("onboarding")
       );
     }
     profile = existing
@@ -115,12 +119,15 @@ export async function GET(request: Request) {
         };
   }
 
-  const next = safeNextPath(requestedNext, dashboardPathForRole(profile?.role));
+  const next = safeNextPath(
+    requestedNext,
+    localizedPath(dashboardPathForRole(profile?.role), locale)
+  );
   const incomplete =
     profile?.role === "startup" &&
     (!profile.job_title || !profile.phone_enc || !profile.terms_agreed_at || !profile.privacy_agreed_at);
   if (incomplete && !next.startsWith("/account/onboarding")) {
-    const onboarding = new URL("/account/onboarding", url.origin);
+    const onboarding = new URL(localizedPath("/account/onboarding", locale), url.origin);
     onboarding.searchParams.set("next", next);
     return NextResponse.redirect(onboarding);
   }

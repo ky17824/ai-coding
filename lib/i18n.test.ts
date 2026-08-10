@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { LOCALES, messages, t } from "@/lib/i18n";
+import {
+  LOCALES,
+  localeFromPath,
+  localizedPath,
+  messages,
+  stripLocalePath,
+  t
+} from "@/lib/i18n";
 
 const HANGUL = /[가-힣]/;
 
@@ -48,5 +55,28 @@ describe("i18n dictionaries", () => {
   it("t()가 로케일별 사전을 돌려준다", () => {
     expect(t("ko").header.signIn).toBe("로그인");
     expect(t("en").header.signIn).toBe("Sign in");
+  });
+});
+
+describe("localized routes", () => {
+  it("adds and removes only the English route prefix", () => {
+    expect(localizedPath("/dashboard", "en")).toBe("/en/dashboard");
+    expect(localizedPath("/en/dashboard", "ko")).toBe("/dashboard");
+    expect(localizedPath("/", "en")).toBe("/en");
+    expect(localizedPath("/en", "ko")).toBe("/");
+  });
+
+  it("preserves query strings and record paths", () => {
+    expect(localizedPath("/assistant/abc?tab=plan", "en")).toBe(
+      "/en/assistant/abc?tab=plan"
+    );
+    expect(stripLocalePath("/en/assistant/abc?tab=plan")).toBe(
+      "/assistant/abc?tab=plan"
+    );
+  });
+
+  it("detects locale from the pathname", () => {
+    expect(localeFromPath("/en/services")).toBe("en");
+    expect(localeFromPath("/services")).toBe("ko");
   });
 });

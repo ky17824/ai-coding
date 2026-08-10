@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { signOut } from "@/app/signin/actions";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { DEFAULT_LOCALE, t, type Locale } from "@/lib/i18n";
+import { localizedPath, t, type Locale } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n-server";
 import { createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
 
 export async function SiteHeader({
   compact = false,
-  locale = DEFAULT_LOCALE
+  locale
 }: {
   compact?: boolean;
   locale?: Locale;
 }) {
-  const m = t(locale);
+  const activeLocale = locale ?? await getRequestLocale();
+  const m = t(activeLocale);
   const user = await requireUser();
   const supabase = user ? await createSupabaseServerClient() : null;
   const { data: profile } = user && supabase
@@ -19,28 +21,29 @@ export async function SiteHeader({
     : { data: null };
   return (
     <header className={`site-header ${compact ? "site-header--compact" : ""}`}>
-      <Link href="/" className="brand" aria-label={m.header.brandHome}>
+      <Link href={localizedPath("/", activeLocale)} className="brand" aria-label={m.header.brandHome}>
         <span className="brand-mark">B</span>
         <span>Borderless</span>
       </Link>
       <nav className="main-nav" aria-label={m.header.mainNav}>
-        <Link href="/dashboard">{m.header.dashboard}</Link>
-        <Link href="/assessment">{m.header.assessment}</Link>
-        <Link href="/journey">{m.header.journey}</Link>
-        <Link href="/services">{m.header.services}</Link>
-        {profile?.role === "admin" && <Link href="/admin">{m.header.admin}</Link>}
+        <Link href={localizedPath("/dashboard", activeLocale)}>{m.header.dashboard}</Link>
+        <Link href={localizedPath("/assessment", activeLocale)}>{m.header.assessment}</Link>
+        <Link href={localizedPath("/journey", activeLocale)}>{m.header.journey}</Link>
+        <Link href={localizedPath("/services", activeLocale)}>{m.header.services}</Link>
+        {profile?.role === "admin" && <Link href={localizedPath("/admin", activeLocale)}>{m.header.admin}</Link>}
       </nav>
       <span className="header-account">
-        {/* 랜딩만 이중 언어다. compact 헤더를 쓰는 페이지들은 아직 한국어 전용이라
-            선택기를 띄우면 없는 영어 페이지를 약속하게 된다. */}
-        {!compact && <LanguageSwitcher locale={locale} />}
+        <LanguageSwitcher locale={activeLocale} />
         {user ? (
           <>
-            <Link href="/account" className="button button--small button--ghost">{m.header.account}</Link>
-            <form action={signOut}><button className="button button--small button--dark">{m.header.signOut}</button></form>
+            <Link href={localizedPath("/account", activeLocale)} className="button button--small button--ghost">{m.header.account}</Link>
+            <form action={signOut}>
+              <input type="hidden" name="locale" value={activeLocale} />
+              <button className="button button--small button--dark">{m.header.signOut}</button>
+            </form>
           </>
         ) : (
-          <Link href="/signin" className="button button--small button--dark">{m.header.signIn}</Link>
+          <Link href={localizedPath("/signin", activeLocale)} className="button button--small button--dark">{m.header.signIn}</Link>
         )}
       </span>
     </header>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import type { Locale } from "@/lib/i18n";
 
 const providers = {
   kakao: {
@@ -20,10 +21,12 @@ export type SocialProvider = keyof typeof providers;
 
 export function SocialLoginButton({
   provider,
-  next = "/dashboard"
+  next = "/dashboard",
+  locale = "ko"
 }: {
   provider: SocialProvider;
   next?: string;
+  locale?: Locale;
 }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -32,7 +35,7 @@ export function SocialLoginButton({
   async function signIn() {
     setError("");
     const supabase = createSupabaseBrowserClient();
-    if (!supabase) return setError("인증 환경이 연결되지 않았습니다.");
+    if (!supabase) return setError(locale === "en" ? "Authentication is not configured." : "인증 환경이 연결되지 않았습니다.");
     setPending(true);
     try {
       const origin = window.location.origin;
@@ -60,7 +63,9 @@ export function SocialLoginButton({
         onClick={signIn}
         disabled={pending}
       >
-        {pending ? `${config.label}로 이동 중…` : `${config.label}로 계속하기`}
+        {pending
+          ? locale === "en" ? `Connecting to ${config.label}…` : `${config.label}로 이동 중…`
+          : locale === "en" ? `Continue with ${config.label}` : `${config.label}로 계속하기`}
       </button>
       {error && <p className="field-error" role="alert">{error}</p>}
     </>

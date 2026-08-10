@@ -41,4 +41,26 @@ describe("protected experience routes", () => {
 
     expect(response.headers.get("location")).toBeNull();
   });
+
+  it("keeps an English protected destination through sign-in", async () => {
+    const response = await middleware(
+      new NextRequest("https://global-gtm.vercel.app/en/dashboard?from=hero")
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://global-gtm.vercel.app/en/signin?returnTo=%2Fen%2Fdashboard%3Ffrom%3Dhero"
+    );
+  });
+
+  it("rewrites an authenticated English route to the shared page", async () => {
+    mocks.user = { id: "founder-1" };
+
+    const response = await middleware(
+      new NextRequest("https://global-gtm.vercel.app/en/dashboard")
+    );
+
+    expect(response.headers.get("x-middleware-rewrite")).toBe(
+      "https://global-gtm.vercel.app/dashboard"
+    );
+  });
 });

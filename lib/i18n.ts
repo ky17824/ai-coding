@@ -14,6 +14,21 @@ export const LOCALE_HOME: Record<Locale, string> = {
   en: "/en"
 };
 
+export function localeFromPath(pathname: string): Locale {
+  return pathname === "/en" || pathname.startsWith("/en/") ? "en" : "ko";
+}
+
+export function stripLocalePath(path: string): string {
+  if (path === "/en") return "/";
+  return path.startsWith("/en/") ? path.slice(3) || "/" : path;
+}
+
+export function localizedPath(path: string, locale: Locale): string {
+  const unprefixed = stripLocalePath(path);
+  if (locale === "ko") return unprefixed;
+  return unprefixed === "/" ? "/en" : `/en${unprefixed}`;
+}
+
 const ko = {
   meta: {
     title: "Borderless | 글로벌 진출 준비부터 실행까지",
@@ -60,6 +75,7 @@ const ko = {
     chartLabels: ["시장", "리더십", "선정", "현지화(Localization)", "조직", "GTM"],
     actionEyebrow: "가장 먼저 할 일",
     actionLabel: "보안·법규 준수(Compliance) 차이 분석(Gap Analysis)",
+    priority: "우선순위 0(Priority 0)",
     evidenceTitle: "근거 기반 진단",
     evidenceNote: "완료하려면 증빙이 필요합니다",
     expertAvatar: "김",
@@ -168,6 +184,7 @@ const en: typeof ko = {
     ],
     actionEyebrow: "Do this first",
     actionLabel: "Security & compliance gap analysis",
+    priority: "Priority 0",
     evidenceTitle: "Evidence-based",
     evidenceNote: "Completion requires proof",
     expertAvatar: "K",
