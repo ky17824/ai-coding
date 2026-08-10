@@ -260,7 +260,7 @@ export function AssessmentForm({
           <div>
             <span className="page-kicker">시장진입 준비도(Global Readiness) 결과</span>
             <h1>
-              지금은 <em>{result.status}</em> 단계입니다.
+              지금은 <em>{result.status}</em>입니다.
             </h1>
             <p>
               {result.achievedStageId
@@ -268,7 +268,7 @@ export function AssessmentForm({
                     result.stages.find(
                       (entry) => entry.stageId === result.achievedStageId
                     )!.label
-                  } 단계를 통과했습니다. 다음 단계는 각 단계 배점의 ${GATE_PERCENT}% 이상을 '해봤다' 이상으로 채우면 열립니다.`
+                  }를 통과했습니다. 다음 단계는 각 단계 배점의 ${GATE_PERCENT}% 이상을 '해봤다' 이상으로 채우면 열립니다.`
                 : `각 단계 배점의 ${GATE_PERCENT}% 이상을 '해봤다' 이상으로 채우면 다음 단계가 열립니다. 앞 단계를 통과해야 다음 단계로 넘어갑니다.`}
             </p>
             <div className="save-state" role="status">
@@ -298,7 +298,7 @@ export function AssessmentForm({
             <div>
               <span>단계 통과 기준(Stage Gate) {current?.gate}</span>
               <h2 id="hold-title">
-                {current?.label} 단계를 아직 통과하지 못했습니다.
+                {current?.label}를 아직 통과하지 못했습니다.
               </h2>
             </div>
             <ul>
@@ -348,7 +348,7 @@ export function AssessmentForm({
         {result.actions.length > 0 && (
           <section className="result-section">
             <span className="page-kicker">다음 실행항목(Next Actions)</span>
-            <h2>{current?.label} 단계를 열기 위해 먼저 할 일</h2>
+            <h2>{current?.label}를 열기 위해 먼저 할 일</h2>
             <div className="action-list">
               {result.actions.map((action, index) => (
                 <article className="action-row panel" key={action.questionId}>
@@ -424,7 +424,7 @@ export function AssessmentForm({
         <span className="page-kicker">시장진입 준비도(Global Readiness)</span>
         <h1>글로벌 진출 준비도 진단</h1>
         <p>
-          {INTAKE_QUESTIONS.length}개 문항으로 극초기·준비중·준비완료 세 단계를
+          {INTAKE_QUESTIONS.length}개 문항으로 준비 1단계·준비 2단계·준비 3단계 세 단계를
           진단합니다. 아직 하지 않은 항목을 고르셔도 불이익은 없습니다.
         </p>
         <div className="offering-picker">
@@ -498,8 +498,8 @@ export function AssessmentForm({
         </div>
         {activeStage >= 1 && (
           <fieldset className="target-market-confirmation panel">
-            <legend>준비완료 전 초기 목표시장 확인</legend>
-            <p>준비중 단계부터는 창업자가 직접 확정한 목표국가와 목표 고객군이 있어야 다음 단계로 넘어갑니다.</p>
+            <legend>준비 3단계 전 초기 목표시장 확인</legend>
+            <p>준비 2단계부터는 창업자가 직접 확정한 목표국가와 목표 고객군이 있어야 다음 단계로 넘어갑니다.</p>
             <div>
               <label>
                 초기 목표국가

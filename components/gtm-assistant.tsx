@@ -266,7 +266,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
               {researchMatchesContext && researchConfirmed ? <strong className="research-confirmed">확인 완료</strong> : researchMatchesContext ? <button className="button button--dark" type="button" onClick={confirmResearch}>조사 결과 확인</button> : <strong>입력 변경됨 · 다시 조사 필요</strong>}
             </div>
             <p>{marketResearch.executiveSummary}</p>
-            {marketResearch.scope === "market_preresearch" && <p className="notice-banner">극초기·준비중 단계에서는 실제 판매 가능성을 판정하지 않고, 시장·경쟁 사전조사와 다음 검증 과제만 제공합니다.</p>}
+            {marketResearch.scope === "market_preresearch" && <p className="notice-banner">준비 1단계와 준비 2단계에서는 실제 판매 가능성을 판정하지 않고, 시장·경쟁 사전조사와 다음 검증 과제만 제공합니다.</p>}
             <div className="market-size-grid">{marketResearch.marketSizing.map((entry) => <article key={entry.label}><strong>{entry.label}</strong><span>{entry.estimate}</span><small>{entry.method}</small></article>)}</div>
             <div className="assistant-research-grid">
               <div><h3>시장동향</h3><ul>{marketResearch.trends.map((entry) => <li key={entry.title}><strong>{entry.title}</strong><span>{entry.finding}</span>{entry.url && <a href={entry.url} target="_blank" rel="noreferrer">{entry.sourceTitle} ↗</a>}</li>)}</ul></div>

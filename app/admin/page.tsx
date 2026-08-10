@@ -11,6 +11,7 @@ import {
   lastActivityAt,
   type CompanyRow
 } from "@/lib/admin-metrics";
+import { normalizeReadinessStatus } from "@/lib/readiness";
 import type { OrderStatus } from "@/lib/types";
 import {
   createSupabaseAdminClient,
@@ -74,7 +75,7 @@ export default async function AdminPage({
       firstAssessmentAt: organizationAssessments.at(-1)?.completed_at ?? null,
       latestAssessment: latest ? {
         completedAt: latest.completed_at,
-        statusLabel: latest.status_label,
+        statusLabel: normalizeReadinessStatus(latest.status_label),
         overallScore: latest.overall_score,
         gateMessages: latest.gate_messages as string[]
       } : null,
@@ -174,7 +175,7 @@ export default async function AdminPage({
           <div className="section-heading section-heading--row"><span><h2>기업 목록</h2></span><span>{filtered.length}개</span></div>
           <form className="admin-filters">
             <input name="q" defaultValue={query.q} placeholder="회사명·담당자 검색" />
-            <select name="stage" defaultValue={query.stage ?? ""}><option value="">전체 단계</option><option>극초기</option><option>준비중</option><option>준비완료</option><option>진출 실행 가능</option></select>
+            <select name="stage" defaultValue={query.stage ?? ""}><option value="">전체 단계</option><option>준비 1단계</option><option>준비 2단계</option><option>준비 3단계</option><option>진출 실행 가능</option></select>
             <select name="gate" defaultValue={query.gate ?? ""}><option value="">단계 통과 기준(Stage Gate) 전체</option><option value="blocked">단계 통과 기준(Stage Gate) 차단</option></select>
             <select name="order" defaultValue={query.order ?? ""}><option value="">주문 전체</option><option value="yes">주문 있음</option><option value="no">주문 없음</option></select>
             <input aria-label="진단 시작일" name="from" type="date" defaultValue={query.from} />

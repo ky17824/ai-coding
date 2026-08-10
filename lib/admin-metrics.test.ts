@@ -17,7 +17,7 @@ const company = (overrides: Partial<CompanyRow> = {}): CompanyRow => ({
   firstAssessmentAt: "2026-07-20T00:00:00.000Z",
   latestAssessment: {
     completedAt: "2026-07-20T00:00:00.000Z",
-    statusLabel: "준비중",
+    statusLabel: "준비 2단계",
     overallScore: 40,
     gateMessages: []
   },

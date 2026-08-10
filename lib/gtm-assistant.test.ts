@@ -85,7 +85,7 @@ describe("AI GTM assistant safeguards", () => {
       sellability: { available: true, verdict: "promising", summary: "판정", evidenceGaps: [] },
       nextExperiments: ["고객 인터뷰"],
       limitations: ["사전조사"]
-    })).toThrow("준비완료 전에는");
+    })).toThrow("준비 3단계 전에는");
   });
 
   it("rejects unsafe source URLs after model parsing", () => {

@@ -258,7 +258,7 @@ revoke execute on function public.current_profile() from public, anon, authentic
 **B. 진단 퍼널**
 
 ```text
-가입 → 진단 완료 → 극초기 통과 → 준비중 통과 → 준비완료 통과
+가입 → 진단 완료 → 준비 1단계 통과 → 준비 2단계 통과 → 준비 3단계 통과
 ```
 
 각 단계의 기업 수와 직전 단계 대비 통과율. 막대를 클릭하면 해당 기업 목록으로 간다.

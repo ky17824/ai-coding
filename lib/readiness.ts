@@ -19,6 +19,12 @@ export const GATE_THRESHOLD = 0.8;
 
 export const STAGES = INTAKE_STAGES;
 
+const LEGACY_STATUS_LABELS: Record<string, ReadinessStatus> = {
+  "극초기": "준비 1단계",
+  "준비중": "준비 2단계",
+  "준비완료": "준비 3단계"
+};
+
 const ITEM = new Map(INTAKE_ITEMS.map((item) => [item.id, item]));
 const LEVEL_MEANING: Record<ReadinessLevel, string> = {
   1: "아직 검토하거나 시작하지 않은 상태입니다.",
@@ -34,7 +40,18 @@ export const questionsOfStage = (stageId: string) =>
   );
 
 export function normalizeGateMessage(message: string) {
-  return message.replace(/^필수 선결 조건이 남았습니다\s*—\s*/, "").trim();
+  return Object.entries(LEGACY_STATUS_LABELS)
+    .reduce(
+      (text, [legacy, current]) =>
+        text.replaceAll(`${legacy} 단계`, current).replaceAll(legacy, current),
+      message
+    )
+    .replace(/^필수 선결 조건이 남았습니다\s*—\s*/, "")
+    .trim();
+}
+
+export function normalizeReadinessStatus(status: string): ReadinessStatus {
+  return LEGACY_STATUS_LABELS[status] ?? status as ReadinessStatus;
 }
 
 export function isTargetMarketConfirmed(targetMarket?: TargetMarketContext | null) {
@@ -227,7 +244,7 @@ export function calculateReadiness(
     }
     if (current.blockers.length === 0 && current.scoreToPass > 0) {
       gateMessages.push(
-        `${current.label} 단계 통과까지 ${current.scoreToPass}점이 남았습니다.`
+        `${current.label} 통과까지 ${current.scoreToPass}점이 남았습니다.`
       );
     }
   }

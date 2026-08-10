@@ -51,9 +51,9 @@ export function buildFunnel(rows: CompanyRow[]) {
   return [
     { label: "가입", count: rows.length },
     { label: "진단 완료", count: assessed.length },
-    { label: "극초기 통과", count: assessed.filter((row) => status(row) !== "극초기").length },
-    { label: "준비중 통과", count: assessed.filter((row) => ["준비완료", "진출 실행 가능"].includes(status(row) ?? "")).length },
-    { label: "준비완료 통과", count: assessed.filter((row) => status(row) === "진출 실행 가능").length }
+    { label: "준비 1단계 통과", count: assessed.filter((row) => status(row) !== "준비 1단계").length },
+    { label: "준비 2단계 통과", count: assessed.filter((row) => ["준비 3단계", "진출 실행 가능"].includes(status(row) ?? "")).length },
+    { label: "준비 3단계 통과", count: assessed.filter((row) => status(row) === "진출 실행 가능").length }
   ];
 }
 

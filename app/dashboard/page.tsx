@@ -8,6 +8,7 @@ import {
   buildStageAnswerInsights,
   calculateReadiness,
   normalizeGateMessage,
+  normalizeReadinessStatus,
   questionsOfStage
 } from "@/lib/readiness";
 import { getPublishedServices } from "@/lib/services";
@@ -84,6 +85,7 @@ export default async function DashboardPage({
     .filter((service) => service.tags.some((tag) => serviceTags.has(tag)))
     .slice(0, 3);
   const domainScores = assessment.domain_scores as Record<string, number>;
+  const assessmentStatus = normalizeReadinessStatus(assessment.status_label);
   const readinessAnswers: ReadinessAnswer[] = (answerRows ?? []).flatMap((row) => {
     const level = Number(row.level);
     if (![1, 2, 3, 4].includes(level)) return [];
@@ -163,7 +165,7 @@ export default async function DashboardPage({
           <article className="readiness-summary panel">
             <div className="summary-title">
               <span><small>시장진입 준비도(Global Readiness)</small><h2>단계별 준비도</h2></span>
-              <span className="summary-score"><strong>{assessment.overall_score}</strong><small>{assessment.status_label} 단계</small></span>
+              <span className="summary-score"><strong>{assessment.overall_score}</strong><small>{assessmentStatus}</small></span>
             </div>
             <div className="domain-bars">
               {STAGES.map((stage) => (
@@ -251,7 +253,7 @@ export default async function DashboardPage({
 
               <article className="answer-insight-chart panel">
                 <div className="answer-insight-chart__heading">
-                  <span><strong>{answerInsights.stageLabel} 단계 응답 분포</strong><small>항목별 배점을 답변 단계에 따라 나누었습니다.</small></span>
+                  <span><strong>{answerInsights.stageLabel} 응답 분포</strong><small>항목별 배점을 답변 단계에 따라 나누었습니다.</small></span>
                   <span><strong>{answerInsights.score}%</strong><small>3·4단계 통과 인정</small></span>
                 </div>
                 <ul>

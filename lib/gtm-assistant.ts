@@ -363,7 +363,7 @@ export function finalizeMarketResearch(
   }
   if (output.scope === "market_preresearch" &&
       (output.sellability.available || output.sellability.verdict !== "not_assessed")) {
-    throw new Error("준비완료 전에는 실제 판매 가능성을 판정할 수 없습니다.");
+    throw new Error("준비 3단계 전에는 실제 판매 가능성을 판정할 수 없습니다.");
   }
   return {
     kind: "market_research",

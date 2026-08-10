@@ -12,6 +12,7 @@ import {
   hasPassedStage,
   isCompleteStageAnswerSet,
   normalizeGateMessage,
+  normalizeReadinessStatus,
   questionsOfStage,
   validateAssessmentAnswers
 } from "@/lib/readiness";
@@ -33,6 +34,13 @@ const confirmedMarket = {
 };
 
 describe("intake question set", () => {
+  it("shows legacy saved statuses with the current stage names", () => {
+    expect(normalizeReadinessStatus("극초기")).toBe("준비 1단계");
+    expect(normalizeReadinessStatus("준비중")).toBe("준비 2단계");
+    expect(normalizeReadinessStatus("준비완료")).toBe("준비 3단계");
+    expect(normalizeReadinessStatus("진출 실행 가능")).toBe("진출 실행 가능");
+  });
+
   it("keeps 55 questions with unique ids, four options, and an action", () => {
     const itemIds = new Set<string>(INTAKE_ITEMS.map((item) => item.id));
     expect(INTAKE_QUESTIONS).toHaveLength(55);
@@ -81,6 +89,8 @@ describe("phase gate", () => {
   it("removes the repeated legacy prerequisite prefix", () => {
     expect(normalizeGateMessage("필수 선결 조건이 남았습니다 — 총 진입비용을 계산해 주세요."))
       .toBe("총 진입비용을 계산해 주세요.");
+    expect(normalizeGateMessage("극초기 단계 통과까지 10점이 남았습니다."))
+      .toBe("준비 1단계 통과까지 10점이 남았습니다.");
   });
 
   it("accepts only complete stage prefixes", () => {
@@ -131,7 +141,7 @@ describe("phase gate", () => {
     expect(result.overallScore).toBe(0);
     expect(result.achievedStageId).toBeNull();
     expect(result.currentStageId).toBe("early");
-    expect(result.status).toBe("극초기");
+    expect(result.status).toBe("준비 1단계");
     expect(result.isOnHold).toBe(true);
     expect(result.actions).toHaveLength(5);
     expect(result.actions[0].urgency).toBe("P0");

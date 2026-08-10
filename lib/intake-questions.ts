@@ -44,7 +44,7 @@ export const POSITIVE_LEVEL: AnswerLevel = 3;
 export const INTAKE_STAGES = [
   {
     id: "early",
-    label: "극초기",
+    label: "준비 1단계",
     phase: "Plan",
     gate: "A",
     journeyPhase: "pre_entry",
@@ -55,7 +55,7 @@ export const INTAKE_STAGES = [
   },
   {
     id: "preparing",
-    label: "준비중",
+    label: "준비 2단계",
     phase: "Enable",
     gate: "B",
     journeyPhase: "initial_entry",
@@ -66,7 +66,7 @@ export const INTAKE_STAGES = [
   },
   {
     id: "ready",
-    label: "준비완료",
+    label: "준비 3단계",
     phase: "Execute 진입요건",
     gate: "C",
     journeyPhase: "scale",

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { PhoneReveal } from "@/components/phone-reveal";
 import { SiteHeader } from "@/components/site-header";
 import { INTAKE_QUESTIONS } from "@/lib/intake-questions";
+import { normalizeReadinessStatus } from "@/lib/readiness";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -51,11 +52,11 @@ export default async function AdminCompanyPage({ params }: { params: Promise<{ i
         <h1 className="page-title">{organization.name}</h1>
         <div className="company-summary panel">
           <div><span>담당자</span><strong>{contact?.display_name ?? "-"}</strong><small>{contact?.job_title ?? "직위 미등록"} · {contact?.email ?? ""}</small></div>
-          <div><span>최근 진단</span><strong>{latest?.status_label ?? "미진단"}</strong><small>{latest ? `${latest.overall_score}점 · ${new Date(latest.completed_at).toLocaleDateString("ko-KR")}` : ""}</small></div>
+          <div><span>최근 진단</span><strong>{latest ? normalizeReadinessStatus(latest.status_label) : "미진단"}</strong><small>{latest ? `${latest.overall_score}점 · ${new Date(latest.completed_at).toLocaleDateString("ko-KR")}` : ""}</small></div>
           <div><span>연락처</span>{contact ? <PhoneReveal profileId={contact.id} /> : <strong>-</strong>}</div>
         </div>
 
-        <section className="admin-section"><h2>진단 이력</h2><div className="table-scroll panel"><table className="admin-table"><thead><tr><th>일자</th><th>단계</th><th>총점</th><th>단계 통과 기준(Stage Gate)</th></tr></thead><tbody>{(assessments ?? []).map((assessment) => <tr key={assessment.id}><td>{new Date(assessment.completed_at).toLocaleDateString("ko-KR")}</td><td>{assessment.status_label}</td><td>{assessment.overall_score}</td><td>{(assessment.gate_messages as string[]).length}</td></tr>)}</tbody></table></div></section>
+        <section className="admin-section"><h2>진단 이력</h2><div className="table-scroll panel"><table className="admin-table"><thead><tr><th>일자</th><th>단계</th><th>총점</th><th>단계 통과 기준(Stage Gate)</th></tr></thead><tbody>{(assessments ?? []).map((assessment) => <tr key={assessment.id}><td>{new Date(assessment.completed_at).toLocaleDateString("ko-KR")}</td><td>{normalizeReadinessStatus(assessment.status_label)}</td><td>{assessment.overall_score}</td><td>{(assessment.gate_messages as string[]).length}</td></tr>)}</tbody></table></div></section>
 
         {latest && <section className="admin-section"><h2>최근 55문항 응답</h2><div className="answer-audit-list">{(answers ?? []).filter((answer) => answer.assessment_id === latest.id).map((answer) => { const question = questionById.get(answer.question_id); return <details className="panel" key={answer.question_id}><summary><strong>{answer.level}단계</strong> {question?.question ?? answer.question_id}</summary>{answer.evidence_value && <p>{answer.evidence_value}</p>}</details>; })}</div></section>}
 

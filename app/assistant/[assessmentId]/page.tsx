@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { GtmAssistant } from "@/components/gtm-assistant";
 import { getPendingFounderQuestion } from "@/lib/gtm-assistant";
 import { SiteHeader } from "@/components/site-header";
-import { normalizeGateMessage } from "@/lib/readiness";
+import { normalizeGateMessage, normalizeReadinessStatus } from "@/lib/readiness";
 import type { GtmMarketResearch, GtmPlanItem, StoredGtmPlan } from "@/lib/types";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 
@@ -104,7 +104,7 @@ export default async function AssistantPage({
         assessment={{
           id: assessment.id,
           score: assessment.overall_score,
-          status: assessment.status_label,
+          status: normalizeReadinessStatus(assessment.status_label),
           isOnHold: assessment.is_on_hold,
           gateMessages: [...new Set(
             ((assessment.gate_messages as string[]) ?? []).map(normalizeGateMessage)

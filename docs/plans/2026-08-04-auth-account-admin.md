@@ -374,7 +374,7 @@ export function buildWorklist(rows: CompanyRow[], now: Date): WorklistItem[];
 // 진단 후 7일 무주문 / Gate 차단 / 결제 후 미시작 세 종류를 만든다
 
 export function buildFunnel(rows: CompanyRow[]): FunnelStep[];
-// 가입 → 진단완료 → 극초기 → 준비중 → 준비완료
+// 가입 → 진단완료 → 준비 1단계 → 준비 2단계 → 준비 3단계
 
 export function buildExpertDemand(
   rows: CompanyRow[], approvedByTag: Record<string, number>

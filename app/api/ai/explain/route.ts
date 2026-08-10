@@ -7,7 +7,7 @@ import { requireUser } from "@/lib/supabase/server";
 const schema = z.object({
   companyName: z.string().min(1).max(120),
   overallScore: z.number().int().min(0).max(100),
-  status: z.enum(["기초 정비", "진출 준비", "현장 검증", "실행 가능"]),
+  status: z.enum(["준비 1단계", "준비 2단계", "준비 3단계", "진출 실행 가능"]),
   domainScores: z.record(z.string(), z.number().int().min(0).max(100)),
   actions: z
     .array(
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   }
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({
-      explanation: `${parsed.data.companyName}의 준비도는 ${parsed.data.overallScore}점, ${parsed.data.status} 단계입니다. 가장 먼저 ${parsed.data.actions[0]?.title ?? "상위 액션"}을 완료 증거와 함께 실행하세요.`,
+      explanation: `${parsed.data.companyName}의 준비도는 ${parsed.data.overallScore}점, ${parsed.data.status}입니다. 가장 먼저 ${parsed.data.actions[0]?.title ?? "상위 액션"}을 완료 증거와 함께 실행하세요.`,
       generatedBy: "deterministic-fallback"
     });
   }

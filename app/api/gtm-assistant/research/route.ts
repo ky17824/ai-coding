@@ -9,6 +9,7 @@ import {
   marketResearchResponseSchema,
   sanitizeFounderText
 } from "@/lib/gtm-assistant";
+import { normalizeReadinessStatus } from "@/lib/readiness";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 
 const founderContextSchema = z.object({
@@ -119,7 +120,10 @@ export async function POST(request: Request) {
       input: JSON.stringify({
         scope,
         founderContext,
-        assessment,
+        assessment: {
+          ...assessment,
+          status_label: normalizeReadinessStatus(assessment.status_label)
+        },
         answeredQuestionCount: (answers ?? []).length,
         answerEvidenceSummary: (answers ?? []).map((answer) => ({
           questionId: answer.question_id,
