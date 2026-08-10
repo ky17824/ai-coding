@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const protectedPrefixes = [
+  "/assessment",
   "/dashboard",
   "/journey",
   "/orders",
@@ -41,7 +42,10 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) {
     const signIn = new URL("/signin", request.url);
-    signIn.searchParams.set("returnTo", request.nextUrl.pathname);
+    signIn.searchParams.set(
+      "returnTo",
+      `${request.nextUrl.pathname}${request.nextUrl.search}`
+    );
     return NextResponse.redirect(signIn);
   }
   return response;
@@ -49,6 +53,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/assessment/:path*",
     "/dashboard/:path*",
     "/journey/:path*",
     "/orders/:path*",

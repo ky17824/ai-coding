@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import * as PortOne from "@portone/browser-sdk/v2";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 interface CheckoutButtonProps {
   serviceId: string;
@@ -24,18 +25,27 @@ export function CheckoutButton({
   const [slotId, setSlotId] = useState(availableSlots[0]?.id ?? "");
 
   async function checkout() {
-    if (!agreed) {
-      setStatus("서비스 범위와 취소·환불 정책에 동의해 주세요.");
-      return;
-    }
-    if (type === "mentoring" && !slotId) {
-      setStatus("예약 가능한 멘토링 일정을 선택해 주세요.");
-      return;
-    }
     setLoading(true);
     setStatus("");
 
     try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = supabase
+        ? await supabase.auth.getUser()
+        : { data: { user: null } };
+      if (!user) {
+        window.location.href = `/signin?returnTo=${encodeURIComponent(`/services/${serviceId}`)}`;
+        return;
+      }
+      if (!agreed) {
+        setStatus("서비스 범위와 취소·환불 정책에 동의해 주세요.");
+        return;
+      }
+      if (type === "mentoring" && !slotId) {
+        setStatus("예약 가능한 멘토링 일정을 선택해 주세요.");
+        return;
+      }
+
       const orderResponse = await fetch("/api/orders", {
         method: "POST",
         headers: { "content-type": "application/json" },
