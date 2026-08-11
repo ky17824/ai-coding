@@ -159,21 +159,21 @@ const en: typeof ko = {
   hero: {
     eyebrow: "Global GTM Journey",
     headline: [
-      { em: "Go global", after: " with" },
-      { em: "evidence", after: ", not" },
-      { em: "optimism", after: "" }
+      { em: "Build", after: " a" },
+      { em: "global company", after: " that" },
+      { em: "scales", after: "" }
     ],
     body:
-      "We measure your readiness objectively and connect you to the actions and experts you need right now. Run your entire global expansion from one view.",
+      "We assess your readiness using evidence and connect you with the right actions and experts at the right time. Manage your entire global expansion in one place.",
     primaryCta: "Start free readiness assessment",
     secondaryCta: "See demo dashboard",
-    privacyNote: "Private beta — join by email."
+    privacyNote: "Beta version 0.1."
   },
   preview: {
-    ariaLabel: "Readiness dashboard preview",
-    windowTitle: "Readiness overview",
+    ariaLabel: "Readiness Dashboard preview",
+    windowTitle: "Readiness Overview",
     scoreEyebrow: "GLOBAL READINESS",
-    scoreLabel: "Expansion readiness",
+    scoreLabel: "Expansion Readiness",
     chartLabels: [
       "Market",
       "Leadership",
@@ -182,22 +182,22 @@ const en: typeof ko = {
       "Org",
       "GTM"
     ],
-    actionEyebrow: "Do this first",
-    actionLabel: "Security & compliance gap analysis",
+    actionEyebrow: "Do This First",
+    actionLabel: "Security & Compliance Gap Analysis",
     priority: "Priority 0",
-    evidenceTitle: "Evidence-based",
-    evidenceNote: "Completion requires proof",
+    evidenceTitle: "Evidence-Based",
+    evidenceNote: "Completion Requires Proof",
     expertAvatar: "K",
-    expertTitle: "Vetted experts",
-    expertNote: "Approved mentors & consultants only"
+    expertTitle: "Vetted Experts",
+    expertNote: "Approved Mentors & Consultants Only"
   },
   trust: {
     ariaLabel: "Service principles",
     items: [
       "Built on Silicon Valley localization methodology",
-      "Evidence-based readiness pre-assessment",
-      "AI-GTM assistant drafts your plan",
-      "Experts who have actually done it"
+      "Evidence-Based Readiness Pre-Assessment",
+      "AI GTM Assistant Helps You Draft Your Plan",
+      "Experts Who Have Actually Done It"
     ]
   },
   steps: {
@@ -218,9 +218,9 @@ const en: typeof ko = {
       },
       {
         number: "03",
-        title: "An AI-GTM assistant drafts the plan with you",
+        title: "An AI GTM assistant helps you draft the plan",
         description:
-          "It drafts your GTM execution plan from your assessment results and target market — you review it and make the call."
+          "It helps draft your GTM execution plan from your assessment results and target market — you review it and make the call."
       },
       {
         number: "04",
@@ -231,9 +231,9 @@ const en: typeof ko = {
     ]
   },
   ctaBand: {
-    eyebrow: "Start global expansion prepared",
-    heading: "Find out where your company stands today.",
-    button: "Start the assessment"
+    eyebrow: "Start Global Expansion Prepared",
+    heading: "Find Out Where Your Company Stands Today.",
+    button: "Start the Assessment"
   }
 };
 
