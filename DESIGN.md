@@ -5,7 +5,7 @@
 - Status: Active
 - Last refreshed: 2026-08-11
 - Primary product surfaces: 랜딩, 인증·온보딩, 단계별 준비도 진단, Gate 판정, 론칭 대상 정의, AI 시장·경쟁 사전조사, 준비 3단계 후 실제 판매 가능성 예비검증, AI GTM 공동계획, 대시보드·여정, 계획 보고서, 전문가 서비스
-- Evidence reviewed: `app/page.tsx`, `app/globals.css`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `components/google-button.tsx`, `components/signin-form.tsx`, `components/signup-form.tsx`, `app/auth/callback/route.ts`, `app/account/actions.ts`, `app/api/gtm-assistant/turn/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`, `.omx/plans/2026-08-11-kakao-login-integration.md`
+- Evidence reviewed: `app/page.tsx`, `app/globals.css`, `public/fonts/PretendardVariable.woff2`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `components/google-button.tsx`, `components/signin-form.tsx`, `components/signup-form.tsx`, `app/auth/callback/route.ts`, `app/account/actions.ts`, `app/api/gtm-assistant/turn/route.ts`, `app/api/gtm-plans/[id]/export/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `scripts/build-questionnaire-docx.js`, `docs/survey/*.docx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`, `.omx/plans/2026-08-11-kakao-login-integration.md`
 - Observed fact: 기존 UI는 `--ink`, `--green`, `--green-dark`, `--mint`, `--paper` 토큰과 흰색 panel, 12px 내외 radius, 짧은 상태 문구를 공통으로 사용한다.
 - Observed fact: 현재 AI GTM 어시스턴트는 목표국가·목표고객·자원·기한·제약만 받고 바로 계획을 만들며, 론칭할 제품·서비스·솔루션과 시장규모·경쟁사 조사 결과를 수집·검토·저장하는 단계가 없다.
 - Observed fact: 대시보드의 단계 통과 카드가 `gate_messages`의 공통 접두문 `필수 선결 조건이 남았습니다 —`를 항목마다 그대로 출력해 같은 상태 문장이 반복된다.
@@ -67,7 +67,7 @@
 ## Visual language
 
 - Color: 기존 CSS 변수만 사용한다. primary action은 `--green`, 고신뢰/헤더는 `--ink`·`--green-dark`, 선택·보조는 `--mint`, 위험은 기존 P0 색을 재사용한다.
-- Typography: 기존 Pretendard/Noto Sans KR/system stack. 제목은 굵고 짧게, 본문은 14~16px, 메타·출처는 11~13px.
+- Typography: 첨부된 `Pretendard Variable`을 웹 화면과 HTML 보고서의 기본 글꼴로 자체 호스팅하고, 내부 DOCX는 `Pretendard`로 통일한다. 웹은 45~920 가변 굵기를 사용하며 제목은 700~850, 본문은 400~500, 메타·출처는 500~650을 기본으로 한다. 숫자·단계 표시·브랜드 마크도 별도 serif 없이 같은 서체를 사용한다. 글꼴을 불러오지 못한 경우에만 Noto Sans KR·Apple SD Gothic Neo·system sans-serif 순으로 대체한다.
 - Spacing/layout rhythm: `app-container` 폭과 16/24/32px 간격을 재사용한다. 데스크톱 assistant는 요약 280~320px + 본문 1fr의 2열, 모바일은 1열.
 - Shape/radius/elevation: 기존 `.panel`, `.button`, 12~18px radius와 `--shadow`를 재사용한다.
 - Motion: 응답 스트리밍보다 명확한 로딩 상태를 우선한다. 160ms 기존 transition만 사용하고 `prefers-reduced-motion`을 존중한다.
@@ -191,7 +191,7 @@ Google로 계속하기
 ## Implementation constraints
 
 - Framework/styling system: Next.js App Router, React 19, 단일 `app/globals.css`, 서버 컴포넌트 우선
-- Design-token constraints: `:root` 기존 변수와 현재 버튼/panel 패턴만 확장
+- Design-token constraints: `:root` 기존 변수와 현재 버튼/panel 패턴만 확장한다. 전역 글꼴은 `--font-sans` 하나로 관리하고 화면별 `font-family` 재정의를 추가하지 않는다.
 - Performance constraints: 최초 페이지 렌더에 AI 호출 금지, 상태 변경에 AI 호출 금지, 클라이언트 번들에 OpenAI/Supabase service key 코드 금지
 - Research constraints: 기존 Responses API의 `file_search`와 `web_search`만 사용하고 새 검색 SDK를 추가하지 않는다. 공개 웹 검색에는 고객명·연락처·계약서·기밀 수치를 보내지 않는다. 공식 통계·규제기관·기업 공식 자료를 우선하고 모든 외부 사실에 URL·게시자·확인일을 저장한다.
 - Compatibility constraints: 55문항의 문구·배점·Critical 규칙은 유지하되 한 진단 세션에서 통과한 단계까지만 저장하며, Supabase RLS와 비로그인 진단 후 인증 복귀 흐름을 유지한다. 초기 목표국가·목표 고객군은 질문 답변에서 추론하지 않고 assessment의 구조화된 확정값으로 저장하며 Gate B에만 추가 선결 조건으로 사용한다. 미응답·잠김 문항을 판매 가능성의 부정 근거로 사용하지 않으며 `readiness_answers` 55개가 모두 있을 때만 실제 판매 가능성 예비검증을 계산한다.

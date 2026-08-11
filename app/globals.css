@@ -1,4 +1,14 @@
+@font-face {
+  font-family: "Pretendard Variable";
+  font-style: normal;
+  font-weight: 45 920;
+  font-display: swap;
+  src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
+}
+
 :root {
+  --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR",
+    "Apple SD Gothic Neo", system-ui, sans-serif;
   --ink: #10221b;
   --muted: #66746e;
   --line: #dfe6e2;
@@ -24,9 +34,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family:
-    Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", Inter, system-ui,
-    sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -123,7 +131,7 @@ svg {
   color: var(--mint);
   display: grid;
   place-items: center;
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-style: italic;
 }
 
@@ -520,7 +528,7 @@ main[lang="en"] .hero h1 em {
 
 .preview-score {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 50px;
   line-height: 0.9;
 }
@@ -795,7 +803,7 @@ main[lang="en"] .hero h1 em {
 
 .funnel-row strong {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 28px;
 }
 
@@ -1139,7 +1147,7 @@ main[lang="en"] .hero h1 em {
 
 .step-card > span {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 36px;
   font-style: italic;
 }
@@ -1361,7 +1369,7 @@ main[lang="en"] .hero h1 em {
 
 .summary-score strong {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 56px;
   line-height: 0.9;
 }
@@ -1410,7 +1418,7 @@ main[lang="en"] .hero h1 em {
 
 .calendar-date > strong {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 42px;
 }
 
@@ -1500,7 +1508,7 @@ main[lang="en"] .hero h1 em {
   display: grid;
   justify-items: end;
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 28px;
 }
 
@@ -1555,7 +1563,7 @@ main[lang="en"] .hero h1 em {
 
 .answer-insight-counts strong {
   color: var(--ink);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 24px;
 }
 
@@ -1590,7 +1598,7 @@ main[lang="en"] .hero h1 em {
 }
 
 .answer-insight-chart__heading > span:last-child strong {
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 30px;
 }
 
@@ -1704,7 +1712,7 @@ main[lang="en"] .hero h1 em {
 
 .answer-insight-card summary small {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   font-style: italic;
 }
@@ -1885,7 +1893,7 @@ main[lang="en"] .hero h1 em {
 
 .journey-column > header > span {
   color: var(--mint);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 26px;
   font-style: italic;
 }
@@ -2309,7 +2317,7 @@ main[lang="en"] .hero h1 em {
 
 .admin-metrics strong {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 34px;
 }
 
@@ -2752,7 +2760,7 @@ main[lang="en"] .hero h1 em {
 
 .question-number {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   font-style: italic;
 }
@@ -2892,7 +2900,7 @@ main[lang="en"] .hero h1 em {
 
 .result-hero h1 em {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-weight: 500;
 }
 
@@ -2923,7 +2931,7 @@ main[lang="en"] .hero h1 em {
 }
 
 .score-orb strong {
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 60px;
   font-weight: 500;
   line-height: 0.9;
@@ -3048,7 +3056,7 @@ main[lang="en"] .hero h1 em {
 
 .domain-score > strong {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 30px;
 }
 
@@ -3072,7 +3080,7 @@ main[lang="en"] .hero h1 em {
 
 .action-index {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 22px;
 }
 
@@ -3135,7 +3143,7 @@ main[lang="en"] .hero h1 em {
 
 .assistant-score strong {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 54px;
 }
 
@@ -3270,7 +3278,7 @@ main[lang="en"] .hero h1 em {
 
 .market-size-grid strong {
   color: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 24px;
 }
 

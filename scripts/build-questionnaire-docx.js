@@ -30,7 +30,7 @@ const { INTAKE_STAGES, INTAKE_ITEMS, INTAKE_QUESTIONS } = require(bundle);
 fs.unlinkSync(bundle);
 
 const W = 9026;
-const FONT = "맑은 고딕";
+const FONT = "Pretendard";
 const GRAY = "595959";
 const LINE = { style: BorderStyle.SINGLE, size: 4, color: "BFBFBF" };
 const CIRCLED = ["①", "②", "③", "④"];
