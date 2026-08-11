@@ -104,10 +104,10 @@ export const EN_QUESTION_COPY: Record<string, QuestionCopy> = {
     "Inventory decisions and relationships tied to one person and define a backup."
   ),
   "pmf-paid-conversion": q(
-    "Has any customer actually paid for your product or service?",
-    ["We do not yet have paying or active customers.", "Customers have shown interest, but none has paid.", "We completed a paid proof of concept or first order.", "Repeat purchases, renewals, or usage growth have occurred across multiple customers."],
-    "List the three most recent examples in order. You may anonymize customer names.",
-    "Secure a paid proof of concept or first order and record the money and time the customer committed."
+    "Have you sold your product or service to a paying customer in your home market?",
+    ["We do not yet have paying or active customers in our home market.", "Domestic customers have shown interest, but none has paid.", "We secured a paid proof of concept or first order in our home market.", "Repeat purchases, renewals, or usage growth have occurred across multiple domestic customers."],
+    "List your three most recent domestic sales in order. You may anonymize customer names.",
+    "Secure a paid proof of concept or first order in the initial target country and record the money and time the customer committed."
   ),
   "pmf-churn-cases": q(
     "Have interested customers ever dropped out, and do you know why?",
