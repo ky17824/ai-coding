@@ -67,25 +67,26 @@
 
 ## Visual language
 
-- Color: 기존 CSS 변수만 사용한다. primary action은 `--green`, 고신뢰/헤더는 `--ink`·`--green-dark`, 선택·보조는 `--mint`, 위험은 기존 P0 색을 재사용한다.
+- Color: 화면의 버튼은 `--green-dark` 기반의 짙은 녹색으로 통일하고, hover는 한 단계 밝은 녹색, 3D 엣지는 더 어두운 녹색을 사용한다. 고신뢰/헤더는 `--ink`, 위험은 기존 P0 색을 유지한다.
 - Typography: 첨부된 `Pretendard Variable`을 웹 화면과 HTML 보고서의 기본 글꼴로 자체 호스팅하고, 내부 DOCX는 `Pretendard`로 통일한다. 웹은 45~920 가변 굵기를 사용하며 제목은 700~850, 본문은 400~500, 메타·출처는 500~650을 기본으로 한다. 숫자·단계 표시·브랜드 마크도 별도 serif 없이 같은 서체를 사용한다. 글꼴을 불러오지 못한 경우에만 Noto Sans KR·Apple SD Gothic Neo·system sans-serif 순으로 대체한다.
 - Spacing/layout rhythm: `app-container` 폭과 16/24/32px 간격을 재사용한다. 데스크톱 assistant는 요약 280~320px + 본문 1fr의 2열, 모바일은 1열.
-- Shape/radius/elevation: 기존 `.panel`, `.button`, 12~18px radius와 `--shadow`를 재사용한다.
-- Motion: 응답 스트리밍보다 명확한 로딩 상태를 우선한다. 160ms 기존 transition만 사용하고 `prefers-reduced-motion`을 존중한다.
+- Shape/radius/elevation: 기존 `.panel`과 12~18px radius를 재사용한다. 제품 액션 버튼은 기본 52px·소형 42px 높이, 12px radius, 짙은 녹색 표면과 더 어두운 하단 엣지 그림자로 규격화한다.
+- Motion: 버튼은 160ms 안에서 hover 시 2px 떠오르고 active 시 3px 눌리는 3D 피드백만 사용한다. 응답 스트리밍보다 명확한 로딩 상태를 우선하고 `prefers-reduced-motion`에서는 이동과 transition을 제거한다.
 - Imagery/iconography: 새로운 AI 일러스트나 아이콘 라이브러리를 추가하지 않는다.
 
 ## Components
 
-- Existing components to reuse: `SiteHeader`, `.panel`, `.button` variants, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, `.offering-picker`, 서비스 카드
+- Existing components to reuse: `SiteHeader`, `.panel`, 짙은 녹색 3D 규격을 공유하는 `.button` variants, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, `.offering-picker`, 서비스 카드
 - New/changed components: provider별 설정을 받는 `SocialLoginButton`, 허용된 callback 오류를 설명하는 `AuthErrorNotice`, 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `MarketSizingTable`, `CompetitorTable`, `SourceList`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드
 - Variants and states: Gate locked/active/passed/stopped, target market missing/partial/confirmed, question satisfied/evidence_needed/improvement_needed/locked, assistant context_draft/researching/review_required/confirmed/plan_draft/active, market source/assumption/estimate/confirmation_needed, offering validation deferred/preliminary_reviewed, plan draft/active/superseded/completed, item not_started/in_progress/blocked/completed, founder/vault/web/deterministic source
 - Token/component ownership: 전역 토큰과 공통 상태는 `app/globals.css`; assistant 전용 레이아웃도 같은 파일의 기존 토큰을 사용한다.
 - Do not add a component library, Tailwind layer, icon package, or design-token abstraction.
+- 소셜 로그인은 공급자 이름과 로고가 보이는 접근 가능한 이름을 유지하면서 공통 버튼 규격을 따른다. 삭제·환불처럼 되돌리기 어려운 행동은 위험 의미를 색 이외의 문구로도 명확히 표시한다.
 
 ### 카카오 로그인
 
 - 로그인·가입 화면은 `카카오로 계속하기`, `Google로 계속하기`, 단일 `또는` 구분선, 이메일 인증 순으로 표시한다. 활성화된 provider가 없으면 소셜 영역과 구분선을 모두 숨긴다.
-- 카카오 버튼은 공식 식별이 가능한 노란 배경과 짙은 글자를 사용하되 accessible name에 `카카오`를 포함해 색에만 의존하지 않는다. 기존 button 크기·radius·focus-visible을 유지한다.
+- 카카오 버튼도 공통 짙은 녹색 표면을 사용하되 accessible name과 로고에 `카카오` 식별을 유지한다. 기존 button 크기·radius·focus-visible을 유지한다.
 - 버튼을 누르면 `카카오로 이동 중…`으로 바꾸고 중복 제출을 막는다. 시작 실패, 동의 취소, callback 실패, 이메일 미제공, 설정 누락은 각각 재시도 또는 이메일 로그인으로 복구할 수 있는 한국어 문장으로 표시한다.
 - 카카오 인증 뒤에는 기존 `/auth/callback`에서 session을 교환한다. 이메일이 없으면 조직·프로필을 만들기 전에 로그아웃하고 `카카오 계정에서 이메일 제공에 동의한 뒤 다시 시도하거나 이메일로 가입해 주세요.`를 표시한다.
 - 신규 사용자는 기존 온보딩에서 회사명·직위·휴대전화·필수 동의를 입력한다. 기존 이력 연결은 `account_email`이 제공되고 Supabase identities에 기존 provider와 Kakao가 같은 사용자 UUID로 연결된 경우에만 허용한다. 이메일 문자열만으로 직접 계정을 합치지 않는다.
@@ -157,7 +158,7 @@ Google로 계속하기
 - Auth semantics: 소셜 버튼의 accessible name에 provider 이름을 포함하고, 처리 중에는 `disabled`와 화면에 보이는 상태 문구를 함께 제공한다. OAuth 오류는 `role=alert`로 한 번만 알린다.
 - Gate prerequisite semantics: 남은 수는 제목과 연결하고, 시장 정의와 질문 blocker는 각각 제목이 있는 목록으로 구분한다. 상태 아이콘에는 `미확정`, `확정`, `보완 필요` 텍스트를 병기한다.
 - Market research semantics: 시장규모는 시각적 막대만 사용하지 않고 실제 `<table>` 또는 정의목록으로 동일 정보를 제공한다. 작업 단계에는 `aria-current="step"`, 조사 진행에는 `aria-busy`, 경쟁사 표에는 caption을 제공한다. 판매 가능성 차원은 색만 있는 방사형 그래프 대신 제목·상태·근거가 있는 목록과 `role="meter"` 막대를 함께 제공한다.
-- Reduced motion and sensory considerations: `prefers-reduced-motion`에서는 새 애니메이션을 끈다. 로딩은 회전 애니메이션 없이 텍스트로도 전달한다.
+- Reduced motion and sensory considerations: `prefers-reduced-motion`에서는 버튼의 3D 이동을 포함한 새 애니메이션을 끈다. 로딩은 회전 애니메이션 없이 텍스트로도 전달한다.
 
 ## Responsive behavior
 

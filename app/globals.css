@@ -17,6 +17,13 @@
   --mint: #bff3d1;
   --green: #1d7b4c;
   --green-dark: #0e3b2b;
+  --button-green: #0e3b2b;
+  --button-green-hover: #14543d;
+  --button-green-edge: #06271c;
+  --button-shadow: 0 4px 0 var(--button-green-edge), 0 10px 22px rgba(6, 39, 28, 0.2);
+  --button-shadow-small: 0 3px 0 var(--button-green-edge), 0 7px 16px rgba(6, 39, 28, 0.18);
+  --button-shadow-hover: 0 6px 0 var(--button-green-edge), 0 14px 26px rgba(6, 39, 28, 0.25);
+  --button-shadow-pressed: 0 1px 0 var(--button-green-edge), 0 5px 12px rgba(6, 39, 28, 0.2);
   --cream: #f2efe4;
   --orange: #f2a65a;
   --shadow: 0 24px 60px rgba(16, 34, 27, 0.1);
@@ -157,9 +164,8 @@ svg {
 }
 
 .landing-shell .button--dark {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: #f5fbf8;
+  border-color: rgba(191, 243, 209, 0.34);
+  background: var(--button-green);
   backdrop-filter: blur(12px);
 }
 
@@ -173,8 +179,24 @@ svg {
   color: var(--green);
 }
 
+.button,
+.icon-button,
+.filter-row button,
+.domain-nav button {
+  border: 1px solid rgba(191, 243, 209, 0.22);
+  color: var(--white);
+  background: var(--button-green);
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
 .button {
-  border: 0;
   border-radius: 12px;
   min-height: 52px;
   padding: 0 22px;
@@ -186,30 +208,32 @@ svg {
   flex-shrink: 0;
   white-space: nowrap;
   font-weight: 750;
-  cursor: pointer;
-  transition:
-    transform 160ms ease,
-    box-shadow 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease,
-    background 160ms ease;
 }
 
-/* 모든 버튼은 올라오면서 그림자가 깊어진다. 변형별 색은 아래에서 각각 준다. */
-.button:hover {
+/* 공통 3D 표면: hover에서는 떠오르고 active에서는 아래 엣지가 눌린다. */
+.button:hover:not(:disabled),
+.icon-button:hover,
+.filter-row button:hover,
+.domain-nav button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 22px rgba(16, 34, 27, 0.16);
+  border-color: rgba(191, 243, 209, 0.4);
+  background: var(--button-green-hover);
+  box-shadow: var(--button-shadow-hover);
 }
 
-/* 눌리는 순간에는 도로 내려앉아 클릭이 손끝에 잡히게 한다. */
-.button:active {
-  transform: translateY(0);
-  box-shadow: 0 4px 10px rgba(16, 34, 27, 0.14);
+.button:active:not(:disabled),
+.icon-button:active,
+.filter-row button:active,
+.domain-nav button:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: var(--button-shadow-pressed);
   transition-duration: 60ms;
 }
 
 .button:focus-visible,
 .icon-button:focus-visible,
+.filter-row button:focus-visible,
+.domain-nav button:focus-visible,
 .answer-option:focus-within {
   outline: 3px solid rgba(29, 123, 76, 0.25);
   outline-offset: 2px;
@@ -219,47 +243,7 @@ svg {
   min-height: 42px;
   padding: 0 18px;
   font-size: 13px;
-}
-
-.button--dark {
-  color: var(--white);
-  background: var(--ink);
-}
-
-.button--primary {
-  background: var(--green);
-  color: var(--white);
-  box-shadow: 0 12px 28px rgba(29, 123, 76, 0.22);
-}
-
-.button--light {
-  background: var(--mint);
-  color: var(--green-dark);
-}
-
-.button--ghost {
-  border: 1px solid var(--line);
-  background: var(--white);
-  color: var(--ink);
-}
-
-.button--primary:hover {
-  background: #19693f;
-  box-shadow: 0 16px 34px rgba(29, 123, 76, 0.3);
-}
-
-.button--dark:hover {
-  background: #1e3a2e;
-}
-
-.button--light:hover {
-  background: #a9ecc0;
-}
-
-.button--ghost:hover {
-  border-color: var(--green);
-  background: #f4faf6;
-  color: var(--green-dark);
+  box-shadow: var(--button-shadow-small);
 }
 
 .button--full {
@@ -267,11 +251,13 @@ svg {
 }
 
 .button:disabled,
-.button:disabled:hover {
-  opacity: 0.5;
+.button:disabled:hover,
+.domain-nav button:disabled,
+.domain-nav button:disabled:hover {
+  opacity: 0.48;
   cursor: not-allowed;
   transform: none;
-  box-shadow: none;
+  box-shadow: 0 2px 0 var(--button-green-edge);
 }
 
 .hero {
@@ -365,13 +351,19 @@ main[lang="en"] .hero h1 {
 }
 
 .hero__actions .button--primary {
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: var(--mint);
-  color: var(--green-dark);
+  border: 1px solid rgba(191, 243, 209, 0.42);
+  background: var(--button-green);
+  color: var(--white);
   backdrop-filter: blur(12px);
   box-shadow:
+    0 4px 0 var(--button-green-edge),
     0 16px 34px rgba(0, 0, 0, 0.28),
     inset 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.cta-band .button--light {
+  border-color: rgba(191, 243, 209, 0.55);
+  background: var(--button-green-hover);
 }
 
 .landing-shell .hero__copy > p,
@@ -679,18 +671,19 @@ main[lang="en"] .hero h1 {
 }
 
 .button--kakao {
-  border: 1px solid #fee500;
-  background: #fee500;
-  color: #191919;
+  border-color: rgba(191, 243, 209, 0.22);
+  background: var(--button-green);
+  color: var(--white);
 }
 
 .button--kakao:hover:not(:disabled) {
-  border-color: #f3da00;
-  background: #f3da00;
+  border-color: rgba(191, 243, 209, 0.4);
+  background: var(--button-green-hover);
+  color: var(--white);
 }
 
 .button--kakao:focus-visible {
-  outline: 3px solid rgba(25, 25, 25, 0.24);
+  outline: 3px solid rgba(29, 123, 76, 0.25);
   outline-offset: 2px;
 }
 
@@ -1242,13 +1235,12 @@ main[lang="en"] .hero h1 {
 }
 
 .icon-button {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
-  background: var(--green-dark);
-  color: var(--white);
+  box-shadow: var(--button-shadow-small);
 }
 
 .icon-button svg {
@@ -1444,27 +1436,15 @@ main[lang="en"] .hero h1 {
 }
 
 .dashboard-page .button {
-  min-height: 44px;
+  min-height: 42px;
   padding: 0 18px;
-  border: 1px solid #4b2e24;
-  border-radius: 12px;
-  background: #4b2e24;
-  color: var(--white);
   font-size: 13px;
-  box-shadow: 0 7px 16px rgba(75, 46, 36, 0.2);
+  box-shadow: var(--button-shadow-small);
 }
 
 .dashboard-page .button > span,
 .dashboard-page .service-card .icon-button svg {
   transition: transform 160ms ease;
-}
-
-.dashboard-page .button:hover,
-.dashboard-page .service-card .icon-button:hover {
-  border-color: #624033;
-  background: #624033;
-  color: var(--white);
-  box-shadow: 0 12px 24px rgba(75, 46, 36, 0.3);
 }
 
 .dashboard-page .button:hover > span,
@@ -1473,21 +1453,8 @@ main[lang="en"] .hero h1 {
 }
 
 .dashboard-page .service-card .icon-button {
-  width: 44px;
-  height: 44px;
-  border: 1px solid #4b2e24;
-  border-radius: 12px;
-  background: #4b2e24;
-  box-shadow: 0 7px 16px rgba(75, 46, 36, 0.2);
-  transition:
-    transform 160ms ease,
-    box-shadow 160ms ease,
-    border-color 160ms ease,
-    background 160ms ease;
-}
-
-.dashboard-page .service-card .icon-button:hover {
-  transform: translateY(-2px);
+  width: 42px;
+  height: 42px;
 }
 
 .dashboard-profile-notice {
@@ -1960,25 +1927,15 @@ main[lang="en"] .hero h1 {
 
 .journey-expert-cta {
   width: fit-content;
-  min-height: 36px;
+  min-height: 42px;
   margin-top: 10px;
   padding: 0 13px;
-  border-color: #4b2e24;
-  background: #4b2e24;
-  color: var(--white);
   font-size: 11px;
-  box-shadow: 0 7px 16px rgba(75, 46, 36, 0.2);
+  box-shadow: var(--button-shadow-small);
 }
 
 .journey-expert-cta span {
   transition: transform 160ms ease;
-}
-
-.journey-expert-cta:hover {
-  border-color: #624033;
-  background: #624033;
-  color: var(--white);
-  box-shadow: 0 12px 24px rgba(75, 46, 36, 0.3);
 }
 
 .journey-expert-cta:hover span {
@@ -1992,20 +1949,17 @@ main[lang="en"] .hero h1 {
 }
 
 .filter-row button {
-  min-height: 38px;
+  min-height: 42px;
   padding: 0 15px;
-  border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--white);
-  color: var(--muted);
   font-size: 11px;
   font-weight: 750;
-  cursor: pointer;
+  box-shadow: var(--button-shadow-small);
 }
 
 .filter-row button.active {
   border-color: var(--green-dark);
-  background: var(--green-dark);
+  background: var(--button-green-hover);
   color: var(--white);
 }
 
@@ -2691,17 +2645,15 @@ main[lang="en"] .hero h1 {
 
 .domain-nav button {
   width: 100%;
+  min-height: 42px;
   padding: 10px 12px;
-  border: 0;
   border-radius: 10px;
   display: flex;
   align-items: center;
   gap: 10px;
-  background: transparent;
-  color: var(--muted);
   font-size: 12px;
   text-align: left;
-  cursor: pointer;
+  box-shadow: var(--button-shadow-small);
 }
 
 .domain-nav button > span {
@@ -2716,12 +2668,12 @@ main[lang="en"] .hero h1 {
 
 .domain-nav button small {
   margin-left: auto;
-  color: var(--green);
+  color: var(--mint);
 }
 
 .domain-nav button.active {
-  background: #edf7f0;
-  color: var(--green-dark);
+  background: var(--button-green-hover);
+  color: var(--white);
   font-weight: 750;
 }
 
@@ -3382,9 +3334,7 @@ h2.plan-summary {
 }
 
 .assistant-plan-item footer .text-link {
-  border: 0;
-  background: none;
-  cursor: pointer;
+  color: var(--white);
 }
 
 .target-market-confirmation {

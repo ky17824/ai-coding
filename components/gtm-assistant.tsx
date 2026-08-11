@@ -350,7 +350,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
                     <label>{en ? "Status" : "상태"}<select value={item.status} onChange={(event) => updateItem(index, { status: event.target.value as GtmPlanItem["status"] })}><option value="not_started">{en ? "Not started" : "진행 전"}</option><option value="in_progress">{en ? "In progress" : "진행 중"}</option><option value="blocked">{en ? "Blocked" : "막힘"}</option><option value="completed">{en ? "Completed" : "완료"}</option></select></label>
                     <label className="assistant-context__wide">{en ? "Completion evidence" : "완료 근거"}<input value={item.completionEvidence} onChange={(event) => updateItem(index, { completionEvidence: event.target.value })} /></label>
                   </div>
-                  <footer><small>{en ? "Sources" : "근거"}: {item.sources.map((source) => source.title).join(" · ")}</small><button type="button" className="text-link" onClick={() => saveItem(index)}>{en ? "Save item" : "항목 저장"}</button></footer>
+                  <footer><small>{en ? "Sources" : "근거"}: {item.sources.map((source) => source.title).join(" · ")}</small><button type="button" className="button button--small" onClick={() => saveItem(index)}>{en ? "Save item" : "항목 저장"}</button></footer>
                 </article>
               ))}
             </div>
