@@ -314,6 +314,11 @@ svg {
   letter-spacing: -0.06em;
 }
 
+main[lang="en"] .hero h1 em {
+  font-size: inherit;
+  letter-spacing: inherit;
+}
+
 .hero h1 span:nth-child(1) {
   animation-delay: 0.2s;
 }
