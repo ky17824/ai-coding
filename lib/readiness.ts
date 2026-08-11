@@ -332,7 +332,11 @@ export function calculateReadiness(
 }
 
 export function decidePlanHorizons(result: ReadinessResult): (30 | 60 | 90)[] {
-  if (result.currentStageId === "early") return [30];
+  if (result.currentStageId === "early") {
+    return result.actions.some((action) => action.questionId === "pmf-paid-conversion")
+      ? [30, 60, 90]
+      : [30];
+  }
   if (result.currentStageId === "preparing") {
     const early = result.stages.find((stage) => stage.stageId === "early");
     return early && early.ratio >= 0.9 && early.blockers.length === 0

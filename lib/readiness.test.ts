@@ -213,8 +213,20 @@ describe("phase gate", () => {
     expect(withMarket.stages.every((stage) => stage.passed)).toBe(true);
   });
 
-  it("limits plan horizons to the failed or completed gate", () => {
-    expect(decidePlanHorizons(calculateReadiness(answerAll(1)))).toEqual([30]);
+  it("gives paid-customer validation a full 90-day runway", () => {
+    const paidCustomerMissing = answerAll(4).map((answer) =>
+      answer.questionId === "pmf-paid-conversion"
+        ? { ...answer, level: 2 as const, evidence: undefined }
+        : answer
+    );
+    const otherEarlyBlocker = answerAll(4).map((answer) =>
+      answer.questionId === "res-owner-time"
+        ? { ...answer, level: 2 as const, evidence: undefined }
+        : answer
+    );
+
+    expect(decidePlanHorizons(calculateReadiness(paidCustomerMissing))).toEqual([30, 60, 90]);
+    expect(decidePlanHorizons(calculateReadiness(otherEarlyBlocker))).toEqual([30]);
     expect(decidePlanHorizons(calculateReadiness(answerAll(4)))).toEqual([60]);
     expect(decidePlanHorizons(calculateReadiness(answerAll(4), confirmedMarket))).toEqual([30, 60, 90]);
   });
