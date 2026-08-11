@@ -2,6 +2,7 @@ import {
   INTAKE_ITEMS,
   INTAKE_QUESTIONS,
   INTAKE_STAGES,
+  PAID_PILOT_QUESTION_ID,
   POSITIVE_LEVEL,
   getIntakeItems,
   getIntakeQuestions,
@@ -41,7 +42,7 @@ const EN_LEVEL_MEANING: Record<ReadinessLevel, string> = {
   3: "There is an execution example, so this response counts toward the stage gate.",
   4: "This is a repeatable or externally verified strength that counts toward the stage gate."
 };
-type AnswerInsightStatus = "blocker" | "needs_work" | "passed" | "strength";
+type AnswerInsightStatus = "blocker" | "deferred" | "needs_work" | "passed" | "strength";
 
 export const questionsOfStage = (stageId: string, locale: Locale = "ko") => {
   const items = new Map(getIntakeItems(locale).map((item) => [item.id, item]));
@@ -86,21 +87,33 @@ export function buildStageAnswerInsights(
 
   const answerById = new Map(submitted.map((answer) => [answer.questionId, answer]));
   const stageQuestions = questionsOfStage(stageId, locale);
+  const paidPilotAnswer = answerById.get(PAID_PILOT_QUESTION_ID);
+  const paidPilotDeferred = stageId === "early" && (
+    !paidPilotAnswer ||
+    paidPilotAnswer.level < POSITIVE_LEVEL ||
+    !paidPilotAnswer.evidence?.value
+  );
   const answers = stageQuestions.flatMap((question) => {
     const answer = answerById.get(question.id);
     if (!answer) return [];
     const missingCriticalEvidence = question.critical && !answer.evidence?.value;
+    const answerIsDeferred = question.id === PAID_PILOT_QUESTION_ID &&
+      (answer.level < POSITIVE_LEVEL || missingCriticalEvidence);
     const status: AnswerInsightStatus = answer.level < POSITIVE_LEVEL || missingCriticalEvidence
-      ? question.critical ? "blocker" : "needs_work"
+      ? answerIsDeferred ? "deferred" : question.critical ? "blocker" : "needs_work"
       : answer.level === 4 ? "strength" : "passed";
     const statusLabel = locale === "en"
       ? status === "blocker"
         ? "Required prerequisite"
+        : status === "deferred"
+          ? "90-day validation task"
         : status === "needs_work"
           ? "Needs work"
           : status === "strength" ? "Strength" : "Passed"
       : status === "blocker"
         ? "필수 선결 조건"
+        : status === "deferred"
+          ? "90일 검증 과제"
         : status === "needs_work"
           ? "보완 필요"
           : status === "strength" ? "강점" : "통과";
@@ -111,7 +124,11 @@ export function buildStageAnswerInsights(
       question: question.question,
       level: answer.level,
       answerText: question.options[answer.level - 1],
-      meaning: missingCriticalEvidence && answer.level >= POSITIVE_LEVEL
+      meaning: answerIsDeferred
+        ? locale === "en"
+          ? "This does not block Readiness Stages 1 or 2. Complete a paid target-country proof of concept or pilot and submit evidence by the end of the 90-day plan to pass Gate C."
+          : "준비 1·2단계를 막지 않습니다. 90일 계획 안에 초기 목표국가의 유료 실증시험이나 파일럿을 완료하고 근거를 제출해야 단계 통과 기준 C를 통과합니다."
+        : missingCriticalEvidence && answer.level >= POSITIVE_LEVEL
         ? locale === "en"
           ? "The response is positive, but this required question still needs supporting evidence."
           : "긍정 응답이지만 필수 문항의 확인 근거가 없어 단계 통과 조건이 남았습니다."
@@ -125,6 +142,7 @@ export function buildStageAnswerInsights(
   });
   const counts: Record<AnswerInsightStatus, number> = {
     blocker: 0,
+    deferred: 0,
     needs_work: 0,
     passed: 0,
     strength: 0
@@ -132,10 +150,19 @@ export function buildStageAnswerInsights(
   for (const answer of answers) counts[answer.status] += 1;
   const items = itemsCatalog.filter((item) => item.stageId === stageId).map((item) => {
     const itemQuestions = stageQuestions.filter((question) => question.itemId === item.id);
+    const gateQuestions = paidPilotDeferred
+      ? itemQuestions.filter((question) => question.id !== PAID_PILOT_QUESTION_ID)
+      : itemQuestions;
+    const totalWeight = gateQuestions.reduce((sum, question) => sum + question.weight, 0);
+    const positiveWeight = gateQuestions
+      .filter((question) => (answerById.get(question.id)?.level ?? 0) >= POSITIVE_LEVEL)
+      .reduce((sum, question) => sum + question.weight, 0);
     return {
       id: item.id,
       label: item.label,
-      totalWeight: item.weight,
+      totalWeight,
+      positiveWeight,
+      positivePercent: totalWeight ? Math.round((positiveWeight / totalWeight) * 100) : 0,
       segments: ([1, 2, 3, 4] as ReadinessLevel[]).map((level) => {
         const weight = itemQuestions
           .filter((question) => answerById.get(question.id)?.level === level)
@@ -144,12 +171,17 @@ export function buildStageAnswerInsights(
       })
     };
   });
+  const positiveScore = items.reduce((sum, item) => sum + item.positiveWeight, 0);
+  const totalScore = items.reduce((sum, item) => sum + item.totalWeight, 0);
 
   return {
     stageId,
     stageLabel: stage.label,
     gate: stage.gate,
-    score: calculateReadiness(submitted, null, locale).domainScores[stageId] ?? 0,
+    positiveScore,
+    totalScore,
+    thresholdScore: totalScore * GATE_THRESHOLD,
+    score: totalScore ? Math.round((positiveScore / totalScore) * 100) : 0,
     counts,
     items,
     answers
@@ -215,16 +247,22 @@ export function calculateReadiness(
   const levels = new Map(submitted.map((a) => [a.questionId, a.level]));
   const evidence = new Map(submitted.map((a) => [a.questionId, a.evidence?.value.trim()]));
   const positive = (id: string) => (levels.get(id) ?? 0) >= POSITIVE_LEVEL;
+  const paidPilotValidated = positive(PAID_PILOT_QUESTION_ID) && Boolean(evidence.get(PAID_PILOT_QUESTION_ID));
 
   const stages: StageResult[] = stagesCatalog.map((stage) => {
     const questions = questionsOfStage(stage.id, locale);
-    const positiveScore = questions
+    const scoredQuestions = stage.id === "early" && !paidPilotValidated
+      ? questions.filter((question) => question.id !== PAID_PILOT_QUESTION_ID)
+      : questions;
+    const totalScore = scoredQuestions.reduce((sum, question) => sum + question.weight, 0);
+    const positiveScore = scoredQuestions
       .filter((question) => positive(question.id))
       .reduce((sum, question) => sum + question.weight, 0);
     const blockers = questions
       .filter(
         (question) =>
-          question.critical && (!positive(question.id) || !evidence.get(question.id))
+          question.critical && question.id !== PAID_PILOT_QUESTION_ID &&
+          (!positive(question.id) || !evidence.get(question.id))
       )
       .map((question) => question.question);
     const prerequisiteBlockers = stage.id === "preparing" && !isTargetMarketConfirmed(targetMarket)
@@ -240,8 +278,12 @@ export function calculateReadiness(
             ? [locale === "en" ? "Confirm the initial target-market information." : "초기 목표시장 정보를 확인해 주세요."]
             : [])
         ]
-      : [];
-    const ratio = positiveScore / stage.weight;
+      : stage.id === "ready" && !paidPilotValidated
+        ? [locale === "en"
+            ? "Complete a paid target-country proof of concept or pilot and submit payment or customer-commitment evidence."
+            : "초기 목표국가의 유료 실증시험이나 파일럿을 완료하고 결제 또는 고객 투입 증거를 제출해 주세요."]
+        : [];
+    const ratio = totalScore ? positiveScore / totalScore : 0;
 
     return {
       stageId: stage.id,
@@ -249,7 +291,7 @@ export function calculateReadiness(
       gate: stage.gate,
       unlocks: stage.unlocks,
       positiveScore,
-      totalScore: stage.weight,
+      totalScore,
       ratio,
       blockers,
       prerequisiteBlockers,
@@ -259,7 +301,7 @@ export function calculateReadiness(
         prerequisiteBlockers.length === 0,
       scoreToPass:
         Math.round(
-          Math.max(0, stage.weight * GATE_THRESHOLD - positiveScore) * 10
+          Math.max(0, totalScore * GATE_THRESHOLD - positiveScore) * 10
         ) / 10
     };
   });
@@ -285,15 +327,21 @@ export function calculateReadiness(
     }
   }
 
-  // 액션은 현재 단계에서만 뽑는다. 통과하지 못한 단계를 두고 앞서가게 하지 않는다.
+  // 현재 단계 액션에 미완료 유료 실증시험을 90일 이월 과제로 함께 유지한다.
   const actions: ActionRecommendation[] = current
-    ? questionsOfStage(current.stageId, locale)
+    ? [
+        ...(!paidPilotValidated
+          ? getIntakeQuestions(locale).filter((question) => question.id === PAID_PILOT_QUESTION_ID)
+          : []),
+        ...questionsOfStage(current.stageId, locale).filter((question) => question.id !== PAID_PILOT_QUESTION_ID)
+      ]
         .filter(
           (question) =>
             !positive(question.id) || (question.critical && !evidence.get(question.id))
         )
         .sort(
           (a, b) =>
+            Number(b.id === PAID_PILOT_QUESTION_ID) - Number(a.id === PAID_PILOT_QUESTION_ID) ||
             Number(!!b.critical) - Number(!!a.critical) ||
             b.weight - a.weight ||
             (levels.get(a.id) ?? 0) - (levels.get(b.id) ?? 0)
@@ -332,10 +380,11 @@ export function calculateReadiness(
 }
 
 export function decidePlanHorizons(result: ReadinessResult): (30 | 60 | 90)[] {
+  if (result.actions.some((action) => action.questionId === PAID_PILOT_QUESTION_ID)) {
+    return [30, 60, 90];
+  }
   if (result.currentStageId === "early") {
-    return result.actions.some((action) => action.questionId === "pmf-paid-conversion")
-      ? [30, 60, 90]
-      : [30];
+    return [30];
   }
   if (result.currentStageId === "preparing") {
     const early = result.stages.find((stage) => stage.stageId === "early");

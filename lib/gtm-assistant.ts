@@ -10,6 +10,7 @@ import type {
   GtmPlanSource
 } from "./types";
 import { matchExpertSupport } from "./expert-matching";
+import { PAID_PILOT_QUESTION_ID } from "./intake-questions";
 
 export const ASSISTANT_MODEL = "gpt-5.6-luna" as const;
 
@@ -309,7 +310,9 @@ export function buildDeterministicPlan(
     checkedAt: now.toISOString().slice(0, 10)
   };
   const items: GtmPlanItem[] = actions.slice(0, 8).map((action, index) => {
-    const horizon = allowedHorizons[
+    const horizon = action.question_id === PAID_PILOT_QUESTION_ID && allowedHorizons.includes(90)
+      ? 90
+      : allowedHorizons[
       Math.min(
         allowedHorizons.length - 1,
         Math.floor((index * allowedHorizons.length) / Math.max(1, Math.min(actions.length, 8)))
@@ -362,13 +365,19 @@ export function validatePlanDraft(
   allowedHorizons: (30 | 60 | 90)[] = [30, 60, 90],
   locale: Locale = "ko"
 ) {
-  if (output.items.some((item) => !allowedHorizons.includes(item.horizon))) {
+  const normalized = {
+    ...output,
+    items: output.items.map((item) => item.questionId === PAID_PILOT_QUESTION_ID && allowedHorizons.includes(90)
+      ? { ...item, horizon: 90 as const }
+      : item)
+  };
+  if (normalized.items.some((item) => !allowedHorizons.includes(item.horizon))) {
     throw new Error(locale === "en" ? "The plan includes a horizon that is not allowed at the current readiness stage." : "현재 단계에 허용되지 않은 계획 기간입니다.");
   }
-  if (output.items.some((item) => item.sources.length === 0)) {
+  if (normalized.items.some((item) => item.sources.length === 0)) {
     throw new Error(locale === "en" ? "Every plan item must include at least one source." : "모든 계획 항목에는 근거가 필요합니다.");
   }
-  for (const source of output.items.flatMap((item) => item.sources)) {
+  for (const source of normalized.items.flatMap((item) => item.sources)) {
     if (!source.url) continue;
     const url = new URL(source.url);
     if (!["http:", "https:"].includes(url.protocol)) {
@@ -376,8 +385,8 @@ export function validatePlanDraft(
     }
   }
   return {
-    ...output,
-    items: output.items.map((item) => {
+    ...normalized,
+    items: normalized.items.map((item) => {
       const expert = matchExpertSupport({
         title: item.title,
         serviceTag: item.serviceTag,

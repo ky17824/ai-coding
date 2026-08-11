@@ -64,9 +64,18 @@ describe("AI GTM assistant safeguards", () => {
   });
 
   it("flags paid pilots and first orders for expert matching", () => {
-    const plan = buildDeterministicPlan([{ ...actions[1], title: "유료 PoC나 첫 주문을 만든다", service_tag: "gtm" }]);
+    const plan = buildDeterministicPlan([{
+      ...actions[1],
+      question_id: "pmf-paid-conversion",
+      title: "유료 PoC나 첫 주문을 만든다",
+      service_tag: "gtm"
+    }]);
 
-    expect(plan.items[0]).toMatchObject({ expertRequired: true, serviceTag: "gtm" });
+    expect(plan.items[0]).toMatchObject({
+      horizon: 90,
+      expertRequired: true,
+      serviceTag: "gtm"
+    });
   });
 
   it("normalizes an under-flagged AI plan before saving", () => {
@@ -87,6 +96,20 @@ describe("AI GTM assistant safeguards", () => {
       expertRequired: true,
       serviceTag: "gtm"
     });
+  });
+
+  it("moves a model-generated paid pilot item to the 90-day horizon", () => {
+    const plan = buildDeterministicPlan(actions);
+    const validated = validatePlanDraft({
+      ...plan,
+      items: [{
+        ...plan.items[0],
+        questionId: "pmf-paid-conversion",
+        horizon: 30
+      }]
+    }, [30, 60, 90]);
+
+    expect(validated.items[0].horizon).toBe(90);
   });
 
   it("keeps deterministic and model plans inside the allowed horizons", () => {

@@ -46,6 +46,7 @@ export function applyOffering(text: string, offering: OfferingType, locale: Loca
 
 /** 이 단계 이상이면 «긍정적인 대답»으로 센다. */
 export const POSITIVE_LEVEL: AnswerLevel = 3;
+export const PAID_PILOT_QUESTION_ID = "pmf-paid-conversion";
 
 export const INTAKE_STAGES = [
   {
@@ -262,15 +263,15 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
     id: "pmf-paid-conversion",
     itemId: "home-pmf",
     weight: 3,
-    question: "국내에서 지금까지 우리 제품·서비스를 실제로 유료 판매한 경험이 있는지요?",
+    question: "국내 유료 판매 경험이 있나요? 없다면 초기 목표국가에서 유료 실증시험(PoC)이나 파일럿을 완료했나요?",
     options: [
-      "국내 유료 고객이나 실사용 고객이 아직 없습니다",
-      "국내 고객의 관심은 있었지만 아직 비용을 받은 적은 없습니다",
-      "국내에서 유료 PoC나 첫 주문을 확보했습니다",
-      "국내 여러 고객에게서 재구매·갱신·사용량 증가가 반복됐습니다"
+      "국내 유료 고객이 없고 초기 목표국가의 유료 실증시험이나 파일럿도 시작하지 않았습니다",
+      "관심 고객은 있지만 국내 판매나 초기 목표국가의 유료 검증을 아직 완료하지 못했습니다",
+      "국내 유료 판매 또는 초기 목표국가의 유료 실증시험·파일럿을 완료했습니다",
+      "국내외 여러 고객에게서 재구매·갱신·사용량 증가가 반복됐습니다"
     ],
     followUp:
-      "국내 유료 판매 사례 3건을 최근 순서로 적어주세요. 고객명은 '고객 A'처럼 익명으로 적으셔도 됩니다.",
+      "국내 유료 판매 또는 초기 목표국가의 유료 실증시험·파일럿 결과를 적어주세요. 고객명은 익명화할 수 있으며 고객이 투입한 비용·시간과 확인된 시장 반응을 포함해 주세요.",
     action: "초기 목표국가에서 유료 PoC나 첫 주문을 확보하고 고객이 투입한 비용·시간을 기록한다",
     source: "영역1 L2-2 Q2",
     critical: true

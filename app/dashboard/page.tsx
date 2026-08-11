@@ -146,7 +146,7 @@ export default async function DashboardPage({
   const recommended = services
     .filter((service) => service.tags.some((tag) => serviceTags.has(tag)))
     .slice(0, 3);
-  const domainScores = assessment.domain_scores as Record<string, number>;
+  const storedDomainScores = assessment.domain_scores as Record<string, number>;
   const assessmentStatus = normalizeReadinessStatus(assessment.status_label);
   const readinessAnswers: ReadinessAnswer[] = (answerRows ?? []).flatMap((row) => {
     const level = Number(row.level);
@@ -171,6 +171,12 @@ export default async function DashboardPage({
     targetCustomerSegment: assessment.target_customer_segment ?? "",
     confirmedAt: assessment.target_market_confirmed_at
   }, locale);
+  const displayDomainScores = readinessAnswers.length > 0
+    ? readinessResult.domainScores
+    : storedDomainScores;
+  const displayOverallScore = readinessAnswers.length > 0
+    ? readinessResult.overallScore
+    : assessment.overall_score;
   const gateMessages = readinessAnswers.length > 0
     ? readinessResult.gateMessages
     : [...new Set(((assessment.gate_messages as string[]) ?? []).map(normalizeGateMessage))];
@@ -230,13 +236,13 @@ export default async function DashboardPage({
           <article className="readiness-summary panel">
             <div className="summary-title">
               <span><small>{en ? "GLOBAL READINESS" : "시장진입 준비도(Global Readiness)"}</small><h2>{en ? "Readiness by stage" : "단계별 준비도"}</h2></span>
-              <span className="summary-score"><strong>{assessment.overall_score}</strong><small>{en ? stages.find((stage) => stage.id === readinessResult.currentStageId)?.label ?? assessmentStatus : assessmentStatus}</small></span>
+              <span className="summary-score"><strong>{displayOverallScore}<span>/ 100</span></strong><small>{en ? stages.find((stage) => stage.id === readinessResult.currentStageId)?.label ?? assessmentStatus : assessmentStatus}</small></span>
             </div>
             <div className="domain-bars">
               {stages.map((stage) => (
                 <div key={stage.id}>
-                  <span><small>{stage.label}</small><strong>{domainScores[stage.id] ?? 0}%</strong></span>
-                  <div className="meter"><span style={{ width: `${domainScores[stage.id] ?? 0}%` }} /></div>
+                  <span><small>{stage.label}</small><strong>{displayDomainScores[stage.id] ?? 0}%</strong></span>
+                  <div className="meter"><span style={{ width: `${displayDomainScores[stage.id] ?? 0}%` }} /></div>
                 </div>
               ))}
             </div>
@@ -313,6 +319,7 @@ export default async function DashboardPage({
 
               <div className="answer-insight-counts" aria-label={en ? `${answerInsights.stageLabel} response summary` : `${answerInsights.stageLabel} 응답 상태 요약`}>
                 <span><strong>{answerInsights.counts.blocker}</strong>{en ? "Required prerequisites" : "필수 선결 조건"}</span>
+                <span><strong>{answerInsights.counts.deferred}</strong>{en ? "90-day validation" : "90일 검증 과제"}</span>
                 <span><strong>{answerInsights.counts.needs_work}</strong>{en ? "Needs work" : "보완 필요"}</span>
                 <span><strong>{answerInsights.counts.passed}</strong>{en ? "Passed" : "통과"}</span>
                 <span><strong>{answerInsights.counts.strength}</strong>{en ? "Strengths" : "강점"}</span>
@@ -320,26 +327,49 @@ export default async function DashboardPage({
 
               <article className="answer-insight-chart panel">
                 <div className="answer-insight-chart__heading">
-                  <span><strong>{en ? `${answerInsights.stageLabel} response distribution` : `${answerInsights.stageLabel} 응답 분포`}</strong><small>{en ? "Weighted points are grouped by response level." : "항목별 배점을 답변 단계에 따라 나누었습니다."}</small></span>
-                  <span><strong>{answerInsights.score}%</strong><small>{en ? "Levels 3 and 4 count toward passing" : "3·4단계 통과 인정"}</small></span>
+                  <span><strong>{en ? `${answerInsights.stageLabel} gate score` : `${answerInsights.stageLabel} 단계 통과 점수`}</strong><small>{en ? "Only the weighted points from Levels 3 and 4 count." : "3·4단계로 답한 문항의 가중 배점만 합산합니다."}</small></span>
+                  <span><strong>{answerInsights.positiveScore} / {answerInsights.totalScore}</strong><small>{answerInsights.score}% · {en ? `Pass at ${answerInsights.thresholdScore} points (80%)` : `통과 기준 ${answerInsights.thresholdScore}점 (80%)`}</small></span>
+                </div>
+                <div
+                  className="answer-score-meter answer-score-meter--stage"
+                  role="progressbar"
+                  aria-label={en ? `${answerInsights.stageLabel} gate score` : `${answerInsights.stageLabel} 단계 통과 점수`}
+                  aria-valuemin={0}
+                  aria-valuemax={answerInsights.totalScore}
+                  aria-valuenow={answerInsights.positiveScore}
+                >
+                  <span style={{ width: `${answerInsights.score}%` }} />
+                  <i aria-hidden="true" />
                 </div>
                 <ul>
                   {answerInsights.items.map((item) => (
                     <li key={item.id}>
-                      <span><strong>{item.label}</strong><small>{item.totalWeight} {en ? "points" : "점"}</small></span>
-                      <div
-                        className="answer-stack"
-                        role="img"
-                        aria-label={`${item.label}: ${item.segments.map((segment) => en ? `Level ${segment.level}, ${segment.weight} points` : `${segment.level}단계 ${segment.weight}점`).join(", ")}`}
-                      >
-                        {item.segments.map((segment) => segment.weight > 0 && (
-                          <span
-                            key={segment.level}
-                            className={`answer-stack__level answer-stack__level--${segment.level}`}
-                            style={{ width: `${segment.percent}%` }}
-                            title={en ? `Level ${segment.level}, ${segment.weight} points` : `${segment.level}단계 ${segment.weight}점`}
-                          />
-                        ))}
+                      <span><strong>{item.label}</strong><small>{item.positiveWeight} / {item.totalWeight} {en ? `points · ${item.positivePercent}%` : `점 · ${item.positivePercent}%`}</small></span>
+                      <div className="answer-item-bars">
+                        <div
+                          className="answer-score-meter"
+                          role="progressbar"
+                          aria-label={en ? `${item.label} gate score` : `${item.label} 통과 인정점수`}
+                          aria-valuemin={0}
+                          aria-valuemax={item.totalWeight}
+                          aria-valuenow={item.positiveWeight}
+                        >
+                          <span style={{ width: `${item.positivePercent}%` }} />
+                        </div>
+                        <div
+                          className="answer-stack"
+                          role="img"
+                          aria-label={`${item.label}: ${item.segments.map((segment) => en ? `Level ${segment.level}, ${segment.weight} points` : `${segment.level}단계 ${segment.weight}점`).join(", ")}`}
+                        >
+                          {item.segments.map((segment) => segment.weight > 0 && (
+                            <span
+                              key={segment.level}
+                              className={`answer-stack__level answer-stack__level--${segment.level}`}
+                              style={{ width: `${segment.percent}%` }}
+                              title={en ? `Level ${segment.level}, ${segment.weight} points` : `${segment.level}단계 ${segment.weight}점`}
+                            />
+                          ))}
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -350,7 +380,8 @@ export default async function DashboardPage({
                   <span><i className="answer-stack__level--3" />{en ? "3 Executed" : "3 실행·사례"}</span>
                   <span><i className="answer-stack__level--4" />{en ? "4 Repeatable / verified" : "4 반복·확인"}</span>
                 </div>
-                <p>{en ? "Only Levels 3 and 4 count toward the stage gate. Passing requires at least 80% of weighted points and every required prerequisite." : "3·4단계 답변만 단계 통과 점수로 인정되며, 가중 점수 80% 이상과 필수 선결 조건 충족이 모두 필요합니다."}</p>
+                <p>{en ? "Formula: gate score = sum of question weights answered at Levels 3 or 4. Passing requires at least 80% of the stage maximum and every required prerequisite. The thinner bar shows the Level 1–4 response mix." : "산식: 단계 통과 점수 = 3·4단계로 답한 문항의 배점 합계입니다. 단계 최대점수의 80% 이상과 필수 선결 조건 충족이 모두 필요하며, 얇은 막대는 1~4단계 응답 구성을 보여줍니다."}</p>
+                {answerInsights.counts.deferred > 0 && <p>{en ? "The 3-point paid-pilot item is excluded from the Stage 1 numerator and denominator while deferred, then becomes required evidence at Gate C." : "90일 검증 과제로 이월된 유료 실증시험 3점은 준비 1단계의 분자와 분모에서 제외하고, 단계 통과 기준 C에서 필수 증거로 확인합니다."}</p>}
               </article>
 
               <div className="answer-insight-list">

@@ -1365,6 +1365,11 @@ main[lang="en"] .hero h1 {
   line-height: 0.9;
 }
 
+.summary-score strong span {
+  margin-left: 6px;
+  font-size: 14px;
+}
+
 .summary-score small {
   margin-top: 6px;
   padding: 4px 8px;
@@ -1511,7 +1516,7 @@ main[lang="en"] .hero h1 {
 .answer-insight-counts {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 
@@ -1583,6 +1588,41 @@ main[lang="en"] .hero h1 {
   list-style: none;
 }
 
+.answer-score-meter {
+  position: relative;
+  height: 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5eae7;
+}
+
+.answer-score-meter > span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: var(--green);
+}
+
+.answer-score-meter--stage {
+  margin-top: 18px;
+  height: 22px;
+  overflow: visible;
+}
+
+.answer-score-meter--stage > i {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: 80%;
+  width: 2px;
+  background: var(--ink);
+}
+
+.answer-item-bars {
+  display: grid;
+  gap: 6px;
+}
+
 .answer-insight-chart li {
   display: grid;
   grid-template-columns: minmax(190px, 0.7fr) 1.3fr;
@@ -1601,7 +1641,7 @@ main[lang="en"] .hero h1 {
 }
 
 .answer-stack {
-  height: 22px;
+  height: 6px;
   overflow: hidden;
   border-radius: 999px;
   display: flex;
@@ -1652,6 +1692,7 @@ main[lang="en"] .hero h1 {
 }
 
 .answer-insight-card--blocker { border-left-color: #b86623; }
+.answer-insight-card--deferred { border-left-color: #8b5e3c; }
 .answer-insight-card--needs_work { border-left-color: #e8ad6b; }
 .answer-insight-card--passed { border-left-color: #86d5a5; }
 .answer-insight-card--strength { border-left-color: var(--green); }

@@ -213,7 +213,7 @@ describe("phase gate", () => {
     expect(withMarket.stages.every((stage) => stage.passed)).toBe(true);
   });
 
-  it("gives paid-customer validation a full 90-day runway", () => {
+  it("defers paid-customer validation through Gate B and requires it at Gate C", () => {
     const paidCustomerMissing = answerAll(4).map((answer) =>
       answer.questionId === "pmf-paid-conversion"
         ? { ...answer, level: 2 as const, evidence: undefined }
@@ -225,7 +225,15 @@ describe("phase gate", () => {
         : answer
     );
 
-    expect(decidePlanHorizons(calculateReadiness(paidCustomerMissing))).toEqual([30, 60, 90]);
+    const deferred = calculateReadiness(paidCustomerMissing, confirmedMarket);
+    expect(deferred.stages[0].passed).toBe(true);
+    expect(deferred.stages[0].positiveScore).toBe(27);
+    expect(deferred.stages[0].totalScore).toBe(27);
+    expect(deferred.stages[1].passed).toBe(true);
+    expect(deferred.stages[2].passed).toBe(false);
+    expect(deferred.currentStageId).toBe("ready");
+    expect(deferred.actions.some((action) => action.questionId === "pmf-paid-conversion")).toBe(true);
+    expect(decidePlanHorizons(deferred)).toEqual([30, 60, 90]);
     expect(decidePlanHorizons(calculateReadiness(otherEarlyBlocker))).toEqual([30]);
     expect(decidePlanHorizons(calculateReadiness(answerAll(4)))).toEqual([60]);
     expect(decidePlanHorizons(calculateReadiness(answerAll(4), confirmedMarket))).toEqual([30, 60, 90]);
@@ -235,8 +243,8 @@ describe("phase gate", () => {
     const result = calculateReadiness(
       INTAKE_QUESTIONS.map((question) => ({
         questionId: question.id,
-        level: (question.itemId === "home-pmf" ? 1 : 4) as ReadinessLevel,
-        evidence: question.critical && question.itemId !== "home-pmf"
+        level: (question.itemId === "resources" ? 1 : 4) as ReadinessLevel,
+        evidence: question.critical && question.itemId !== "resources"
           ? { kind: "note" as const, value: "확인 근거" }
           : undefined
       })),
@@ -299,7 +307,7 @@ describe("dashboard answer insights", () => {
 
     for (const item of insight.items) {
       expect(sum(item.segments.map((segment) => segment.weight))).toBeCloseTo(
-        item.totalWeight,
+        INTAKE_ITEMS.find((entry) => entry.id === item.id)!.weight,
         10
       );
       expect(sum(item.segments.map((segment) => segment.percent))).toBeCloseTo(
@@ -310,5 +318,36 @@ describe("dashboard answer insights", () => {
     expect(insight.score).toBe(
       calculateReadiness(answers).domainScores.early
     );
+    expect(insight.positiveScore).toBeCloseTo(
+      insight.items.reduce((total, item) => total + item.positiveWeight, 0),
+      10
+    );
+    expect(insight.totalScore).toBe(
+      insight.items.reduce((total, item) => total + item.totalWeight, 0)
+    );
+    expect(insight.thresholdScore).toBe(insight.totalScore * 0.8);
+  });
+
+  it("labels an unmet paid pilot as a deferred 90-day validation task", () => {
+    const answers = questionsOfStage("early").map((question) => ({
+      questionId: question.id,
+      level: (question.id === "pmf-paid-conversion" ? 2 : 4) as ReadinessLevel,
+      evidence: question.critical && question.id !== "pmf-paid-conversion"
+        ? { kind: "note" as const, value: "확인 근거" }
+        : undefined
+    }));
+    const insight = buildStageAnswerInsights(answers, "early");
+
+    expect(insight.answers.find((answer) => answer.questionId === "pmf-paid-conversion"))
+      .toMatchObject({ status: "deferred", statusLabel: "90일 검증 과제" });
+    expect(insight.counts.deferred).toBe(1);
+    expect(insight.totalScore).toBe(27);
+    expect(insight.thresholdScore).toBeCloseTo(21.6, 10);
+
+    const result = calculateReadiness(answers);
+    expect(result.stages.find((stage) => stage.stageId === "early")?.passed).toBe(true);
+    expect(result.currentStageId).toBe("preparing");
+    expect(result.actions.some((action) => action.questionId === "pmf-paid-conversion")).toBe(true);
+    expect(decidePlanHorizons(result)).toEqual([30, 60, 90]);
   });
 });

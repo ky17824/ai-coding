@@ -15,7 +15,7 @@
 - Observed fact: 현재 계정 탈퇴는 Supabase 계정만 익명화·삭제하고 외부 OAuth provider 연결 해제는 수행하지 않는다.
 - Product decision: `준비 1단계`와 `준비 2단계`에서는 후속 고객 행동·지불·반복 구매 증거가 아직 충분하지 않으므로 실제 판매 가능성을 판정하지 않는다. `준비 3단계`까지 55문항을 모두 답한 진단에서만 실제 판매 가능성 예비검증을 제공한다.
 - Product decision: 초기 목표국가와 그 국가의 목표 고객군은 준비 1단계에서 정하기 시작하되, 준비 2단계 통과 기준(Stage Gate) B를 통과해 준비 3단계로 이동하기 전에는 창업자가 직접 입력하고 확정해야 한다. AI가 질문 답변에서 추정한 값은 확정값으로 인정하지 않는다.
-- Product decision: 준비 1단계의 유료고객 검증 문항을 충족하지 못하면 30일 단기 보완으로 끝내지 않는다. 초기 목표국가에서 유료 실증시험(PoC) 또는 첫 주문을 확보할 수 있도록 30·60·90일 계획을 모두 제공하고, 계약·발주·결제 등 지불 증거가 확인될 때까지 다음 단계는 잠근다. 다른 준비 1단계 보완 항목은 기존 30일 계획을 유지한다.
+- Product decision: 국내 유료 판매 경험이 없으면 준비 1·2단계를 즉시 차단하지 않고 초기 목표국가의 유료 실증시험(PoC) 또는 파일럿 검증을 90일 이월 과제로 둔다. AI GTM 어시스턴트는 30·60·90일 계획을 모두 제공하고, 준비 3단계 종료 전 계약·발주·결제 또는 고객의 비용·시간 투입 증거가 확인되어야 단계 통과 기준(Stage Gate) C를 통과한다. 다른 준비 1단계 Critical 문항과 80% 가중점수 기준은 그대로 유지한다.
 - Product decision: 카카오 로그인은 Supabase의 기본 Kakao provider와 기존 PKCE callback을 재사용한다. 첫 버전은 `account_email`을 제공한 계정만 허용하며 신규 OAuth 사용자는 기존 회사 정보·연락처·필수 동의 온보딩을 완료한다. 기존 계정 이력은 Supabase가 동일 identity로 실제 연결한 경우에만 이어진다.
 - Design inference: AI 화면도 별도 챗봇 브랜드가 아니라 Borderless 실행 여정의 한 단계로 보여야 한다.
 
@@ -56,6 +56,7 @@
 - 한 번에 한 결정: 질문은 한 개씩, 계획 승인은 전체 초안을 검토한 뒤 한 번만 요구한다.
 - 첫 가치까지 짧게: 첫 미통과 Gate에서 진단을 끝내고 바로 계획으로 전환하며, 통과하지 못한 뒤 단계의 문항 수와 점수를 보여주지 않는다.
 - 질문이 진행률의 기준이다: 대시보드는 계획 개수보다 `충족 / 근거 보완 / 보완 필요 / 잠김` 문항 수를 먼저 보여주고 각 계획이 어떤 질문을 보완하는지 연결한다.
+- 점수와 응답 분포를 분리한다: 큰 막대는 `3·4단계 응답 문항의 배점 합 / 단계 최대점수`와 80% 기준선을 보여주고, 얇은 막대는 1~4단계 응답 구성만 보여준다. 항목별 점수와 단계 합계가 같은 산식으로 검산되어야 한다.
 - 상태는 한 번, 행동은 항목마다 말한다: `선결 조건이 남았습니다` 같은 공통 문장은 카드 제목에서 한 번만 표시하고 각 행에는 고유한 조건, 현재 상태, 다음 행동만 보여준다.
 - 긴 조사 결과도 영역을 침범하지 않는다: 시장동향과 주요 경쟁사는 각각 경계가 있는 카드로 구분하고, 긴 출처·URL은 카드 안에서 줄바꿈한다.
 - 시장 정의는 추정하지 않는다: 목표국가와 목표 고객군은 창업자가 명시적으로 확인한 구조화 값만 Gate B와 AI 조사 입력에 사용한다.
@@ -77,7 +78,7 @@
 ## Components
 
 - Existing components to reuse: `SiteHeader`, `.panel`, 짙은 녹색 3D 규격을 공유하는 `.button` variants, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, `.offering-picker`, 서비스 카드
-- New/changed components: provider별 설정을 받는 `SocialLoginButton`, 허용된 callback 오류를 설명하는 `AuthErrorNotice`, 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `MarketSizingTable`, `CompetitorTable`, `SourceList`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드
+- New/changed components: provider별 설정을 받는 `SocialLoginButton`, 허용된 callback 오류를 설명하는 `AuthErrorNotice`, 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 통과 인정점수와 응답 분포를 분리한 `GateScoreChart`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `MarketSizingTable`, `CompetitorTable`, `SourceList`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드
 - Variants and states: Gate locked/active/passed/stopped, target market missing/partial/confirmed, question satisfied/evidence_needed/improvement_needed/locked, assistant context_draft/researching/review_required/confirmed/plan_draft/active, market source/assumption/estimate/confirmation_needed, offering validation deferred/preliminary_reviewed, plan draft/active/superseded/completed, item not_started/in_progress/blocked/completed, founder/vault/web/deterministic source
 - Token/component ownership: 전역 토큰과 공통 상태는 `app/globals.css`; assistant 전용 레이아웃도 같은 파일의 기존 토큰을 사용한다.
 - Do not add a component library, Tailwind layer, icon package, or design-token abstraction.

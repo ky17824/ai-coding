@@ -104,9 +104,9 @@ export const EN_QUESTION_COPY: Record<string, QuestionCopy> = {
     "Inventory decisions and relationships tied to one person and define a backup."
   ),
   "pmf-paid-conversion": q(
-    "Have you sold your product or service to a paying customer in your home market?",
-    ["We do not yet have paying or active customers in our home market.", "Domestic customers have shown interest, but none has paid.", "We secured a paid proof of concept or first order in our home market.", "Repeat purchases, renewals, or usage growth have occurred across multiple domestic customers."],
-    "List your three most recent domestic sales in order. You may anonymize customer names.",
+    "Have you made a paid sale in your home market? If not, have you completed a paid proof of concept or pilot in your initial target country?",
+    ["We have neither a paying home-market customer nor a paid proof of concept or pilot in the target country.", "Customers have shown interest, but we have not completed a paid sale or target-country validation.", "We completed either a paid home-market sale or a paid proof of concept or pilot in the target country.", "Repeat purchases, renewals, or usage growth have occurred across multiple domestic or international customers."],
+    "Describe the paid home-market sale or target-country proof of concept or pilot. You may anonymize the customer; include the money or time committed and the market response observed.",
     "Secure a paid proof of concept or first order in the initial target country and record the money and time the customer committed."
   ),
   "pmf-churn-cases": q(
