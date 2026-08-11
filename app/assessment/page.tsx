@@ -4,6 +4,7 @@ import { AssessmentForm } from "@/components/assessment-form";
 import { SiteHeader } from "@/components/site-header";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
+import { getPublishedServices } from "@/lib/services";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import type { EvidenceInput, ReadinessAnswer, ReadinessLevel, TargetMarketContext } from "@/lib/types";
 
@@ -17,6 +18,7 @@ export default async function AssessmentPage({
   searchParams: Promise<{ new?: string; resume?: string }>;
 }) {
   const [user, query, locale] = await Promise.all([requireUser(), searchParams, getRequestLocale()]);
+  const availableServices = await getPublishedServices(locale);
   let initialAnswers: ReadinessAnswer[] = [];
   let initialTargetMarket: TargetMarketContext | undefined;
   const admin = user ? createSupabaseAdminClient() : null;
@@ -74,6 +76,7 @@ export default async function AssessmentPage({
           initialAnswers={initialAnswers}
           initialTargetMarket={initialTargetMarket}
           locale={locale}
+          availableServices={availableServices}
         />
       </div>
     </main>

@@ -6,8 +6,14 @@ describe("service recommendation", () => {
     const service = SAMPLE_SERVICES[0];
     const original = service.approved;
     service.approved = false;
-    expect(recommendServices(service.tags)).not.toContainEqual(service);
+    expect(recommendServices(SAMPLE_SERVICES, service.tags)).not.toContainEqual(service);
     service.approved = original;
-    expect(recommendServices(["compliance"])[0]?.id).toBe("svc-compliance");
+    expect(recommendServices(SAMPLE_SERVICES, ["compliance"])[0]?.id).toBe(
+      "svc-compliance"
+    );
+  });
+
+  it("recommends nothing when the caller has no services to offer", () => {
+    expect(recommendServices([], ["compliance"])).toEqual([]);
   });
 });

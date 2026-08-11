@@ -2,15 +2,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { CheckoutButton } from "@/components/checkout-button";
-import { SAMPLE_SERVICES } from "@/lib/service-data";
 import { getPublishedService } from "@/lib/services";
 import { getRequestLocale } from "@/lib/i18n-server";
 
 const won = new Intl.NumberFormat("ko-KR");
-
-export function generateStaticParams() {
-  return SAMPLE_SERVICES.map((service) => ({ id: service.id }));
-}
 
 export async function generateMetadata({
   params

@@ -28,23 +28,33 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         <p className="page-description">
           {en ? "Only standardized services from admin-approved mentors and consultants are listed. Recommendations are matched to your readiness actions and areas of expertise." : "관리자 승인을 거친 멘토·컨설턴트의 표준화된 서비스만 공개됩니다. 추천 순서는 준비도 액션과 전문 분야의 일치도에 따라 정해집니다."}
         </p>
-        {requestedTag && (
+        {requestedTag && services.length > 0 && (
           <p className="notice-banner" role="status">
             {matchedServices.length > 0
               ? en ? `${matchedServices.length} matching service${matchedServices.length === 1 ? "" : "s"} found.` : `관련 서비스 ${matchedServices.length}개를 찾았습니다.`
               : en ? "No exact match is available yet, so all approved services are shown." : "현재 정확히 일치하는 전문가가 없어 전체 승인 서비스를 안내합니다."}
           </p>
         )}
-        <div className="filter-row" aria-label={en ? "Service type filter" : "서비스 유형 필터"}>
-          <button className="active" type="button">{en ? "All" : "전체"}</button>
-          <button type="button">{en ? "1:1 Mentoring" : "1:1 멘토링"}</button>
-          <button type="button">{en ? "Consulting Package" : "컨설팅 패키지"}</button>
-        </div>
-        <div className="service-grid">
-          {visibleServices.map((service) => (
-            <ServiceCard key={service.id} service={service} locale={locale} />
-          ))}
-        </div>
+        {services.length > 0 ? (
+          <>
+            <div className="filter-row" aria-label={en ? "Service type filter" : "서비스 유형 필터"}>
+              <button className="active" type="button">{en ? "All" : "전체"}</button>
+              <button type="button">{en ? "1:1 Mentoring" : "1:1 멘토링"}</button>
+              <button type="button">{en ? "Consulting Package" : "컨설팅 패키지"}</button>
+            </div>
+            <div className="service-grid">
+              {visibleServices.map((service) => (
+                <ServiceCard key={service.id} service={service} locale={locale} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="notice-banner" role="status">
+            {en
+              ? "No expert services are published yet. We list them here once mentors and consultants are approved."
+              : "아직 공개된 전문가 서비스가 없습니다. 멘토·컨설턴트 승인이 끝나면 이곳에 공개됩니다."}
+          </p>
+        )}
       </div>
     </main>
   );

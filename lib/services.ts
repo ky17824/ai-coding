@@ -57,7 +57,10 @@ function mapService(row: ServiceRow, locale: Locale): ServiceOffering {
 
 export async function getPublishedServices(locale: Locale = "ko") {
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return getSampleServices(locale);
+  // 샘플은 개발 화면을 채우기 위한 것이다. 실제 사용자에게 없는 전문가를 보여주지 않는다.
+  if (!supabase) {
+    return process.env.NODE_ENV === "development" ? getSampleServices(locale) : [];
+  }
 
   const { data, error } = await supabase
     .from("service_offerings")
@@ -67,7 +70,7 @@ export async function getPublishedServices(locale: Locale = "ko") {
     .eq("is_published", true)
     .limit(50);
 
-  if (error || !data?.length) return getSampleServices(locale);
+  if (error || !data?.length) return [];
   return (data as unknown as ServiceRow[]).map((row) => mapService(row, locale));
 }
 

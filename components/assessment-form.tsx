@@ -18,12 +18,13 @@ import {
   questionsOfStage,
   validateAssessmentAnswers
 } from "@/lib/readiness";
-import { getSampleServices, recommendServices } from "@/lib/service-data";
+import { recommendServices } from "@/lib/service-data";
 import type {
   EvidenceInput,
   ReadinessAnswer,
   ReadinessLevel,
   ReadinessResult,
+  ServiceOffering,
   TargetMarketContext
 } from "@/lib/types";
 import { ServiceCard } from "@/components/service-card";
@@ -41,13 +42,16 @@ export function AssessmentForm({
   resume = false,
   initialAnswers = [],
   initialTargetMarket,
-  locale = "ko"
+  locale = "ko",
+  availableServices = []
 }: {
   isSignedIn: boolean;
   resume?: boolean;
   initialAnswers?: ReadinessAnswer[];
   initialTargetMarket?: TargetMarketContext;
   locale?: Locale;
+  /** 실제 공개된 전문가 서비스. 비어 있으면 추천 영역을 감춘다. */
+  availableServices?: ServiceOffering[];
 }) {
   const stages = getIntakeStages(locale);
   const items = getIntakeItems(locale);
@@ -310,14 +314,14 @@ export function AssessmentForm({
 
   if (result) {
     const matched = recommendServices(
+      availableServices,
       result.actions.map((action) => action.serviceTag),
-      3,
-      locale
+      3
     );
     const services =
       matched.length > 0
         ? matched
-        : getSampleServices(locale).filter((service) => service.approved).slice(0, 3);
+        : availableServices.filter((service) => service.approved).slice(0, 3);
     const current = result.stages.find(
       (entry) => entry.stageId === result.currentStageId
     );

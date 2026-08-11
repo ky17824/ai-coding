@@ -176,9 +176,14 @@ export function getSampleServices(locale: Locale = "ko") {
   return SAMPLE_SERVICES.map((service) => ({ ...service, ...ENGLISH_SERVICE_COPY[service.id] }));
 }
 
-export function recommendServices(tags: string[], limit = 3, locale: Locale = "ko") {
+/** 추천 대상 목록은 호출자가 넘긴다. 여기서 샘플을 끌어오면 프로덕션에 없는 전문가가 섞인다. */
+export function recommendServices(
+  services: ServiceOffering[],
+  tags: string[],
+  limit = 3
+) {
   const wanted = new Set(tags);
-  return getSampleServices(locale).filter(
+  return services.filter(
     (service) =>
       service.approved && service.tags.some((tag) => wanted.has(tag))
   )
