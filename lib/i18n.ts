@@ -165,7 +165,7 @@ const en: typeof ko = {
     ],
     body:
       "We assess your readiness using evidence and connect you with the right actions and experts at the right time. Manage your entire global expansion in one place.",
-    primaryCta: "Start free readiness assessment",
+    primaryCta: "Start the Assessment",
     secondaryCta: "See demo dashboard",
     privacyNote: "Beta version 0.1."
   },
