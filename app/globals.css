@@ -1902,7 +1902,26 @@ main[lang="en"] .hero h1 em {
   min-height: 36px;
   margin-top: 10px;
   padding: 0 13px;
+  border-color: #4b2e24;
+  background: #4b2e24;
+  color: var(--white);
   font-size: 11px;
+  box-shadow: 0 7px 16px rgba(75, 46, 36, 0.2);
+}
+
+.journey-expert-cta span {
+  transition: transform 160ms ease;
+}
+
+.journey-expert-cta:hover {
+  border-color: #624033;
+  background: #624033;
+  color: var(--white);
+  box-shadow: 0 12px 24px rgba(75, 46, 36, 0.3);
+}
+
+.journey-expert-cta:hover span {
+  transform: translateX(4px);
 }
 
 .filter-row {
