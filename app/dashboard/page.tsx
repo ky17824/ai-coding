@@ -52,7 +52,7 @@ export default async function DashboardPage({
 
   if (!assessment) {
     return (
-      <main className="app-page">
+      <main className="app-page dashboard-page">
         <SiteHeader compact locale={locale} />
         <div className="app-container dashboard">
           {incomplete && <IncompleteProfile locale={locale} />}
@@ -159,7 +159,7 @@ export default async function DashboardPage({
     : plan ? (en ? "Continue AI plan" : "AI 계획 이어가기") : (en ? "Create AI plan" : "AI 계획 만들기");
 
   return (
-    <main className="app-page">
+    <main className="app-page dashboard-page">
       <SiteHeader compact locale={locale} />
       <div className="app-container dashboard">
         {incomplete && <IncompleteProfile locale={locale} />}
@@ -211,7 +211,9 @@ export default async function DashboardPage({
                       <li key={entry.label}><span>{entry.label}</span><strong>{entry.value && assessment.target_market_confirmed_at ? (en ? "Confirmed" : "확정") : (en ? "Not confirmed" : "미확정")}</strong></li>
                     ))}
                   </ul>
-                  <Link href={path("/assessment?new=1")} className="text-link">{en ? "Set initial target market →" : "초기 목표시장 정하기 →"}</Link>
+                  <Link href={path("/assessment?new=1")} className="button button--small">
+                    {en ? "Set initial target market" : "초기 목표시장 정하기"}<span aria-hidden="true">→</span>
+                  </Link>
                 </div>
               )}
               <div>
@@ -316,7 +318,7 @@ export default async function DashboardPage({
 
               <div className="answer-insights__cta panel">
                 <span><strong>{en ? "Turn responses that need work into an execution plan." : "보완이 필요한 답변을 실행 계획으로 전환하세요."}</strong><small>{en ? "Build a plan with the AI GTM Assistant from your current assessment." : "현재 진단 결과를 바탕으로 AI GTM 어시스턴트와 계획을 만듭니다."}</small></span>
-                <Link href={path(planHref)} className="button button--primary">{planCta} →</Link>
+                <Link href={path(planHref)} className="button button--primary">{planCta}<span aria-hidden="true">→</span></Link>
               </div>
             </>
           )}
@@ -329,7 +331,7 @@ export default async function DashboardPage({
               <h2 className="plan-summary">{plan?.summary || (en ? "Turn your assessment into a staged 30-, 60-, and 90-day execution plan." : "진단 결과를 단계별 실행계획(30·60·90 Day Plan)으로 바꿔 보세요.")}</h2>
               <p className="page-description">{planStatus}</p>
             </span>
-            <Link href={path(planHref)} className="button button--primary">{planCta} →</Link>
+            <Link href={path(planHref)} className="button button--primary">{planCta}<span aria-hidden="true">→</span></Link>
           </div>
           {planItems && planItems.length > 0 && (
             <div className="dashboard-action-list">
@@ -363,7 +365,7 @@ export default async function DashboardPage({
 
         {recommended.length > 0 && (
           <section className="dashboard-section">
-            <div className="dashboard-section__heading"><span><span className="page-kicker">{en ? "RECOMMENDED" : "추천(Recommended)"}</span><h2>{en ? "Experts matched to your current actions" : "현재 액션에 맞는 전문가 서비스"}</h2></span><Link href={path("/services")} className="text-link">{en ? "View all →" : "전체 보기 →"}</Link></div>
+            <div className="dashboard-section__heading"><span><span className="page-kicker">{en ? "RECOMMENDED" : "추천(Recommended)"}</span><h2>{en ? "Experts matched to your current actions" : "현재 액션에 맞는 전문가 서비스"}</h2></span><Link href={path("/services")} className="button button--small">{en ? "View all" : "전체 보기"}<span aria-hidden="true">→</span></Link></div>
             <div className="service-grid">{recommended.map((service) => <ServiceCard key={service.id} service={service} locale={locale} />)}</div>
           </section>
         )}
@@ -374,5 +376,12 @@ export default async function DashboardPage({
 
 function IncompleteProfile({ locale }: { locale: Locale }) {
   const en = locale === "en";
-  return <p className="notice-banner">{en ? "Add your company details and contact information before ordering expert services. " : "전문가 서비스를 주문하시려면 회사 정보와 연락처를 먼저 입력해 주세요. "}<Link href={`${localizedPath("/account/onboarding", locale)}?next=${encodeURIComponent(localizedPath("/dashboard", locale))}`}>{en ? "Complete profile →" : "지금 입력 →"}</Link></p>;
+  return (
+    <div className="notice-banner dashboard-profile-notice">
+      <span>{en ? "Add your company details and contact information before ordering expert services." : "전문가 서비스를 주문하시려면 회사 정보와 연락처를 먼저 입력해 주세요."}</span>
+      <Link className="button button--small" href={`${localizedPath("/account/onboarding", locale)}?next=${encodeURIComponent(localizedPath("/dashboard", locale))}`}>
+        {en ? "Complete profile" : "지금 입력"}<span aria-hidden="true">→</span>
+      </Link>
+    </div>
+  );
 }

@@ -1436,6 +1436,60 @@ main[lang="en"] .hero h1 em {
   margin-top: auto;
 }
 
+.dashboard-page .button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid #4b2e24;
+  border-radius: 12px;
+  background: #4b2e24;
+  color: var(--white);
+  font-size: 13px;
+  box-shadow: 0 7px 16px rgba(75, 46, 36, 0.2);
+}
+
+.dashboard-page .button > span,
+.dashboard-page .service-card .icon-button svg {
+  transition: transform 160ms ease;
+}
+
+.dashboard-page .button:hover,
+.dashboard-page .service-card .icon-button:hover {
+  border-color: #624033;
+  background: #624033;
+  color: var(--white);
+  box-shadow: 0 12px 24px rgba(75, 46, 36, 0.3);
+}
+
+.dashboard-page .button:hover > span,
+.dashboard-page .service-card .icon-button:hover svg {
+  transform: translateX(4px);
+}
+
+.dashboard-page .service-card .icon-button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #4b2e24;
+  border-radius: 12px;
+  background: #4b2e24;
+  box-shadow: 0 7px 16px rgba(75, 46, 36, 0.2);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.dashboard-page .service-card .icon-button:hover {
+  transform: translateY(-2px);
+}
+
+.dashboard-profile-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .dashboard-section h2 {
   margin: 7px 0 0;
   font-size: 28px;
@@ -3541,6 +3595,11 @@ h2.plan-summary {
 
   .site-header .button {
     display: none;
+  }
+
+  .dashboard-profile-notice {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .hero {
