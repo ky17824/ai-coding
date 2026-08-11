@@ -8,6 +8,8 @@ import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import type { GtmMarketResearch, GtmPlanItem, StoredGtmPlan } from "@/lib/types";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
+import { localizeStoredGtmPlan } from "@/lib/content-localization";
+import { getIntakeItems, getIntakeQuestions } from "@/lib/intake-questions";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "AI GTM Assistant" : "AI GTM 어시스턴트" };
@@ -63,12 +65,12 @@ export default async function AssistantPage({
   const [{ data: actions }, { data: plan }] = await Promise.all([
     admin
       .from("action_items")
-      .select("id,title,urgency,completion_evidence")
+      .select("id,question_id,title,urgency,completion_evidence")
       .eq("assessment_id", assessmentId)
       .order("created_at"),
     admin
       .from("gtm_plans")
-      .select("id,status,summary,assumptions,founder_context,market_research,market_research_confirmed_at,recent_messages,turn_count,generation_count,model")
+      .select("id,status,summary,assumptions,founder_context,market_research,market_research_confirmed_at,recent_messages,turn_count,generation_count,model,content_locale,founder_context_locale,market_research_locale")
       .eq("assessment_id", assessmentId)
       .in("status", ["draft", "active"])
       .maybeSingle()
@@ -94,12 +96,24 @@ export default async function AssistantPage({
       turnCount: plan.turn_count,
       generationCount: plan.generation_count,
       generatedBy: plan.model,
+      contentLocale: plan.content_locale ?? "ko",
+      founderContextLocale: plan.founder_context_locale ?? plan.content_locale ?? "ko",
+      marketResearchLocale: plan.market_research_locale ?? plan.content_locale ?? "ko",
       items: (itemRows ?? []).map((row) => mapItem(row as Record<string, unknown>))
     };
+    initialPlan = await localizeStoredGtmPlan(
+      admin,
+      profile.organization_id,
+      initialPlan,
+      locale
+    );
   }
   const initialQuestion = initialPlan && initialPlan.items.length === 0
     ? getPendingFounderQuestion(initialPlan.founderContext, initialPlan.recentMessages, locale)
     : null;
+
+  const questions = new Map(getIntakeQuestions(locale).map((question) => [question.id, question]));
+  const items = new Map(getIntakeItems(locale).map((item) => [item.id, item]));
 
   return (
     <main className="app-page">
@@ -116,12 +130,17 @@ export default async function AssistantPage({
           targetCountry: assessment.target_country ?? "",
           targetCustomer: assessment.target_customer_segment ?? ""
         }}
-        actions={(actions ?? []).map((action) => ({
-          id: action.id,
-          title: action.title,
-          priority: action.urgency,
-          completionEvidence: action.completion_evidence
-        }))}
+        actions={(actions ?? []).map((action) => {
+          const question = action.question_id ? questions.get(action.question_id) : null;
+          const item = question ? items.get(question.itemId) : null;
+          return {
+            id: action.id,
+            title: question?.action ?? action.title,
+            priority: action.urgency,
+            completionEvidence: question?.followUp ?? action.completion_evidence,
+            owner: item?.owner
+          };
+        })}
         initialPlan={initialPlan}
         initialQuestion={initialQuestion}
         locale={locale}

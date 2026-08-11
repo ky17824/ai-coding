@@ -11,6 +11,8 @@ import {
 } from "@/lib/gtm-assistant";
 import { normalizeReadinessStatus } from "@/lib/readiness";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
+import { preserveFounderContextLocale } from "@/lib/content-localization";
+import type { GtmFounderContext } from "@/lib/types";
 
 const founderContextSchema = z.object({
   offeringType: z.enum(["product", "service", "solution", "hybrid", ""]),
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
       .eq("review_status", "approved")
       .limit(12),
     admin.from("gtm_plans")
-      .select("id,market_research_count")
+      .select("id,market_research_count,founder_context,content_locale,founder_context_locale")
       .eq("assessment_id", assessment.id)
       .in("status", ["draft", "active"])
       .maybeSingle()
@@ -155,14 +157,29 @@ export async function POST(request: Request) {
         created_by: user.id,
         founder_context: founderContext,
         market_research: result,
-        market_research_count: 1
+        market_research_count: 1,
+        content_locale: locale,
+        founder_context_locale: locale,
+        market_research_locale: locale
       }).select("id").single();
       if (error || !created) throw error ?? new Error(en ? "We couldn't start the plan." : "계획을 시작하지 못했습니다.");
       planId = created.id;
     } else {
+      const contextSourceLocale = existingPlan?.founder_context_locale ?? existingPlan?.content_locale ?? "ko";
+      if (contextSourceLocale !== locale) {
+        await preserveFounderContextLocale(
+          admin,
+          profile.organization_id,
+          planId,
+          contextSourceLocale,
+          (existingPlan?.founder_context as Partial<GtmFounderContext> | null) ?? {}
+        );
+      }
       const { error } = await admin.from("gtm_plans").update({
         founder_context: founderContext,
         market_research: result,
+        founder_context_locale: locale,
+        market_research_locale: locale,
         market_research_confirmed_at: null,
         market_research_count: (existingPlan?.market_research_count ?? 0) + 1,
         updated_at: new Date().toISOString()

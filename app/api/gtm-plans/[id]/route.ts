@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { translateTextFields } from "@/lib/content-localization";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 
 const localeSchema = z.enum(["ko", "en"]).default("ko");
@@ -34,7 +35,7 @@ export async function PATCH(
   const { id } = await params;
   const { data: plan } = await admin
     .from("gtm_plans")
-    .select("id,organization_id,market_research,market_research_confirmed_at")
+    .select("id,organization_id,market_research,market_research_confirmed_at,content_locale")
     .eq("id", id)
     .maybeSingle();
   const { data: profile } = await admin
@@ -75,12 +76,26 @@ export async function PATCH(
       : NextResponse.json({ ok: true });
   }
 
+  let ownerLabel = parsed.data.ownerLabel;
+  let completionEvidence = parsed.data.completionEvidence;
+  const sourceLocale = plan.content_locale === "en" ? "en" : "ko";
+  if (sourceLocale !== parsed.data.locale) {
+    const translated = await translateTextFields({ ownerLabel, completionEvidence }, sourceLocale);
+    if (!translated) {
+      return NextResponse.json(
+        { message: en ? "We couldn't preserve this edit in the plan's original language. Please try again." : "계획 원문 언어로 변환하지 못했습니다. 다시 시도해 주세요." },
+        { status: 503 }
+      );
+    }
+    ({ ownerLabel, completionEvidence } = translated);
+  }
+
   const { error } = await admin
     .from("gtm_plan_items")
     .update({
-      owner_label: parsed.data.ownerLabel,
+      owner_label: ownerLabel,
       due_date: parsed.data.dueDate,
-      completion_evidence: parsed.data.completionEvidence,
+      completion_evidence: completionEvidence,
       status: parsed.data.status,
       completed_at: parsed.data.status === "completed" ? new Date().toISOString() : null,
       updated_at: new Date().toISOString()

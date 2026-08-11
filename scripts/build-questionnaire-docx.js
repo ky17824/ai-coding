@@ -12,13 +12,9 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const {
-  Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
-  Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle
-} = require("docx");
-
 const out = process.argv[2];
 if (!out) throw new Error("출력 경로를 인자로 주세요.");
+const locale = process.argv[3] === "en" ? "en" : "ko";
 
 const root = path.resolve(__dirname, "..");
 const bundle = path.join(os.tmpdir(), `intake-${process.pid}.cjs`);
@@ -26,8 +22,22 @@ execFileSync(path.join(root, "node_modules/.bin/esbuild"), [
   path.join(root, "lib/intake-questions.ts"),
   "--bundle", "--format=cjs", "--platform=node", `--outfile=${bundle}`
 ]);
-const { INTAKE_STAGES, INTAKE_ITEMS, INTAKE_QUESTIONS } = require(bundle);
+const { getIntakeStages, getIntakeItems, getIntakeQuestions } = require(bundle);
 fs.unlinkSync(bundle);
+
+const INTAKE_STAGES = getIntakeStages(locale);
+const INTAKE_ITEMS = getIntakeItems(locale);
+const INTAKE_QUESTIONS = getIntakeQuestions(locale);
+
+if (out === "--json") {
+  process.stdout.write(JSON.stringify({ stages: INTAKE_STAGES, items: INTAKE_ITEMS, questions: INTAKE_QUESTIONS }));
+  process.exit(0);
+}
+
+const {
+  Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
+  Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle
+} = require("docx");
 
 const W = 9026;
 const FONT = "Pretendard";

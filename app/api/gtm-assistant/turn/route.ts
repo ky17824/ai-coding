@@ -28,6 +28,7 @@ import type {
   ReadinessLevel
 } from "@/lib/types";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
+import { preserveFounderContextLocale } from "@/lib/content-localization";
 
 const requestSchema = z.object({
   assessmentId: z.string().uuid(),
@@ -118,6 +119,7 @@ async function saveDraft(
   draft: GtmPlanDraft,
   trace: Record<string, unknown>,
   generationCount: number,
+  locale: "ko" | "en",
   usage = { input: 0, output: 0, reasoning: 0 }
 ) {
   const { error: planError } = await admin
@@ -131,6 +133,7 @@ async function saveDraft(
       output_tokens: usage.output,
       reasoning_tokens: usage.reasoning,
       generation_trace: trace,
+      content_locale: locale,
       updated_at: new Date().toISOString()
     })
     .eq("id", planId);
@@ -205,7 +208,7 @@ export async function POST(request: Request) {
         .limit(12),
       admin
         .from("gtm_plans")
-        .select("id,founder_context,recent_messages,turn_count,generation_count,market_research,market_research_confirmed_at")
+        .select("id,founder_context,recent_messages,turn_count,generation_count,market_research,market_research_confirmed_at,content_locale,founder_context_locale,market_research_locale")
         .eq("assessment_id", assessment.id)
         .in("status", ["draft", "active"])
         .maybeSingle(),
@@ -249,7 +252,10 @@ export async function POST(request: Request) {
     : undefined;
   if (questionKey && message) cleanContext[questionKey] = message;
 
-  const storedMessages = ((existingPlan?.recent_messages as GtmAssistantMessage[] | null) ?? [])
+  const contextSourceLocale = existingPlan?.founder_context_locale ?? existingPlan?.content_locale ?? "ko";
+  const storedMessages = (contextSourceLocale === locale
+    ? ((existingPlan?.recent_messages as GtmAssistantMessage[] | null) ?? [])
+    : [])
     .filter((entry) =>
       (entry.role === "assistant" || entry.role === "user") && typeof entry.content === "string"
     );
@@ -299,7 +305,9 @@ export async function POST(request: Request) {
         created_by: user.id,
         founder_context: cleanContext,
         recent_messages: recentMessages,
-        turn_count: userMessageAdded ? 1 : 0
+        turn_count: userMessageAdded ? 1 : 0,
+        content_locale: locale,
+        founder_context_locale: locale
       })
       .select("id")
       .single();
@@ -308,11 +316,21 @@ export async function POST(request: Request) {
     }
     planId = created.id;
   } else {
+    if (contextSourceLocale !== locale) {
+      await preserveFounderContextLocale(
+        admin,
+        profile.organization_id,
+        planId,
+        contextSourceLocale,
+        (existingPlan?.founder_context as Partial<GtmFounderContext> | null) ?? {}
+      );
+    }
     const { error } = await admin
       .from("gtm_plans")
       .update({
         founder_context: cleanContext,
         recent_messages: recentMessages,
+        founder_context_locale: locale,
         turn_count: Math.min(20, (existingPlan?.turn_count ?? 0) + (userMessageAdded ? 1 : 0)),
         updated_at: new Date().toISOString()
       })
@@ -363,7 +381,7 @@ export async function POST(request: Request) {
     const saved = await saveDraft(admin, planId!, draft, {
       generatedBy: draft.generatedBy,
       fallbackReason: reason
-    }, (existingPlan?.generation_count ?? 0) + 1);
+    }, (existingPlan?.generation_count ?? 0) + 1, locale);
     return NextResponse.json({ planId, result: saved });
   };
 
@@ -447,6 +465,7 @@ export async function POST(request: Request) {
       safeResult,
       trace,
       (existingPlan?.generation_count ?? 0) + 1,
+      locale,
       usage
     );
     return NextResponse.json({ planId, result: saved });

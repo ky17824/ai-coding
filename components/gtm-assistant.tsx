@@ -28,6 +28,7 @@ interface Props {
     title: string;
     priority: string;
     completionEvidence: string;
+    owner?: string;
   }[];
   initialPlan: StoredGtmPlan | null;
   initialQuestion: GtmAssistantQuestion | null;
@@ -238,6 +239,11 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
       </aside>
 
       <section className="assistant-workspace">
+        {initialPlan?.translationFallback && (
+          <p className="notice-banner" role="status">
+            {en ? "Some saved content could not be translated, so the original text is shown." : "일부 저장 내용을 번역하지 못해 원문으로 표시합니다."}
+          </p>
+        )}
         <div className="question-heading">
           <span>{en ? "FOUNDER WORKSHOP" : "창업자 공동계획 회의(Founder Workshop)"}</span>
           <h2>{en ? "Define what you are launching and your initial target market." : "글로벌 론칭 대상과 초기 목표시장(Target Market)을 정의해 주세요."}</h2>

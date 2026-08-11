@@ -5,7 +5,7 @@
 - Status: Active
 - Last refreshed: 2026-08-11
 - Primary product surfaces: 랜딩, 인증·온보딩, 단계별 준비도 진단, Gate 판정, 론칭 대상 정의, AI 시장·경쟁 사전조사, 준비 3단계 후 실제 판매 가능성 예비검증, AI GTM 공동계획, 대시보드·여정, 계획 보고서, 전문가 서비스
-- Evidence reviewed: `app/page.tsx`, `app/globals.css`, `public/fonts/PretendardVariable.woff2`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `components/google-button.tsx`, `components/signin-form.tsx`, `components/signup-form.tsx`, `app/auth/callback/route.ts`, `app/account/actions.ts`, `app/api/gtm-assistant/turn/route.ts`, `app/api/gtm-plans/[id]/export/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `scripts/build-questionnaire-docx.js`, `docs/survey/*.docx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`, `.omx/plans/2026-08-11-kakao-login-integration.md`
+- Evidence reviewed: live `https://global-gtm.vercel.app/en/dashboard`, `app/page.tsx`, `app/globals.css`, `public/fonts/PretendardVariable.woff2`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `components/google-button.tsx`, `components/signin-form.tsx`, `components/signup-form.tsx`, `app/auth/callback/route.ts`, `app/account/actions.ts`, `app/api/gtm-assistant/turn/route.ts`, `app/api/gtm-plans/[id]/export/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `supabase/migrations/005_ai_gtm_assistant.sql`, `scripts/build-questionnaire-docx.js`, `docs/survey/*.docx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`, `.omx/plans/2026-08-11-kakao-login-integration.md`, `.omx/plans/2026-08-11-full-english-localization.md`
 - Observed fact: 기존 UI는 `--ink`, `--green`, `--green-dark`, `--mint`, `--paper` 토큰과 흰색 panel, 12px 내외 radius, 짧은 상태 문구를 공통으로 사용한다.
 - Observed fact: 현재 AI GTM 어시스턴트는 목표국가·목표고객·자원·기한·제약만 받고 바로 계획을 만들며, 론칭할 제품·서비스·솔루션과 시장규모·경쟁사 조사 결과를 수집·검토·저장하는 단계가 없다.
 - Observed fact: 대시보드의 단계 통과 카드가 `gate_messages`의 공통 접두문 `필수 선결 조건이 남았습니다 —`를 항목마다 그대로 출력해 같은 상태 문장이 반복된다.
@@ -220,8 +220,45 @@ Google로 계속하기
 - Voice: 미국 스타트업 창업자에게 직접 말하는 간결하고 evidence-led한 문장을 사용한다. 한국어 존댓말을 직역하지 않고 행동, 근거, 제약, 다음 결정을 먼저 쓴다.
 - Terminology: 한국어 `준비 1단계·2단계·3단계`는 `Readiness Stage 1·2·3`으로 표시한다. GTM, TAM, SAM, SOM, LAM처럼 시장에서 통용되는 약어는 유지하고 첫 설명에서 정식 명칭을 제공한다.
 - Content invariants: 질문 ID, 점수, Critical 여부, 단계 통과 기준, 서비스·주문 ID, source ID는 번역하지 않는다. locale별 표시 문구만 달라진다.
-- Generated content: AI 질문·조사·계획·보고서는 세션 locale로 생성하고 locale을 요청 context에 포함한다. 기존 한국어 산출물을 자동 번역하지 않으며 필요하면 원문 언어를 표시하고 영어로 재생성한다.
-- User-authored content: DB의 회사명, 상품 설명, 증거, 운영자가 입력한 서비스 설명은 원문을 보존한다. 영어 번역 필드가 없으면 번역된 것처럼 표시하지 않는다.
+- Platform-owned copy: 버튼, 제목, 상태, 오류, 단계명, 담당 역할, 질문, 액션 안내, 완료 근거 안내는 typed locale catalog 또는 안정적인 ID에서 렌더링한다. DB에 저장된 한국어 표시 문장을 `/en`에서 그대로 출력하지 않는다.
+- Generated content: AI 질문·조사·계획·보고서는 요청 locale로 생성하고 산출 언어를 저장한다. 기존 AI 산출물은 화면 locale에 맞춰 자동 번역하고 원문을 덮어쓰지 않은 채 같은 계획의 locale별 표시본으로 캐시한다. 번역이 실패하면 원문과 재시도 안내를 함께 표시한다.
+- Assessment actions: `action_items.question_id`가 있는 진단 액션은 저장된 `title`, `owner_label`, `completion_evidence`보다 질문 catalog의 locale별 문구를 우선한다. 운영자나 사용자가 수정한 자유 액션만 원문 콘텐츠로 취급한다.
+- Plan localization: 계획의 상태·기간·우선순위는 구조화 값으로 번역하고, AI가 만든 요약·시장조사·계획 항목의 문장만 locale별 표시본으로 관리한다. 진행 상태와 완료 증거는 언어 전환으로 복제하거나 초기화하지 않는다.
+- User-authored content: 한국어로 입력한 회사·제품·서비스·솔루션 설명, 목표시장, 목표고객, 제약, 실행 메모는 원문을 보존하면서 영어 화면용 자연스러운 번역본을 자동 생성한다. 사람 이름, 법인명, 브랜드명, 제품명은 기본적으로 원문을 유지하고 설명 문장만 번역한다.
 - Legal content: 영어 약관·개인정보·환불 문서는 별도 본문으로 제공하고 법률 검토 전에는 한국어 원문 우선 고지를 포함한다.
+- Downloadable documents: HTML/PDF 보고서와 창업자용 55문항 DOCX는 화면 locale이 아니라 문서 locale을 명시적으로 받는다. 영문 문서는 제목·본문·표·상태·날짜·접근성 텍스트까지 영어여야 하며, 한국어 문서의 파일명이나 본문을 재사용하지 않는다.
+- Internal documentation: 사용자에게 제공되는 설문, 보고서, 안내서는 한국어와 영어 산출물을 따로 유지한다. 개발 계획·변경 이력 같은 비노출 내부 문서는 번역 대상에서 제외하되, 영문 사용자 문서의 source와 version을 명시한다.
 - Formatting: 영어의 긴 단어·URL·표 제목이 panel 밖으로 넘치지 않도록 wrapping을 허용한다. 날짜·숫자·통화는 선택 locale과 조사 기준 통화를 명시한다.
-- QA: `/en`에서 가입·로그인, 55문항, Gate 중단, 대시보드, AI 조사·계획, 서비스·주문, 보고서 다운로드까지 한글 잔존과 무접두 경로 이탈이 없어야 한다.
+- Fallback behavior: 번역본이 없을 때 한국어를 조용히 노출하지 않는다. 영어 안내와 `Generate English version` 또는 `View original` 선택을 제공하며, 핵심 행동 버튼과 진행 상태는 계속 사용할 수 있어야 한다.
+- QA: `/en`에서 가입·로그인, 55문항, Gate 중단, 대시보드, AI 조사·계획, 여정, 서비스·주문, 운영, 보고서 다운로드까지 플랫폼 소유 한글 잔존과 무접두 경로 이탈이 없어야 한다. 영문 DOM 잔존 검사에서는 사용자 원문·회사명·사람 이름·브랜드명을 명시적으로 제외한다.
+
+### English content provenance
+
+| 콘텐츠 출처 | 영어 화면 표시 규칙 | 저장 원칙 |
+| --- | --- | --- |
+| 정적 UI·오류·상태 | 항상 locale catalog에서 영어 표시 | 표시 문구를 DB에 저장하지 않음 |
+| 55문항·단계·진단 액션 | question/stage ID로 영어 catalog 조회 | ID·점수·응답·근거만 공통 저장 |
+| AI 요약·조사·계획 항목 | 같은 plan의 영문 표시본만 노출 | 원문과 locale별 표시본을 분리 저장 |
+| 사용자 입력 설명·목표시장·목표고객 | 영어 표시본을 자동 생성해 우선 노출 | 원문과 source hash에 연결된 영어 번역본을 분리 저장 |
+| 회사·법인·상품·브랜드·사람 이름 | 기본적으로 원문 표기, 사용자가 영문명을 등록하면 교체 | 공식 영문명과 자동 번역을 구분해 저장 |
+| 서비스 catalog | 관리자가 승인한 영어 필드 우선 | 한국어·영어 필드를 명시적으로 관리 |
+| 보고서·설문 DOCX | 선택 문서 locale로 전체 생성 | locale·source version을 문서 metadata에 기록 |
+
+### English release gates
+
+1. `/en/dashboard`는 저장된 한국어 `plan.summary`, `plan_items.title`, `action_items.title`, `owner_label`, `completion_evidence`를 직접 렌더링하지 않는다.
+2. `/en/assistant/:id`, `/en/journey`, `/en/admin`, `/en/orders/:id`, `/en/provider`에도 동일한 provenance 규칙을 적용한다.
+3. 기존 계획에 화면 locale 표시본이 없으면 자동 번역해 캐시하고, 번역 실패 시에만 원문과 재시도 안내를 표시한다.
+4. 영문 보고서 다운로드는 화면의 영어 표시본과 동일한 내용을 사용하며 한국어 계획 항목을 포함하지 않는다.
+5. 영어 55문항 DOCX를 별도 생성하고 질문 ID·배점·선결 조건이 한국어 원본과 일치하는지 자동 비교한다.
+
+### Automatic English display for Korean user content
+
+1. 한국어 입력값은 원본 필드를 수정하거나 덮어쓰지 않는다.
+2. 저장 직후 번역 작업을 시도하고, 기존 데이터는 `/en` 최초 조회 시 필요한 필드만 일괄 번역한다.
+3. 번역본은 `entity_type`, `entity_id`, `field_name`, `target_locale`, `source_hash`를 키로 캐시한다. 원문이 바뀌면 hash가 달라져 이전 번역을 자동으로 사용하지 않는다.
+4. 영어 화면은 번역본이 있으면 즉시 표시하고, 생성 중이면 영어 skeleton과 `Preparing English version…`을 보여준다. 번역 실패 시 원문을 조용히 섞지 않고 `View original`을 제공한다.
+5. 번역 프롬프트는 미국 창업자와 시장 전문가가 읽기 자연스러운 영어를 사용하되 숫자, 통화, 날짜, URL, 고유명사, 법적 명칭과 사실관계를 변경하거나 보강하지 않는다.
+6. 한 화면에서 필요한 입력값을 한 요청으로 묶어 번역하고 결과를 캐시한다. 화면 필드마다 별도 AI 요청을 보내지 않는다.
+7. 사용자는 자동 번역본을 수정하고 `Official English version`으로 저장할 수 있다. 공식 영문본은 원문이 바뀌기 전까지 자동 번역보다 우선한다.
+8. 대시보드, AI 어시스턴트, GTM 여정, 서비스·주문, 관리자 화면, HTML/PDF/DOCX 보고서가 같은 번역본을 재사용한다.

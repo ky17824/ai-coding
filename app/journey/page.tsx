@@ -6,6 +6,8 @@ import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { matchExpertSupport } from "@/lib/expert-matching";
+import { localizeStoredGtmPlan } from "@/lib/content-localization";
+import type { GtmPlanItem, StoredGtmPlan } from "@/lib/types";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "Global GTM Journey" : "Global GTM 여정" };
@@ -56,7 +58,7 @@ export default async function JourneyPage() {
   const steps = en ? detailedStepsEn : detailedSteps;
   const user = await requireUser();
   const admin = createSupabaseAdminClient();
-  let activePlan: { id: string; assessment_id: string; summary: string } | null = null;
+  let activePlan: StoredGtmPlan | null = null;
   let planItems: {
     id: string;
     horizon: number;
@@ -73,16 +75,50 @@ export default async function JourneyPage() {
       .select("organization_id").eq("id", user.id).single();
     if (profile?.organization_id) {
       const { data: plan } = await admin.from("gtm_plans")
-        .select("id,assessment_id,summary")
+        .select("id,assessment_id,summary,content_locale")
         .eq("organization_id", profile.organization_id)
         .eq("status", "active")
         .order("updated_at", { ascending: false }).limit(1).maybeSingle();
-      activePlan = plan;
       if (plan) {
         const { data } = await admin.from("gtm_plan_items")
           .select("id,horizon,priority,title,owner_label,due_date,status,expert_required,service_tag")
           .eq("plan_id", plan.id).order("horizon").order("sort_order");
         planItems = data ?? [];
+        activePlan = await localizeStoredGtmPlan(admin, profile.organization_id, {
+          id: plan.id,
+          assessmentId: plan.assessment_id,
+          status: "active",
+          summary: plan.summary,
+          assumptions: [],
+          founderContext: {},
+          marketResearch: null,
+          marketResearchConfirmedAt: null,
+          recentMessages: [],
+          turnCount: 0,
+          generationCount: 0,
+          generatedBy: "",
+          contentLocale: plan.content_locale ?? "ko",
+          items: planItems.map((item) => ({
+            id: item.id,
+            sourceActionItemId: null,
+            questionId: null,
+            horizon: item.horizon as 30 | 60 | 90,
+            priority: item.priority as GtmPlanItem["priority"],
+            title: item.title,
+            rationale: "",
+            ownerLabel: item.owner_label,
+            dueDate: item.due_date,
+            completionEvidence: "",
+            dependencies: [],
+            riskNote: "",
+            status: item.status as GtmPlanItem["status"],
+            expertRequired: item.expert_required,
+            expertReason: "",
+            serviceTag: item.service_tag,
+            handoffBrief: "",
+            sources: []
+          }))
+        }, locale);
       }
     }
   }
@@ -95,28 +131,29 @@ export default async function JourneyPage() {
         <p className="page-description">
           {en ? "We group the 11 Global Class steps into three horizons. Progress depends on evidence of completion, not a fixed schedule." : "Global Class 11단계를 세 구간으로 묶었습니다. 정해진 일정이 아니라 완료를 증명할 근거가 있어야 다음 단계로 넘어갑니다."}
         </p>
-        {activePlan && planItems.length > 0 ? (
+        {activePlan && activePlan.items.length > 0 ? (
           <>
             <div className="dashboard-section__heading">
               <span><span className="page-kicker">{en ? "APPROVED AI GTM PLAN" : "승인된 AI GTM 계획(Approved AI GTM Plan)"}</span><h2 className="plan-summary">{activePlan.summary}</h2></span>
-              <Link className="button button--ghost" href={path(`/assistant/${activePlan.assessment_id}`)}>{en ? "Edit plan" : "계획 수정"}</Link>
+              <Link className="button button--ghost" href={path(`/assistant/${activePlan.assessmentId}`)}>{en ? "Edit plan" : "계획 수정"}</Link>
             </div>
+            {activePlan.translationFallback && <p className="notice-banner">{en ? "Some saved content is shown in its original language." : "일부 저장 내용은 원문으로 표시합니다."}</p>}
             <div className="journey-board">
               {[30, 60, 90].map((horizon) => (
                 <section className="journey-column panel" key={horizon}>
                   <header><span>{horizon}</span><div><h2>{en ? `${horizon}-Day Plan` : `단계별 실행계획(30·60·90 Day Plan) · ${horizon}일`}</h2><p>{en ? "Add completion evidence to move to the next horizon." : "완료 근거를 남기시면 다음 구간으로 넘어갑니다."}</p></div></header>
                   <div className="journey-step-list">
-                    {planItems.filter((item) => item.horizon === horizon).map((item, index) => {
+                    {activePlan.items.filter((item) => item.horizon === horizon).map((item, index) => {
                       const expert = matchExpertSupport({
                         title: item.title,
-                        serviceTag: item.service_tag,
-                        expertRequired: item.expert_required
+                        serviceTag: item.serviceTag,
+                        expertRequired: item.expertRequired
                       });
                       return (
                         <article key={item.id}>
                           <span className={item.status === "completed" ? "done" : item.status === "in_progress" ? "active" : ""}>{item.status === "completed" ? "✓" : index + 1}</span>
                           <div>
-                            <small>{item.priority} · {item.owner_label} · {item.due_date}</small>
+                            <small>{item.priority} · {item.ownerLabel} · {item.dueDate}</small>
                             <h3>{item.title}</h3>
                             {expert.recommended && (
                               <Link

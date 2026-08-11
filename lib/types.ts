@@ -232,5 +232,9 @@ export interface StoredGtmPlan {
   turnCount: number;
   generationCount: number;
   generatedBy: string;
+  contentLocale: "ko" | "en";
+  founderContextLocale?: "ko" | "en";
+  marketResearchLocale?: "ko" | "en";
+  translationFallback?: boolean;
   items: GtmPlanItem[];
 }

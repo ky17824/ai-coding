@@ -10,12 +10,13 @@ import {
   normalizeReadinessStatus,
   questionsOfStage
 } from "@/lib/readiness";
-import { getIntakeStages } from "@/lib/intake-questions";
+import { getIntakeItems, getIntakeQuestions, getIntakeStages } from "@/lib/intake-questions";
 import { getPublishedServices } from "@/lib/services";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
-import type { EvidenceInput, ReadinessAnswer, ReadinessLevel } from "@/lib/types";
+import type { EvidenceInput, GtmPlanItem, ReadinessAnswer, ReadinessLevel, StoredGtmPlan } from "@/lib/types";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
+import { localizeStoredGtmPlan } from "@/lib/content-localization";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "GTM Journey Dashboard" : "GTM 여정 대시보드" };
@@ -68,12 +69,12 @@ export default async function DashboardPage({
 
   const [{ data: actions }, services, { data: plan }, { data: answerRows }] = await Promise.all([
     admin.from("action_items")
-      .select("id,title,owner_label,completion_evidence,urgency,service_tag,due_date,completed_at")
+      .select("id,question_id,title,owner_label,completion_evidence,urgency,service_tag,due_date,completed_at")
       .eq("assessment_id", assessment.id)
       .order("created_at"),
     getPublishedServices(locale),
     admin.from("gtm_plans")
-      .select("id,status,summary,updated_at")
+      .select("id,status,summary,updated_at,content_locale")
       .eq("assessment_id", assessment.id)
       .in("status", ["draft", "active"])
       .maybeSingle(),
@@ -88,6 +89,59 @@ export default async function DashboardPage({
         .order("horizon")
         .order("sort_order")
     : { data: null };
+  const localizedPlan = plan ? await localizeStoredGtmPlan(
+    admin,
+    profile.organization_id,
+    {
+      id: plan.id,
+      assessmentId: assessment.id,
+      status: plan.status,
+      summary: plan.summary,
+      assumptions: [],
+      founderContext: {},
+      marketResearch: null,
+      marketResearchConfirmedAt: null,
+      recentMessages: [],
+      turnCount: 0,
+      generationCount: 0,
+      generatedBy: "",
+      contentLocale: plan.content_locale ?? "ko",
+      items: (planItems ?? []).map((item) => ({
+        id: item.id,
+        sourceActionItemId: null,
+        questionId: null,
+        horizon: item.horizon as 30 | 60 | 90,
+        priority: item.priority as GtmPlanItem["priority"],
+        title: item.title,
+        rationale: "",
+        ownerLabel: item.owner_label,
+        dueDate: item.due_date,
+        completionEvidence: "",
+        dependencies: [],
+        riskNote: "",
+        status: item.status as GtmPlanItem["status"],
+        expertRequired: item.expert_required,
+        expertReason: "",
+        serviceTag: item.service_tag,
+        handoffBrief: "",
+        sources: []
+      }))
+    } satisfies StoredGtmPlan,
+    locale
+  ) : null;
+  const displayPlanItems = localizedPlan?.items ?? [];
+  const questionCatalog = new Map(getIntakeQuestions(locale).map((question) => [question.id, question]));
+  const itemCatalog = new Map(getIntakeItems(locale).map((item) => [item.id, item]));
+  const displayActions = (actions ?? []).map((action) => {
+    const question = action.question_id ? questionCatalog.get(action.question_id) : null;
+    const item = question ? itemCatalog.get(question.itemId) : null;
+    return {
+      ...action,
+      title: question?.action ?? action.title,
+      owner_label: item?.owner ?? action.owner_label,
+      completion_evidence: question?.followUp ?? action.completion_evidence
+    };
+  });
   const serviceTags = new Set((actions ?? []).map((action) => action.service_tag));
   const recommended = services
     .filter((service) => service.tags.some((tag) => serviceTags.has(tag)))
@@ -328,20 +382,21 @@ export default async function DashboardPage({
           <div className="dashboard-section__heading">
             <span>
               <span className="page-kicker">{en ? "AI GTM PLAN" : "AI GTM 계획(AI GTM Plan)"}</span>
-              <h2 className="plan-summary">{plan?.summary || (en ? "Turn your assessment into a staged 30-, 60-, and 90-day execution plan." : "진단 결과를 단계별 실행계획(30·60·90 Day Plan)으로 바꿔 보세요.")}</h2>
+              <h2 className="plan-summary">{localizedPlan?.summary || (en ? "Turn your assessment into a staged 30-, 60-, and 90-day execution plan." : "진단 결과를 단계별 실행계획(30·60·90 Day Plan)으로 바꿔 보세요.")}</h2>
               <p className="page-description">{planStatus}</p>
+              {localizedPlan?.translationFallback && <p className="notice-banner">{en ? "Some saved content is shown in its original language." : "일부 저장 내용은 원문으로 표시합니다."}</p>}
             </span>
             <Link href={path(planHref)} className="button button--primary">{planCta}<span aria-hidden="true">→</span></Link>
           </div>
-          {planItems && planItems.length > 0 && (
+          {displayPlanItems.length > 0 && (
             <div className="dashboard-action-list">
-              {planItems.slice(0, 5).map((item, index) => (
+              {displayPlanItems.slice(0, 5).map((item, index) => (
                 <article className="dashboard-action panel" key={item.id}>
                   <span className="action-index">{String(index + 1).padStart(2, "0")}</span>
                   <div>
                     <span className={`priority priority--${item.priority}`}>{item.priority === "P0" ? (en ? "Priority 0" : "우선순위 0(Priority 0)") : (en ? "Priority 1" : "우선순위 1(Priority 1)")} · {item.horizon} {en ? "days" : "일"}</span>
                     <h3>{item.title}</h3>
-                    <p>{item.owner_label} · {item.due_date}{item.expert_required ? (en ? " · Expert review required" : " · 전문가 확인 필요") : ""}</p>
+                    <p>{item.ownerLabel} · {item.dueDate}{item.expertRequired ? (en ? " · Expert review required" : " · 전문가 확인 필요") : ""}</p>
                   </div>
                   <strong>{item.status === "completed" ? (en ? "Complete" : "완료") : item.status === "in_progress" ? (en ? "In progress" : "진행 중") : (en ? "Not started" : "진행 전")}</strong>
                 </article>
@@ -353,7 +408,7 @@ export default async function DashboardPage({
         <section className="dashboard-section">
           <div className="dashboard-section__heading"><span><span className="page-kicker">{en ? "PRIORITY ACTIONS" : "우선 실행항목(Priority Actions)"}</span><h2>{en ? "Actions from this assessment" : "이번 진단의 실행 액션"}</h2></span></div>
           <div className="dashboard-action-list">
-            {(actions ?? []).map((action, index) => (
+            {displayActions.map((action, index) => (
               <article className="dashboard-action panel" key={action.id}>
                 <span className="action-index">{String(index + 1).padStart(2, "0")}</span>
                 <div><span className={`priority priority--${action.urgency}`}>{action.urgency === "P0" ? (en ? "Priority 0" : "우선순위 0(Priority 0)") : (en ? "Priority 1" : "우선순위 1(Priority 1)")}</span><h3>{action.title}</h3><p>{action.owner_label} · {action.completion_evidence}{action.due_date ? ` · ${action.due_date}` : ""}</p></div>
