@@ -311,6 +311,10 @@ svg {
   word-break: keep-all;
 }
 
+main[lang="en"] .hero h1 {
+  font-size: clamp(33px, calc(3.6vw - 1px), 49px);
+}
+
 .hero h1 span {
   display: block;
   animation: line-rise 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
