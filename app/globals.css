@@ -1897,6 +1897,14 @@ main[lang="en"] .hero h1 em {
   font-size: 12px;
 }
 
+.journey-expert-cta {
+  width: fit-content;
+  min-height: 36px;
+  margin-top: 10px;
+  padding: 0 13px;
+  font-size: 11px;
+}
+
 .filter-row {
   margin: 34px 0 22px;
   display: flex;

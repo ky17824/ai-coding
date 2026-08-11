@@ -9,6 +9,7 @@ import type {
   GtmPlanItem,
   GtmPlanSource
 } from "./types";
+import { matchExpertSupport } from "./expert-matching";
 
 export const ASSISTANT_MODEL = "gpt-5.6-luna" as const;
 
@@ -276,7 +277,6 @@ export interface SavedAction {
   urgency: "P0" | "P1";
 }
 
-const HIGH_RISK = /legal|law|tax|privacy|regulat|certif|contract|payment|정산|법|세무|인증|규제|개인정보/i;
 const CURRENT_FACTS = /최신|현재|규정|규제|법률|세율|관세|인증|허가|비자|보조금|지원사업|시장 규모|환율|가격/i;
 
 export function sanitizeFounderText(value: string) {
@@ -315,7 +315,8 @@ export function buildDeterministicPlan(
         Math.floor((index * allowedHorizons.length) / Math.max(1, Math.min(actions.length, 8)))
       )
     ];
-    const expertRequired = HIGH_RISK.test(`${action.service_tag} ${action.title}`);
+    const expert = matchExpertSupport({ title: action.title, serviceTag: action.service_tag });
+    const fieldExecution = expert.reason === "field_execution";
     return {
       sourceActionItemId: action.id,
       questionId: action.question_id,
@@ -327,14 +328,20 @@ export function buildDeterministicPlan(
       dueDate: dateAfter(now, horizon),
       completionEvidence: action.completion_evidence,
       dependencies: [],
-      riskNote: expertRequired
-        ? locale === "en" ? "Have a qualified expert review local regulations and contract terms before execution." : "현지 규정과 계약 조건은 실행 전에 전문가 확인이 필요합니다."
+      riskNote: expert.recommended
+        ? fieldExecution
+          ? locale === "en" ? "Local customer validation, a paid pilot, or a first order may require hands-on market support." : "현지 고객 검증·유료 실증시험·첫 주문 실행에는 외부 현장 역량이 필요할 수 있습니다."
+          : locale === "en" ? "Have a qualified expert review local regulations and contract terms before execution." : "현지 규정과 계약 조건은 실행 전에 전문가 확인이 필요합니다."
         : locale === "en" ? "Revisit the schedule and completion criteria if the assumptions change." : "전제가 바뀌면 일정과 완료 기준을 다시 확인해 주세요.",
       status: "not_started",
-      expertRequired,
-      expertReason: expertRequired ? (locale === "en" ? "This action may require legal, tax, or regulatory judgment." : "법률·세무·규제 판단이 포함될 수 있습니다.") : "",
-      serviceTag: action.service_tag,
-      handoffBrief: expertRequired
+      expertRequired: expert.recommended,
+      expertReason: expert.recommended
+        ? fieldExecution
+          ? locale === "en" ? "This action may require local customer, channel, or field-execution expertise." : "현지 고객·채널·실행 경험이 필요한 액션입니다."
+          : locale === "en" ? "This action may require legal, tax, or regulatory judgment." : "법률·세무·규제 판단이 포함될 수 있습니다."
+        : "",
+      serviceTag: expert.tag,
+      handoffBrief: expert.recommended
         ? locale === "en" ? `Review the local requirements and completion evidence for: ${action.title}` : `${action.title}의 현지 적용 조건과 완료 근거를 검토해 주세요.`
         : "",
       sources: [source]
@@ -368,7 +375,29 @@ export function validatePlanDraft(
       throw new Error(locale === "en" ? "Source URLs must use HTTP or HTTPS." : "근거 URL은 HTTP(S) 주소여야 합니다.");
     }
   }
-  return output;
+  return {
+    ...output,
+    items: output.items.map((item) => {
+      const expert = matchExpertSupport({
+        title: item.title,
+        serviceTag: item.serviceTag,
+        expertRequired: item.expertRequired
+      });
+      if (!expert.recommended) return item;
+      const fieldExecution = expert.reason === "field_execution";
+      return {
+        ...item,
+        expertRequired: true,
+        expertReason: item.expertReason || (fieldExecution
+          ? locale === "en" ? "This action may require local customer, channel, or field-execution expertise." : "현지 고객·채널·실행 경험이 필요한 액션입니다."
+          : locale === "en" ? "This action may require legal, tax, or regulatory judgment." : "법률·세무·규제 판단이 포함될 수 있습니다."),
+        serviceTag: expert.tag,
+        handoffBrief: item.handoffBrief || (locale === "en"
+          ? `Review the local requirements and completion evidence for: ${item.title}`
+          : `${item.title}의 현지 적용 조건과 완료 근거를 검토해 주세요.`)
+      };
+    })
+  };
 }
 
 export function finalizeMarketResearch(

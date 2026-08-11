@@ -63,6 +63,32 @@ describe("AI GTM assistant safeguards", () => {
     });
   });
 
+  it("flags paid pilots and first orders for expert matching", () => {
+    const plan = buildDeterministicPlan([{ ...actions[1], title: "유료 PoC나 첫 주문을 만든다", service_tag: "gtm" }]);
+
+    expect(plan.items[0]).toMatchObject({ expertRequired: true, serviceTag: "gtm" });
+  });
+
+  it("normalizes an under-flagged AI plan before saving", () => {
+    const plan = buildDeterministicPlan(actions);
+    const validated = validatePlanDraft({
+      ...plan,
+      items: [{
+        ...plan.items[1],
+        title: "현지 고객과 유료 PoC를 진행한다",
+        expertRequired: false,
+        expertReason: "",
+        handoffBrief: "",
+        serviceTag: "gtm"
+      }]
+    });
+
+    expect(validated.items[0]).toMatchObject({
+      expertRequired: true,
+      serviceTag: "gtm"
+    });
+  });
+
   it("keeps deterministic and model plans inside the allowed horizons", () => {
     const plan = buildDeterministicPlan(actions, new Date("2026-08-05T00:00:00Z"), [60]);
     expect(plan.items.every((item) => item.horizon === 60)).toBe(true);

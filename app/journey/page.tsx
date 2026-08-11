@@ -5,6 +5,7 @@ import { JOURNEY_PHASES } from "@/lib/readiness-data";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
+import { matchExpertSupport } from "@/lib/expert-matching";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "Global GTM Journey" : "Global GTM 여정" };
@@ -105,12 +106,31 @@ export default async function JourneyPage() {
                 <section className="journey-column panel" key={horizon}>
                   <header><span>{horizon}</span><div><h2>{en ? `${horizon}-Day Plan` : `단계별 실행계획(30·60·90 Day Plan) · ${horizon}일`}</h2><p>{en ? "Add completion evidence to move to the next horizon." : "완료 근거를 남기시면 다음 구간으로 넘어갑니다."}</p></div></header>
                   <div className="journey-step-list">
-                    {planItems.filter((item) => item.horizon === horizon).map((item, index) => (
-                      <article key={item.id}>
-                        <span className={item.status === "completed" ? "done" : item.status === "in_progress" ? "active" : ""}>{item.status === "completed" ? "✓" : index + 1}</span>
-                        <div><small>{item.priority} · {item.owner_label} · {item.due_date}</small><h3>{item.title}</h3>{item.expert_required && <Link href={path(`/services?tag=${encodeURIComponent(item.service_tag)}`)}>{en ? "Find an expert →" : "전문가 연결 →"}</Link>}</div>
-                      </article>
-                    ))}
+                    {planItems.filter((item) => item.horizon === horizon).map((item, index) => {
+                      const expert = matchExpertSupport({
+                        title: item.title,
+                        serviceTag: item.service_tag,
+                        expertRequired: item.expert_required
+                      });
+                      return (
+                        <article key={item.id}>
+                          <span className={item.status === "completed" ? "done" : item.status === "in_progress" ? "active" : ""}>{item.status === "completed" ? "✓" : index + 1}</span>
+                          <div>
+                            <small>{item.priority} · {item.owner_label} · {item.due_date}</small>
+                            <h3>{item.title}</h3>
+                            {expert.recommended && (
+                              <Link
+                                className="button button--ghost button--small journey-expert-cta"
+                                href={path(`/services?tag=${encodeURIComponent(expert.tag)}`)}
+                                aria-label={en ? `Find an expert for ${item.title}` : `${item.title} 전문가 연결`}
+                              >
+                                {en ? "Find an expert" : "전문가 연결"} <span aria-hidden="true">→</span>
+                              </Link>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
                 </section>
               ))}
