@@ -13,7 +13,7 @@ const providers = {
   google: {
     label: "Google",
     error: "Google 로그인을 시작하지 못했습니다.",
-    className: "button--ghost"
+    className: "button--google"
   }
 } as const;
 
@@ -63,6 +63,15 @@ export function SocialLoginButton({
         onClick={signIn}
         disabled={pending}
       >
+        {provider === "google" && (
+          <img
+            className="button__google-logo"
+            src="/google-g.svg"
+            alt=""
+            width="18"
+            height="18"
+          />
+        )}
         {pending
           ? locale === "en" ? `Connecting to ${config.label}…` : `${config.label}로 이동 중…`
           : locale === "en" ? `Continue with ${config.label}` : `${config.label}로 계속하기`}

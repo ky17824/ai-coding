@@ -20,7 +20,7 @@ export default async function SignInPage({
       }
     : {
         title: "로그인",
-        heading: "글로벌 진출 여정을 이어가세요.",
+        heading: "글로벌 진출 여정을 시작하세요",
         body: "비밀번호, 소셜 계정 또는 안전한 이메일 링크로 로그인할 수 있습니다."
       };
   const next = safeNextPath(query.returnTo ?? query.next, localizedPath("/dashboard", locale));

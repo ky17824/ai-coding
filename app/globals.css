@@ -680,6 +680,30 @@ main[lang="en"] .hero h1 {
   outline-offset: 2px;
 }
 
+.button--google {
+  border-color: #dadce0;
+  background: var(--white);
+  color: #1f1f1f;
+  box-shadow: 0 2px 0 #dadce0, 0 8px 18px rgba(31, 31, 31, 0.1);
+}
+
+.button--google:hover:not(:disabled) {
+  border-color: #c2c5c9;
+  background: #f8faff;
+  color: #1f1f1f;
+  box-shadow: 0 4px 0 #d0d3d7, 0 12px 22px rgba(31, 31, 31, 0.12);
+}
+
+.button--google:active:not(:disabled) {
+  box-shadow: 0 1px 0 #d0d3d7, 0 4px 10px rgba(31, 31, 31, 0.1);
+}
+
+.button__google-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
 .consent-list {
   display: grid;
   gap: 9px;
@@ -2115,7 +2139,7 @@ main[lang="en"] .hero h1 {
 
 .signin-page {
   min-height: 100vh;
-  padding: 34px;
+  padding: clamp(16px, 4vw, 34px);
   display: grid;
   grid-template-rows: auto 1fr;
   background:
@@ -2124,15 +2148,15 @@ main[lang="en"] .hero h1 {
 }
 
 .signin-panel {
-  width: min(460px, 100%);
-  margin: 70px auto;
-  padding: 38px;
+  width: min(420px, 100%);
+  margin: clamp(28px, 8vh, 70px) auto;
+  padding: clamp(24px, 6vw, 34px);
   align-self: center;
 }
 
 .signin-panel h1 {
   margin: 13px 0;
-  font-size: 36px;
+  font-size: 24px;
   line-height: 1.25;
   letter-spacing: -0.055em;
 }
