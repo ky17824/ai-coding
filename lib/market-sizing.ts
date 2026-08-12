@@ -127,9 +127,13 @@ export function validateMarketSizingEvidence(evidence: MarketSizingEvidence) {
       }
     });
   };
-  if (evidence.tam.status === "estimated") {
-    requireSources(evidence.tam.bottomUp.customerCountSources, "TAM customer count", "tam");
-    requireSources(evidence.tam.bottomUp.annualRevenuePerCustomerSources, "TAM annual revenue per customer", "tam");
+  if (evidence.tam.bottomUp.customerCount || evidence.tam.bottomUp.annualRevenuePerCustomer || evidence.tam.topDownPaths.length > 0) {
+    if (evidence.tam.bottomUp.customerCount) {
+      requireSources(evidence.tam.bottomUp.customerCountSources, "TAM customer count", "tam");
+    }
+    if (evidence.tam.bottomUp.annualRevenuePerCustomer) {
+      requireSources(evidence.tam.bottomUp.annualRevenuePerCustomerSources, "TAM annual revenue per customer", "tam");
+    }
     evidence.tam.topDownPaths.forEach((path) => requireSources(path.sources, `TAM top-down path ${path.name}`, "tam"));
     const factUrls = evidence.tam.topDownPaths.map((path) =>
       path.sources.find((source) => source.kind === "fact" && source.url)?.url
@@ -146,19 +150,23 @@ export function validateMarketSizingEvidence(evidence: MarketSizingEvidence) {
       issues.tam.push("Each TAM top-down path requires an independent public fact URL.");
     }
   }
-  if (evidence.sam.status === "estimated") {
+  if (evidence.sam.filters.length > 0) {
     evidence.sam.filters.forEach((filter) => requireSources(filter.sources, `SAM filter ${filter.name}`, "sam"));
     const kinds = new Set(evidence.sam.filters.map((filter) => filter.kind));
     for (const kind of ["geography", "customer_fit", "channel", "regulatory"] as const) {
       if (!kinds.has(kind)) issues.sam.push(`SAM requires a ${kind} filter.`);
     }
   }
-  if (evidence.som.status === "estimated") {
+  if (evidence.som.sharePercent) {
     requireSources(evidence.som.shareSources, "SOM obtainable share", "som");
+  }
+  if (evidence.som.capacityRevenue) {
     requireSources(evidence.som.capacitySources, "SOM sales capacity", "som");
   }
-  if (evidence.beachhead.status === "estimated") {
+  if (evidence.beachhead.customerCount) {
     requireSources(evidence.beachhead.customerCountSources, "Beachhead customer count", "beachhead");
+  }
+  if (evidence.beachhead.annualRevenuePerCustomer) {
     requireSources(evidence.beachhead.annualRevenuePerCustomerSources, "Beachhead annual revenue per customer", "beachhead");
   }
   return issues;
@@ -310,9 +318,11 @@ export function calculateMarketSizing(
     source.kind === "fact" && source.url && isRecent(source, evidence.referenceYear)
   )?.url);
   const topDownIsCurrent = topDownFactUrls.length === 2 && topDownFactUrls.every(Boolean) && new Set(topDownFactUrls).size === 2;
-  const tamBlocked = evidence.tam.status === "insufficient_evidence" || sourceIssues.tam.length > 0 || !bottomUp || bottomUp.base <= 0 || !topDown || topDown.base <= 0 || !topDownIsCurrent || (variance !== null && variance > 100);
-  const tamRange = tamBlocked ? null : topDown ? average([bottomUp, topDown]) : bottomUp;
-  const samRange = !tamRange || evidence.sam.status === "insufficient_evidence" || sourceIssues.sam.length > 0 || evidence.sam.filters.length === 0
+  const tamBlocked = sourceIssues.tam.length > 0 || (bottomUp !== null && bottomUp.base <= 0) ||
+    !topDown || topDown.base <= 0 || !topDownIsCurrent ||
+    (variance !== null && variance > 100);
+  const tamRange = tamBlocked ? null : bottomUp ? average([bottomUp, topDown]) : topDown;
+  const samRange = !tamRange || sourceIssues.sam.length > 0 || evidence.sam.filters.length === 0
     ? null
     : multiply(tamRange, multiplyFactors(evidence.sam.filters));
   const demandSom = samRange && evidence.som.sharePercent
@@ -322,12 +332,12 @@ export function calculateMarketSizing(
         high: evidence.som.sharePercent.high / 100
       })
     : null;
-  const somRange = evidence.som.status === "insufficient_evidence" || sourceIssues.som.length > 0 || !demandSom || !evidence.som.capacityRevenue
+  const somRange = sourceIssues.som.length > 0 || !demandSom || !evidence.som.capacityRevenue
     ? null
     : minRange(demandSom, evidence.som.capacityRevenue);
   const beachheadCohesive = evidence.beachhead.cohesion.buysSimilarProducts &&
     evidence.beachhead.cohesion.similarSalesCycle && evidence.beachhead.cohesion.wordOfMouthPotential;
-  const beachheadRange = evidence.beachhead.status === "estimated" && sourceIssues.beachhead.length === 0 && beachheadCohesive &&
+  const beachheadRange = sourceIssues.beachhead.length === 0 && beachheadCohesive &&
       evidence.beachhead.customerCount && evidence.beachhead.annualRevenuePerCustomer && evidence.beachhead.expansionPath.length > 0
     ? multiply(evidence.beachhead.customerCount, evidence.beachhead.annualRevenuePerCustomer)
     : null;
@@ -371,7 +381,11 @@ export function calculateMarketSizing(
       status: tamRange ? "estimated" : "insufficient_evidence",
       range: tamRange,
       method: topDown ? "triangulated" : "bottom_up",
-      formula: evidence.tam.bottomUp.formula,
+      formula: bottomUp
+        ? evidence.tam.bottomUp.formula
+        : locale === "en"
+          ? "Triangulated range from two independent recent public market paths"
+          : "최근 공개자료의 독립적인 시장 경로 2개를 교차검증한 범위",
       calculationInputs: [
         ...(evidence.tam.bottomUp.customerCount ? [{ name: locale === "en" ? "Customer/end-user count" : "고객·최종사용자 수", ...evidence.tam.bottomUp.customerCount, unit: locale === "en" ? "count" : "개", sourceTitles: evidence.tam.bottomUp.customerCountSources.map((source) => source.title), sources: evidence.tam.bottomUp.customerCountSources }] : []),
         ...(evidence.tam.bottomUp.annualRevenuePerCustomer ? [{ name: locale === "en" ? "Annual revenue per customer" : "연간 고객당 매출", ...evidence.tam.bottomUp.annualRevenuePerCustomer, unit: `${evidence.currency}/${locale === "en" ? "year" : "년"}`, sourceTitles: evidence.tam.bottomUp.annualRevenuePerCustomerSources.map((source) => source.title), sources: evidence.tam.bottomUp.annualRevenuePerCustomerSources }] : []),

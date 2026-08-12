@@ -125,16 +125,32 @@ describe("market sizing", () => {
     });
   });
 
-  it("returns insufficient evidence instead of inventing a base estimate", () => {
+  it("uses two current independent top-down paths when founder bottom-up inputs are unavailable", () => {
     const input = evidence();
     input.tam.bottomUp.customerCount = null;
+    input.tam.bottomUp.annualRevenuePerCustomer = null;
+    input.tam.bottomUp.customerCountSources = [];
+    input.tam.bottomUp.annualRevenuePerCustomerSources = [];
 
     const result = calculateMarketSizing(input, "en");
 
-    expect(result[0]).toMatchObject({ status: "insufficient_evidence", range: null });
-    expect(result[1]).toMatchObject({ status: "insufficient_evidence", range: null });
-    expect(result[2]).toMatchObject({ status: "insufficient_evidence", range: null });
+    expect(result[0]).toMatchObject({ status: "estimated", range: range(850_000, 950_000, 1_100_000), confidence: "low" });
+    expect(result[0].evidenceGaps).toContain("Countable customers and annual revenue per customer");
+    expect(result[1]).toMatchObject({ status: "estimated", range: range(297_500, 380_000, 495_000) });
+    expect(result[2]).toMatchObject({ status: "estimated", range: range(2_975, 11_400, 24_750) });
     expect(result[3].status).toBe("estimated");
+  });
+
+  it("derives estimate status from validated evidence instead of model status flags", () => {
+    const input = evidence();
+    input.tam.status = "insufficient_evidence";
+    input.sam.status = "insufficient_evidence";
+    input.som.status = "insufficient_evidence";
+    input.beachhead.status = "insufficient_evidence";
+
+    expect(calculateMarketSizing(input, "en").map((entry) => entry.status)).toEqual([
+      "estimated", "estimated", "estimated", "estimated"
+    ]);
   });
 
   it("requires two top-down paths and all three Beachhead cohesion checks", () => {

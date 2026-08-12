@@ -38,7 +38,7 @@ interface Props {
 
 function MarketSizeCard({ entry, en }: { entry: GtmMarketSizingEntry; en: boolean }) {
   const title = entry.key === "beachhead"
-    ? en ? "Beachhead Market" : "교두보 시장(Beachhead Market)"
+    ? en ? "Beachhead Market" : "교두보 시장"
     : entry.label;
   const confidence = en
     ? `${entry.confidence} confidence`
@@ -49,9 +49,13 @@ function MarketSizeCard({ entry, en }: { entry: GtmMarketSizingEntry; en: boolea
   const sourceKind = (kind: string) => en
     ? kind.replaceAll("_", " ")
     : ({ fact: "공개 사실", founder_input: "창업자 입력", proxy_assumption: "대리 가정" }[kind] ?? kind);
+  const sourceKinds = new Set(entry.calculationInputs.flatMap((input) => input.sources.map((source) => source.kind)));
+  const estimateBasis = sourceKinds.has("founder_input")
+    ? en ? "Founder input + external evidence" : "입력·외부자료 추정"
+    : en ? "External evidence estimate" : "외부 자료 기반 추정";
   return (
     <article>
-      <div className="market-size-card__heading"><strong>{title}</strong><em data-status={entry.status}>{entry.status === "estimated" ? confidence : en ? "Needs evidence" : "근거 보완 필요"}</em></div>
+      <div className="market-size-card__heading"><strong>{title}</strong><em data-status={entry.status}>{entry.status === "estimated" ? `${estimateBasis} · ${confidence}` : en ? "Sizing paused · insufficient evidence" : "산정 보류 · 근거 부족"}</em></div>
       <span>{entry.estimate}</span>
       {entry.range && <small>{entry.range.referenceYear} · {entry.range.currency} · {method}</small>}
       <p>{entry.formula}</p>
@@ -276,7 +280,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
   return (
     <div className="app-container assistant-layout">
       <aside className="assistant-sidebar panel">
-        <span className="page-kicker">{en ? "AI GTM ASSISTANT" : "AI GTM 어시스턴트(AI GTM Assistant)"}</span>
+        <span className="page-kicker">{en ? "AI GTM ASSISTANT" : "AI GTM 어시스턴트"}</span>
         <h1>{en ? "Turn your assessment into an execution plan" : "진단 결과를 실행 계획으로"}</h1>
         <p>{en ? "Build a staged 30-, 60-, and 90-day plan from your 55 assessment answers and saved actions." : "55문항 결과와 저장된 액션만 사용해 단계별 실행계획(30·60·90 Day Plan)을 함께 만들어 드립니다."}</p>
         <div className="assistant-score"><strong>{assessment.score}</strong><span>{assessment.status}</span></div>
@@ -285,7 +289,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
         )}
         <h2>{en ? "Priority actions" : "진단 우선 액션"}</h2>
         <ol className="assistant-action-list">
-          {actions.map((action) => <li key={action.id}><span>{en ? `Priority ${action.priority === "P0" ? "0" : "1"}` : action.priority === "P0" ? "우선순위 0(Priority 0)" : "우선순위 1(Priority 1)"}</span>{action.title}</li>)}
+          {actions.map((action) => <li key={action.id}><span>{en ? `Priority ${action.priority === "P0" ? "0" : "1"}` : action.priority === "P0" ? "우선순위 0" : "우선순위 1"}</span>{action.title}</li>)}
         </ol>
       </aside>
 
@@ -296,8 +300,8 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
           </p>
         )}
         <div className="question-heading">
-          <span>{en ? "FOUNDER WORKSHOP" : "창업자 공동계획 회의(Founder Workshop)"}</span>
-          <h2>{en ? "Define what you are launching and your initial target market." : "글로벌 론칭 대상과 초기 목표시장(Target Market)을 정의해 주세요."}</h2>
+          <span>{en ? "FOUNDER WORKSHOP" : "창업자 공동계획 회의"}</span>
+          <h2>{en ? "Define what you are launching and your initial target market." : "글로벌 론칭 대상과 초기 목표시장을 정의해 주세요."}</h2>
           <p>{en ? "Tell us what you sell, who buys it, and why. AI will research the market, market size, and competitors, then use the findings in your plan." : "무엇을 누구에게 왜 판매할지 먼저 정의하면 AI가 시장동향·규모·경쟁사를 조사하고 실행 계획에 반영합니다."}</p>
         </div>
         <div className="assistant-context panel">
@@ -314,10 +318,10 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
           <label>{en ? "Annual purchase frequency or term" : "연간 구매 빈도·계약기간"}<input value={context.annualPurchaseFrequency} onChange={(event) => setContext({ ...context, annualPurchaseFrequency: event.target.value })} placeholder={en ? "e.g., 2 purchases/year or 12-month contract" : "예: 연 2회 또는 12개월 계약"} /></label>
           <label>{en ? "Initially reachable customers" : "초기에 직접 접근 가능한 고객 수"}<input value={context.initialReachableCustomers} onChange={(event) => setContext({ ...context, initialReachableCustomers: event.target.value })} placeholder={en ? "e.g., 30 qualified retailers through one partner" : "예: 파트너를 통해 접촉 가능한 유통사 30곳"} /></label>
           <label>{en ? "Three-year sales capacity" : "3년 판매·공급 가능 범위"}<input value={context.threeYearSalesCapacity} onChange={(event) => setContext({ ...context, threeYearSalesCapacity: event.target.value })} placeholder={en ? "e.g., US$500K or 5,000 units" : "예: US$500K 또는 5,000개"} /></label>
-          <label>{en ? "Target country" : "목표국가(Target Country)"}<input value={context.targetCountry} onChange={(event) => setContext({ ...context, targetCountry: event.target.value })} placeholder={en ? "e.g., Japan" : "예: 일본"} /></label>
+          <label>{en ? "Target country" : "목표국가"}<input value={context.targetCountry} onChange={(event) => setContext({ ...context, targetCountry: event.target.value })} placeholder={en ? "e.g., Japan" : "예: 일본"} /></label>
           <label>{en ? "Target customer" : "목표 고객"}<input value={context.targetCustomer} onChange={(event) => setContext({ ...context, targetCustomer: event.target.value })} placeholder={en ? "e.g., Mid-sized manufacturers in Tokyo" : "예: 도쿄 소재 중견 제조사"} /></label>
-          <label className="assistant-context__wide">{en ? "Current validation evidence" : "현재 검증 근거"}<textarea rows={2} value={context.validationEvidence} onChange={(event) => setContext({ ...context, validationEvidence: event.target.value })} placeholder={en ? "List only confirmed evidence, such as interviews, paying customers, or market tests." : "인터뷰, 유료 고객, 실증시험(Market Testing) 등 현재 확인된 사실만 적어 주세요."} /></label>
-          <label>{en ? "Available resources" : "가용 자원(Resource)"}<input value={context.resources} onChange={(event) => setContext({ ...context, resources: event.target.value })} placeholder={en ? "e.g., Founder, 20 hours/week, $2,000/month" : "예: 대표 1명, 월 300만 원"} /></label>
+          <label className="assistant-context__wide">{en ? "Current validation evidence" : "현재 검증 근거"}<textarea rows={2} value={context.validationEvidence} onChange={(event) => setContext({ ...context, validationEvidence: event.target.value })} placeholder={en ? "List only confirmed evidence, such as interviews, paying customers, or market tests." : "인터뷰, 유료 고객, 시장 실증시험 등 현재 확인된 사실만 적어 주세요."} /></label>
+          <label>{en ? "Available resources" : "가용 자원"}<input value={context.resources} onChange={(event) => setContext({ ...context, resources: event.target.value })} placeholder={en ? "e.g., Founder, 20 hours/week, $2,000/month" : "예: 대표 1명, 월 300만 원"} /></label>
           <label>{en ? "Target date" : "목표 기한"}<input type="date" value={context.deadline} onChange={(event) => setContext({ ...context, deadline: event.target.value })} /></label>
           <label className="assistant-context__wide">{en ? "Constraints" : "제약"}<textarea rows={2} value={context.constraints} onChange={(event) => setContext({ ...context, constraints: event.target.value })} placeholder={en ? "e.g., We need customer validation before forming a local entity." : "예: 현지 법인을 세우기 전에 고객 검증이 필요합니다"} /></label>
           <button className="button button--primary" type="button" onClick={runResearch} disabled={busy}>
@@ -397,7 +401,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
             <div className="assistant-plan-list">
               {items.map((item, index) => (
                 <article className="assistant-plan-item panel" key={item.id ?? `${item.title}-${index}`}>
-                  <header><span className={`priority priority--${item.priority}`}>{en ? `Priority ${item.priority === "P0" ? "0" : "1"}` : item.priority === "P0" ? "우선순위 0(Priority 0)" : "우선순위 1(Priority 1)"}</span><strong>{item.horizon} {en ? "days" : "일"}</strong>{item.expertRequired && <Link className="button button--ghost button--small" href={localizedPath(`/services?tag=${encodeURIComponent(item.serviceTag)}`, locale)}>{en ? "Find an expert →" : "전문가 연결 →"}</Link>}</header>
+                  <header><span className={`priority priority--${item.priority}`}>{en ? `Priority ${item.priority === "P0" ? "0" : "1"}` : item.priority === "P0" ? "우선순위 0" : "우선순위 1"}</span><strong>{item.horizon} {en ? "days" : "일"}</strong>{item.expertRequired && <Link className="button button--ghost button--small" href={localizedPath(`/services?tag=${encodeURIComponent(item.serviceTag)}`, locale)}>{en ? "Find an expert →" : "전문가 연결 →"}</Link>}</header>
                   <h3>{item.title}</h3>
                   <p>{item.rationale}</p>
                   <div className="assistant-plan-fields">

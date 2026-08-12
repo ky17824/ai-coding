@@ -28,27 +28,42 @@ function pathKey(path: Path) {
   return path.map(String).join(".");
 }
 
-function isTranslatable(path: Path, value: string, sourceLocale: Locale) {
+function matchesTargetLocale(value: string, targetLocale: Locale) {
+  return targetLocale === "ko" ? /[가-힣]/.test(value) : !/[가-힣]/.test(value);
+}
+
+function hasEnglishProse(value: string) {
+  const words = value.match(/\b[A-Za-z]{2,}\b/g) ?? [];
+  return /^(?:none|unknown|no information|not available)$/i.test(value.trim()) ||
+    (words.length >= 2 && !words.every((word) => /^[A-Z]{2,5}$/.test(word)));
+}
+
+function isTranslatable(path: Path, value: string, sourceLocale: Locale, targetLocale?: Locale) {
   const last = String(path.at(-1) ?? "");
   const full = pathKey(path);
   if (!value.trim() || NON_TRANSLATABLE_KEYS.has(last)) return false;
   if (/^https?:\/\//i.test(value) || /^\d{4}-\d{2}-\d{2}/.test(value)) return false;
   if (/\.competitors\.\d+\.name$/.test(`.${full}`) || /\.sources\.\d+\.title$/.test(`.${full}`)) return false;
-  if (/founderContext\.(offeringName|targetCountry)$/.test(full)) return false;
+  if (/(?:founderContext|marketResearch)\.offeringName$/.test(full)) return false;
+  if (targetLocale === "ko") {
+    if (/(?:founderContext|marketResearch)\.targetCountry$/.test(full)) return /[A-Za-z]{3}/.test(value);
+    return hasEnglishProse(value);
+  }
+  if (targetLocale === "en") return /[가-힣]/.test(value);
   return sourceLocale === "ko" ? /[가-힣]/.test(value) : /[A-Za-z]{3}/.test(value);
 }
 
-function collectStrings(value: unknown, sourceLocale: Locale, path: Path = [], result: { path: Path; text: string }[] = []) {
+function collectStrings(value: unknown, sourceLocale: Locale, targetLocale?: Locale, path: Path = [], result: { path: Path; text: string }[] = []) {
   if (typeof value === "string") {
-    if (isTranslatable(path, value, sourceLocale)) result.push({ path, text: value });
+    if (isTranslatable(path, value, sourceLocale, targetLocale)) result.push({ path, text: value });
     return result;
   }
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => collectStrings(entry, sourceLocale, [...path, index], result));
+    value.forEach((entry, index) => collectStrings(entry, sourceLocale, targetLocale, [...path, index], result));
     return result;
   }
   if (value && typeof value === "object") {
-    Object.entries(value).forEach(([key, entry]) => collectStrings(entry, sourceLocale, [...path, key], result));
+    Object.entries(value).forEach(([key, entry]) => collectStrings(entry, sourceLocale, targetLocale, [...path, key], result));
   }
   return result;
 }
@@ -85,21 +100,13 @@ export async function localizeStoredGtmPlan(
       summary: document.summary,
       assumptions: document.assumptions,
       items: document.items
-    }, plan.contentLocale ?? "ko"),
+    }, plan.contentLocale ?? "ko", targetLocale),
     ...collectStrings({
       founderContext: document.founderContext,
       recentMessages: document.recentMessages
-    }, plan.founderContextLocale ?? plan.contentLocale ?? "ko"),
-    ...collectStrings({ marketResearch: document.marketResearch }, plan.marketResearchLocale ?? plan.contentLocale ?? "ko")
-  ].filter((entry) => {
-    const key = pathKey(entry.path);
-    const source = key.startsWith("founderContext") || key.startsWith("recentMessages")
-      ? plan.founderContextLocale ?? plan.contentLocale ?? "ko"
-      : key.startsWith("marketResearch")
-        ? plan.marketResearchLocale ?? plan.contentLocale ?? "ko"
-        : plan.contentLocale ?? "ko";
-    return source !== targetLocale;
-  });
+    }, plan.founderContextLocale ?? plan.contentLocale ?? "ko", targetLocale),
+    ...collectStrings({ marketResearch: document.marketResearch }, plan.marketResearchLocale ?? plan.contentLocale ?? "ko", targetLocale)
+  ];
   if (strings.length === 0) return plan;
 
   const fields = strings.map((entry) => ({
@@ -116,7 +123,9 @@ export async function localizeStoredGtmPlan(
   const cache = new Map((cached ?? []).map((entry) => [entry.field_name, entry]));
   const missing = fields.filter((field) => {
     const entry = cache.get(field.key);
-    return !entry?.is_official && entry?.source_hash !== field.hash;
+    if (entry?.is_official) return false;
+    return !entry || entry.source_hash !== field.hash ||
+      !matchesTargetLocale(entry.translated_text, targetLocale);
   });
   let failed = false;
 
@@ -138,7 +147,7 @@ export async function localizeStoredGtmPlan(
         const translated = new Map(response.output_parsed?.translations.map((entry) => [entry.key, entry.text]) ?? []);
         const rows = missing.flatMap((field) => {
           const text = translated.get(field.key);
-          return text ? [{
+          return text && matchesTargetLocale(text, targetLocale) ? [{
             organization_id: organizationId,
             entity_type: "gtm_plan",
             entity_id: plan.id,
@@ -167,7 +176,8 @@ export async function localizeStoredGtmPlan(
   const localized = structuredClone(document);
   fields.forEach((field) => {
     const entry = cache.get(field.key);
-    if (entry?.is_official || entry?.source_hash === field.hash) {
+    if (entry?.is_official || (entry?.source_hash === field.hash &&
+        matchesTargetLocale(entry.translated_text, targetLocale))) {
       setAtPath(localized, field.path, entry.translated_text);
     }
   });
