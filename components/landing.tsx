@@ -1,8 +1,8 @@
-import { Fragment, type CSSProperties } from "react";
+import { Fragment } from "react";
 import Link from "next/link";
 import { BackgroundPaths } from "@/components/background-paths";
-import { CountUp } from "@/components/count-up";
 import { ArrowIcon, LockIcon } from "@/components/icons";
+import { ReadinessPreview } from "@/components/readiness-preview";
 import { SiteHeader } from "@/components/site-header";
 import { MobileAutoScroll } from "@/components/mobile-autoscroll";
 import { localizedPath, t, type Locale } from "@/lib/i18n";
@@ -53,30 +53,11 @@ export function Landing({ locale }: { locale: Locale }) {
                 <small>{m.preview.windowTitle}</small>
               </div>
               <div className="preview-window__body">
-                <div className="preview-title">
-                  <span>
-                    <small>{m.preview.scoreEyebrow}</small>
-                    <strong>{m.preview.scoreLabel}</strong>
-                  </span>
-                  <span className="preview-score">
-                    <CountUp to={68} />%
-                  </span>
-                </div>
-                <div className="chart">
-                  {[64, 72, 56, 42, 78, 61].map((value, index) => (
-                    <div className="chart__column" key={value}>
-                      <span
-                        style={
-                          {
-                            height: `${value}%`,
-                            "--delay": `${index * 0.12}s`
-                          } as CSSProperties
-                        }
-                      />
-                      <small>{m.preview.chartLabels[index]}</small>
-                    </div>
-                  ))}
-                </div>
+                <ReadinessPreview
+                  scoreEyebrow={m.preview.scoreEyebrow}
+                  scoreLabel={m.preview.scoreLabel}
+                  chartLabels={m.preview.chartLabels}
+                />
                 <div className="preview-action">
                   <span className="action-number">01</span>
                   <span>

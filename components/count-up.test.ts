@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { countAtTime } from "@/components/count-up";
+import { READINESS_STAGES } from "@/components/readiness-preview";
 
 describe("countAtTime", () => {
-  it("counts up once, then follows the chart's 3.6-second sway", () => {
-    expect(countAtTime(68, 0, 1500)).toBe(0);
-    expect(countAtTime(68, 1500, 1500)).toBe(68);
-    expect(countAtTime(68, 3300, 1500)).toBe(63);
-    expect(countAtTime(68, 5100, 1500)).toBe(68);
+  it("eases both upward and downward score transitions to their target", () => {
+    expect(READINESS_STAGES.map(({ score }) => score)).toEqual([62, 65, 78, 84]);
+    expect(countAtTime(0, 62, 0, 1200)).toBe(0);
+    expect(countAtTime(0, 62, 600, 1200)).toBe(54);
+    expect(countAtTime(0, 62, 1200, 1200)).toBe(62);
+    expect(countAtTime(84, 62, 600, 1200)).toBe(65);
+    expect(countAtTime(84, 62, 1200, 1200)).toBe(62);
   });
 });
