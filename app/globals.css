@@ -3286,6 +3286,12 @@ main[lang="en"] .hero h1 {
   color: var(--muted);
 }
 
+.assistant-research-grid li > span,
+.assistant-research-grid li > small {
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .market-size-grid p,
 .market-definition {
   color: var(--muted);
