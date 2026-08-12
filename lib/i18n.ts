@@ -155,7 +155,7 @@ const en: typeof ko = {
     eyebrow: "Global GTM Journey",
     headline: [
       { em: "Go Global", after: "" },
-      { em: "Prepared", after: " to" },
+      { em: "Ready", after: " to" },
       { em: "Succeed", after: "" }
     ],
     body:
