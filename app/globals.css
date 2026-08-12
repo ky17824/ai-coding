@@ -298,7 +298,7 @@ svg {
 }
 
 main[lang="en"] .hero h1 {
-  font-size: clamp(33px, calc(3.6vw - 1px), 49px);
+  font-size: clamp(31px, calc(3.6vw - 3px), 47px);
 }
 
 .hero h1 span {
