@@ -119,7 +119,7 @@ const ko = {
   },
   ctaBand: {
     eyebrow: "준비된 글로벌 진출의 시작",
-    heading: "우리 회사의 현재 위치를 확인해 보세요.",
+    heading: "글로벌 진출 준비도를 확인해 보세요.",
     button: "준비도 진단 시작"
   }
 };
@@ -222,7 +222,7 @@ const en: typeof ko = {
   },
   ctaBand: {
     eyebrow: "Start Global Expansion Prepared",
-    heading: "Find Out Where Your Company Stands Today.",
+    heading: "Check Your Global Expansion Readiness.",
     button: "Start the Assessment"
   }
 };

@@ -1035,6 +1035,10 @@ main[lang="en"] .hero h1 {
   margin-bottom: 32px;
 }
 
+.section--steps .section-heading h2 {
+  font-size: clamp(11.33px, 1.333vw, 17.33px);
+}
+
 .section-heading {
   margin-bottom: 48px;
 }
@@ -1193,9 +1197,9 @@ main[lang="en"] .hero h1 {
 
 .cta-band {
   width: min(1180px, calc(100% - 48px));
-  min-height: 160px;
+  min-height: 80px;
   margin: 18px auto 56px;
-  padding: 32px 48px;
+  padding: 10px 32px;
   border-radius: 28px;
   display: flex;
   align-items: center;
@@ -1211,8 +1215,8 @@ main[lang="en"] .hero h1 {
 }
 
 .cta-band h2 {
-  margin: 10px 0 0;
-  font-size: 32px;
+  margin: 4px 0 0;
+  font-size: 30px;
 }
 
 /* App surfaces */
@@ -3580,7 +3584,7 @@ h2.plan-summary {
   }
 
   .cta-band {
-    padding: 36px 28px;
+    padding: 18px 28px;
   }
 }
 
