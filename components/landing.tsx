@@ -2,7 +2,7 @@ import { Fragment, type CSSProperties } from "react";
 import Link from "next/link";
 import { BackgroundPaths } from "@/components/background-paths";
 import { CountUp } from "@/components/count-up";
-import { ArrowIcon, CheckIcon, LockIcon } from "@/components/icons";
+import { ArrowIcon, LockIcon } from "@/components/icons";
 import { SiteHeader } from "@/components/site-header";
 import { MobileAutoScroll } from "@/components/mobile-autoscroll";
 import { localizedPath, t, type Locale } from "@/lib/i18n";
@@ -86,20 +86,6 @@ export function Landing({ locale }: { locale: Locale }) {
                   <span className="pill">{m.preview.priority}</span>
                 </div>
               </div>
-            </div>
-            <div className="floating-card floating-card--top">
-              <CheckIcon />
-              <span>
-                <strong>{m.preview.evidenceTitle}</strong>
-                <small>{m.preview.evidenceNote}</small>
-              </span>
-            </div>
-            <div className="floating-card floating-card--bottom">
-              <span className="avatar">{m.preview.expertAvatar}</span>
-              <span>
-                <strong>{m.preview.expertTitle}</strong>
-                <small>{m.preview.expertNote}</small>
-              </span>
             </div>
           </div>
         </section>

@@ -291,7 +291,7 @@ svg {
 
 .hero h1 {
   margin: 22px 0 24px;
-  font-size: clamp(34px, 3.6vw, 50px);
+  font-size: clamp(32px, calc(3.6vw - 2px), 48px);
   line-height: 1.16;
   letter-spacing: -0.05em;
   word-break: keep-all;
@@ -393,8 +393,7 @@ main[lang="en"] .hero h1 {
 }
 
 .landing-shell .preview-window__bar small,
-.landing-shell .preview-action small,
-.landing-shell .floating-card small {
+.landing-shell .preview-action small {
   color: rgba(232, 244, 238, 0.58);
 }
 
@@ -406,14 +405,6 @@ main[lang="en"] .hero h1 {
 
 .landing-shell .chart__column small {
   color: rgba(232, 244, 238, 0.66);
-}
-
-.landing-shell .floating-card {
-  border-color: rgba(191, 243, 209, 0.15);
-  background: rgba(8, 28, 23, 0.9);
-  color: #f5fbf8;
-  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.32);
-  backdrop-filter: blur(14px);
 }
 
 .text-link {
@@ -966,51 +957,6 @@ main[lang="en"] .hero h1 {
 .pill--consulting {
   background: #fff0dc;
   color: #935915;
-}
-
-.floating-card {
-  position: absolute;
-  padding: 13px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid rgba(16, 34, 27, 0.08);
-  border-radius: 14px;
-  background: var(--white);
-  box-shadow: 0 14px 30px rgba(16, 34, 27, 0.11);
-}
-
-.floating-card > svg {
-  width: 32px;
-  height: 32px;
-  padding: 7px;
-  border-radius: 10px;
-  background: var(--mint);
-  color: var(--green);
-}
-
-.floating-card > span {
-  display: grid;
-  gap: 3px;
-}
-
-.floating-card strong {
-  font-size: 12px;
-}
-
-.floating-card small {
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.floating-card--top {
-  top: 18px;
-  right: -12px;
-}
-
-.floating-card--bottom {
-  bottom: 18px;
-  left: -18px;
 }
 
 .avatar {
@@ -3606,7 +3552,7 @@ h2.plan-summary {
   }
 
   .hero h1 {
-    font-size: 34px;
+    font-size: 32px;
   }
 
   .hero__actions {
@@ -3619,14 +3565,6 @@ h2.plan-summary {
 
   .preview-window__body {
     padding: 22px;
-  }
-
-  .floating-card--top {
-    right: -8px;
-  }
-
-  .floating-card--bottom {
-    left: -8px;
   }
 
   .chart {

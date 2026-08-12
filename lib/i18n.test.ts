@@ -35,8 +35,8 @@ describe("i18n dictionaries", () => {
   });
 
   it("빈 문자열 값이 없다", () => {
-    // hero.headline의 마지막 줄 after는 의도적으로 비어 있다.
-    const allowedEmpty = new Set(["hero.headline.2.after"]);
+    // hero.headline의 첫째·마지막 줄 after는 의도적으로 비어 있다.
+    const allowedEmpty = new Set(["hero.headline.0.after", "hero.headline.2.after"]);
     for (const locale of LOCALES) {
       const empty = Object.entries(flat[locale])
         .filter(([key, value]) => value.trim() === "" && !allowedEmpty.has(key))

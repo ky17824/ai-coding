@@ -57,7 +57,7 @@ const ko = {
     // 각 줄은 <span><em>{em}</em>{after}</span> 로 렌더된다. 3줄 stagger 애니메이션이
     // 이 구조에 의존하므로 줄 수를 바꾸지 말 것.
     headline: [
-      { em: "글로벌 진출", after: "," },
+      { em: "글로벌 진출", after: "" },
       { em: "준비", after: "된 만큼" },
       { em: "성공", after: "할 수 있습니다" }
     ],
@@ -75,12 +75,7 @@ const ko = {
     chartLabels: ["시장", "리더십", "선정", "현지화(Localization)", "조직", "GTM"],
     actionEyebrow: "가장 먼저 할 일",
     actionLabel: "보안·법규 준수(Compliance) 차이 분석(Gap Analysis)",
-    priority: "우선순위 0(Priority 0)",
-    evidenceTitle: "근거 기반 진단",
-    evidenceNote: "완료하려면 증빙이 필요합니다",
-    expertAvatar: "김",
-    expertTitle: "검증된 전문가",
-    expertNote: "승인된 멘토·컨설턴트만"
+    priority: "우선순위 0(Priority 0)"
   },
   trust: {
     ariaLabel: "서비스 원칙",
@@ -184,12 +179,7 @@ const en: typeof ko = {
     ],
     actionEyebrow: "Do This First",
     actionLabel: "Security & Compliance Gap Analysis",
-    priority: "Priority 0",
-    evidenceTitle: "Evidence-Based",
-    evidenceNote: "Completion Requires Proof",
-    expertAvatar: "K",
-    expertTitle: "Vetted Experts",
-    expertNote: "Approved Mentors & Consultants Only"
+    priority: "Priority 0"
   },
   trust: {
     ariaLabel: "Service principles",
