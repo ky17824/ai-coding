@@ -3270,10 +3270,23 @@ main[lang="en"] .hero h1 {
   color: #8c5a16;
 }
 
-.market-size-grid strong {
+.market-definition > strong,
+.assistant-research-grid h3 {
+  display: block;
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.market-definition > strong {
+  margin-bottom: 10px;
+}
+
+.market-size-card__heading > strong {
   color: var(--green);
   font-family: var(--font-sans);
-  font-size: 24px;
+  font-size: 20px;
+  line-height: 1.3;
 }
 
 .market-size-grid span {
