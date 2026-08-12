@@ -1,49 +1,49 @@
-# Sign-in design QA
+# Comprehensive market report CTA design QA
 
-- Source visual truth: `/private/var/folders/1_/p9pmlbcj5mxg2k5fpf61nd040000gn/T/codex-clipboard-e15d501a-9227-4aa2-9812-0e3ba5a78bb6.png` (988 × 1452) and `/private/var/folders/1_/p9pmlbcj5mxg2k5fpf61nd040000gn/T/codex-clipboard-aab99ec4-8409-479a-b821-475ec0d1a6fb.png` (694 × 160)
-- Implementation screenshots: `/private/tmp/global-gtm-signin-desktop.png` (944 × 1464) and `/private/tmp/global-gtm-signin-mobile.png` (320 × 900)
-- Combined comparison: `/private/tmp/global-gtm-signin-comparison.png` (1888 × 1564)
-- CSS viewports: 944 × 1464 desktop and 320 × 900 mobile; browser density 1×
-- State: Korean sign-in page with Google authentication enabled
+- Source visual truth: `/var/folders/1_/p9pmlbcj5mxg2k5fpf61nd040000gn/T/codex-clipboard-7d9fb44c-b44a-414c-b696-0504d03bbede.png` (1618 × 370)
+- Implementation screenshot: `/private/tmp/report-cta-white-3d-desktop.png` (794 × 162)
+- Combined comparison: `/private/tmp/report-cta-design-qa-comparison.jpg` (1658 × 245)
+- Viewport: 1290px desktop and 390 × 844 mobile; desktop browser density 2×, implementation crop normalized to CSS size for comparison
+- State: authenticated Korean AI GTM assistant with generated research and both report actions available
 
 ## Full-view comparison evidence
 
-- The card is centered at both viewports with 0px center deviation.
-- Desktop card width is 420px. At 320px, the card is 288px wide with 16px safe space on both sides and no horizontal overflow.
-- The requested heading is present at 24px, exactly two-thirds of the former 36px size.
-- The Google and password sign-in buttons both retain the standardized 52px height and shared typography.
+- The former dark-green-on-dark-green actions are replaced by high-contrast white buttons with dark-green labels.
+- Both actions render at the same 306px desktop width and standardized 52px height; the CTA copy, padding, radius, and green container remain unchanged.
+- At 390px both buttons render at the same 249px width with no horizontal overflow (`scrollWidth 375 < innerWidth 390`).
 
-## Focused comparison evidence
+## Focused region comparison evidence
 
-- The Google button uses a white surface, light gray boundary, dark label, and the official multicolor Google G asset.
-- The logo loads successfully at 18 × 18px. Input fields accept text, both sign-in buttons remain enabled, and the browser reports no console errors.
+- The CTA-only crop shows the white surface, light gray border, 4px lower edge, and soft green shadow clearly against the dark container.
+- Both links retain their expected destinations; the report view keeps `target="_blank"` and the HTML action remains a direct download link.
+- Browser console check returned no errors.
 
 ## Required fidelity surfaces
 
-- Fonts and typography: existing Pretendard system and standardized button weight preserved; heading reduced to 24px without clipping.
-- Spacing and layout rhythm: narrower centered card, responsive page padding, and responsive card padding prevent small-screen clipping.
-- Colors and visual tokens: existing green primary login button retained; Google button follows the supplied white/gray reference.
-- Image quality and asset fidelity: official Google-hosted multicolor G source is stored locally as a sharp SVG asset.
-- Copy and content: heading reads `글로벌 진출 여정을 시작하세요`; existing authentication copy and behavior are unchanged.
+- Fonts and typography: existing Pretendard family, weight, size, line height, wrapping, and labels are unchanged.
+- Spacing and layout rhythm: existing CTA alignment and 24px desktop spacing are preserved; actions are normalized to one 320px column.
+- Colors and visual tokens: buttons use `--white` and `--green-dark` with a neutral light edge; contrast is visibly distinct from the container.
+- Image quality and asset fidelity: the component contains no raster, logo, illustration, or custom icon assets; none were introduced.
+- Copy and content: `종합 시장보고서 보기 ↗` and `HTML 다운로드` are unchanged.
 
 ## Findings
 
 - No actionable P0, P1, or P2 differences remain.
-- P3: the Google button keeps the product's standardized subtle depth instead of becoming a completely flat Google control; this is intentional to honor the existing button rule.
+- No P3 follow-up is required for the requested scope.
 
 ## Comparison history
 
-- Initial implementation used an external Google image URL; browser verification showed the logo did not load.
-- Replaced it with the official Google color G stored locally. Post-fix capture confirms successful loading and matching placement.
-- Added responsive width and padding after the small-form-factor requirement. Post-fix 320px capture confirms 16px symmetric margins and no overflow.
+- Initial state: both buttons shared the container's dark green surface and were difficult to distinguish.
+- Fix: applied a CTA-scoped white 3D surface, dark-green label, equal width, and preserved common button interaction geometry.
+- Post-fix evidence: desktop comparison shows clear contrast; 390px verification shows equal sizing and no overflow.
 
 ## Implementation checklist
 
-- [x] Requested Korean heading and 24px size
-- [x] White Google button with official logo
-- [x] Existing primary login button standard preserved
-- [x] Narrower centered card
-- [x] 320px no-clipping verification
-- [x] Input and console checks
+- [x] White contrasting button surfaces
+- [x] Existing 3D hover/active behavior preserved
+- [x] Common 52px height and 12px radius preserved
+- [x] Equal action widths
+- [x] Desktop and 390px mobile verification
+- [x] Link destinations and console check
 
 final result: passed
