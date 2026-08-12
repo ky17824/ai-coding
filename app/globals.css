@@ -3500,9 +3500,28 @@ main[lang="en"] .hero h1 {
   color: #bcebd2;
 }
 
-.research-report-cta .button--ghost {
+.research-report-cta .assistant-plan-actions {
+  width: min(320px, 100%);
+  display: grid;
+}
+
+.research-report-cta .button {
+  width: 100%;
+  border-color: #d9e1dd;
+  background: var(--white);
+  color: var(--green-dark);
+  box-shadow: 0 4px 0 #c3cec8, 0 10px 22px rgba(6, 39, 28, 0.28);
+}
+
+.research-report-cta .button:hover:not(:disabled) {
   border-color: #fff;
-  color: #fff;
+  background: #f7faf8;
+  color: var(--green-dark);
+  box-shadow: 0 6px 0 #c3cec8, 0 14px 26px rgba(6, 39, 28, 0.32);
+}
+
+.research-report-cta .button:active:not(:disabled) {
+  box-shadow: 0 1px 0 #c3cec8, 0 5px 12px rgba(6, 39, 28, 0.24);
 }
 
 .assistant-plan-actions {
