@@ -59,7 +59,7 @@ export function Landing({ locale }: { locale: Locale }) {
                     <strong>{m.preview.scoreLabel}</strong>
                   </span>
                   <span className="preview-score">
-                    <CountUp to={68} />
+                    <CountUp to={68} />%
                   </span>
                 </div>
                 <div className="chart">
