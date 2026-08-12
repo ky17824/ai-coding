@@ -449,23 +449,25 @@ export function calculateMarketSizing(
 }
 
 function legacyEntry(value: Record<string, unknown>, index: number): GtmMarketSizingEntry {
+  const withoutLam = (text: unknown) => String(text ?? "").replace(/\bLAM\b/g, "Beachhead Market");
   const legacyLabel = String(value.label ?? "");
   const key = legacyLabel === "LAM" ? "beachhead" : (["TAM", "SAM", "SOM"].includes(legacyLabel)
     ? legacyLabel.toLowerCase() : ["tam", "sam", "som", "beachhead"][index]) as GtmMarketSizingEntry["key"];
   const label = key === "beachhead" ? "Beachhead Market" : key.toUpperCase() as "TAM" | "SAM" | "SOM";
-  const estimateValue = String(value.estimate ?? "");
+  const estimateValue = withoutLam(value.estimate);
+  const method = withoutLam(value.method ?? "legacy");
   return {
     key,
     label,
     status: /추정 불가|insufficient/i.test(estimateValue) ? "insufficient_evidence" : "estimated",
     estimate: estimateValue,
     range: null,
-    method: String(value.method ?? "legacy"),
-    formula: String(value.method ?? ""),
+    method,
+    formula: method,
     calculationInputs: [],
-    assumptions: Array.isArray(value.assumptions) ? value.assumptions.map(String) : [],
+    assumptions: Array.isArray(value.assumptions) ? value.assumptions.map(withoutLam) : [],
     sources: Array.isArray(value.sourceTitles) ? value.sourceTitles.map((title) => ({
-      title: String(title),
+      title: withoutLam(title),
       url: null,
       publisher: "",
       publishedAt: null,

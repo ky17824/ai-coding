@@ -216,8 +216,8 @@ describe("market sizing", () => {
       marketSizing: [{
         label: "LAM",
         estimate: "$20K",
-        method: "Pilot scope",
-        assumptions: [],
+        method: "LAM = reachable outlets × annual revenue",
+        assumptions: ["LAM uses the pilot scope"],
         sourceTitles: []
       }],
       competitors: [],
@@ -231,7 +231,9 @@ describe("market sizing", () => {
     expect(normalized?.marketSizing[0]).toMatchObject({
       key: "beachhead",
       label: "Beachhead Market",
-      estimate: "$20K"
+      estimate: "$20K",
+      formula: "Beachhead Market = reachable outlets × annual revenue",
+      assumptions: ["Beachhead Market uses the pilot scope"]
     });
   });
 });
