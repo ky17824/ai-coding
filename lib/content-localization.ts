@@ -21,7 +21,8 @@ const NON_TRANSLATABLE_KEYS = new Set([
   "id", "url", "checkedAt", "generatedAt", "dueDate", "deadline",
   "kind", "scope", "status", "priority", "serviceTag", "role",
   "questionKey", "inputType", "label", "offeringType", "generatedBy",
-  "key", "methodologyVersion", "currency", "confidence", "method", "researchContextSignature"
+  "key", "methodologyVersion", "researchMethodologyVersion", "currency", "confidence", "method",
+  "category", "marketPresence", "sourceType", "publisher", "freshness", "researchContextSignature"
 ]);
 
 function pathKey(path: Path) {
@@ -42,6 +43,7 @@ function isTranslatable(path: Path, value: string, sourceLocale: Locale, targetL
   const last = String(path.at(-1) ?? "");
   const full = pathKey(path);
   if (!value.trim() || NON_TRANSLATABLE_KEYS.has(last)) return false;
+  if (/researchCoverage\.(?:lanes|coverageGaps)\./.test(full)) return false;
   if (/^https?:\/\//i.test(value) || /^\d{4}-\d{2}-\d{2}/.test(value)) return false;
   if (/\.competitors\.\d+\.name$/.test(`.${full}`) || /\.sources\.\d+\.title$/.test(`.${full}`)) return false;
   if (/(?:founderContext|marketResearch)\.offeringName$/.test(full)) return false;

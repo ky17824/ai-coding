@@ -7,8 +7,10 @@ import { marketResearchContextSignature } from "@/lib/market-sizing";
 import type {
   GtmAssistantQuestion,
   GtmFounderContext,
+  GtmMarketCompetitor,
   GtmMarketResearch,
   GtmMarketSizingEntry,
+  GtmMarketTrend,
   GtmPlanDraft,
   GtmPlanItem,
   StoredGtmPlan
@@ -34,6 +36,15 @@ interface Props {
   }[];
   initialPlan: StoredGtmPlan | null;
   initialQuestion: GtmAssistantQuestion | null;
+}
+
+function safeExternalUrl(value: string | null) {
+  try {
+    const url = new URL(value ?? "");
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 function MarketSizeCard({ entry, en }: { entry: GtmMarketSizingEntry; en: boolean }) {
@@ -71,10 +82,56 @@ function MarketSizeCard({ entry, en }: { entry: GtmMarketSizingEntry; en: boolea
           entry.cohesion.wordOfMouthPotential && (en ? "word of mouth" : "입소문 가능성")
         ].filter(Boolean).join(" · ") || (en ? "Not yet verified" : "아직 확인되지 않음")}</p>}
         {entry.expansionPath.length > 0 && <p>{en ? "Expansion path" : "인접시장 확장 경로"}: {entry.expansionPath.join(" → ")}</p>}
-        {entry.sources.length > 0 && <><b>{en ? "Sources" : "근거 자료"}</b><ul>{entry.sources.map((source) => <li key={`${source.title}-${source.url ?? source.kind}`}>{source.url ? <a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a> : source.title}<small>{source.publisher}{source.publishedAt ? ` · ${source.publishedAt}` : ""}{source.checkedAt ? ` · ${en ? "checked" : "확인"} ${source.checkedAt}` : ""} · {sourceKind(source.kind)}</small></li>)}</ul></>}
+        {entry.sources.length > 0 && <><b>{en ? "Sources" : "근거 자료"}</b><ul>{entry.sources.map((source) => { const href = safeExternalUrl(source.url); return <li key={`${source.title}-${source.url ?? source.kind}`}>{href ? <a href={href} target="_blank" rel="noreferrer">{source.title} ↗</a> : source.title}<small>{source.publisher}{source.publishedAt ? ` · ${source.publishedAt}` : ""}{source.checkedAt ? ` · ${en ? "checked" : "확인"} ${source.checkedAt}` : ""} · {sourceKind(source.kind)}</small></li>; })}</ul></>}
       </details>
     </article>
   );
+}
+
+function TrendList({ entries, en }: { entries: GtmMarketTrend[]; en: boolean }) {
+  const categories: Record<GtmMarketTrend["category"], [string, string]> = {
+    demand: ["수요·성장", "Demand & growth"],
+    customer_behavior: ["고객 행동", "Customer behavior"],
+    channel: ["유통·채널", "Distribution & channels"],
+    regulation: ["규제", "Regulation"],
+    product_culture: ["제품·문화", "Product & culture"]
+  };
+  return <ul className="research-finding-list">{entries.map((entry) => <li key={`${entry.category}-${entry.title}`}><span className="research-tag">{categories[entry.category][en ? 1 : 0]}</span><strong>{entry.title}</strong><small>{en ? `${entry.confidence} confidence · ${entry.freshness}` : `신뢰도 ${{ low: "낮음", medium: "보통", high: "높음" }[entry.confidence]} · ${{ current: "최신", aging: "오래된 자료 포함", undated: "발행일 미상" }[entry.freshness]}`}</small><span>{entry.finding}</span><small><b>{en ? "Implication" : "사업 시사점"}</b> · {entry.implication}</small><span className="research-source-links">{entry.sources.map((source) => { const href = safeExternalUrl(source.url); return href ? <a key={`${entry.title}-${source.url}`} href={href} target="_blank" rel="noreferrer">{source.title}{source.publisher ? ` · ${source.publisher}` : ""} ↗</a> : <span key={`${entry.title}-${source.title}`}>{source.title}{source.publisher ? ` · ${source.publisher}` : ""}</span>; })}</span></li>)}</ul>;
+}
+
+function CompetitorList({ entries, en }: { entries: GtmMarketCompetitor[]; en: boolean }) {
+  const typeLabel = (entry: GtmMarketCompetitor) => en
+    ? `${entry.marketPresence} · ${entry.type}`
+    : `${{ local: "현지", regional: "지역", global: "글로벌" }[entry.marketPresence]} · ${{ direct: "직접", adjacent: "인접", alternative: "대체재" }[entry.type]}`;
+  return <ul className="research-competitor-list">{entries.map((entry) => <li key={`${entry.name}-${entry.type}`}><span className="research-tag">{typeLabel(entry)}</span><strong>{entry.name}</strong><small>{en ? `${entry.confidence} confidence · ${entry.freshness}` : `신뢰도 ${{ low: "낮음", medium: "보통", high: "높음" }[entry.confidence]} · ${{ current: "최신", aging: "오래된 자료 포함", undated: "발행일 미상" }[entry.freshness]}`}</small><span>{entry.relevance}</span><small><b>{en ? "Target customer" : "목표 고객"}</b> · {entry.targetCustomer}</small><small><b>{en ? "Value proposition" : "제공 가치"}</b> · {entry.valueProposition}</small>{entry.pricePositioning && <small><b>{en ? "Price" : "가격대"}</b> · {entry.pricePositioning}</small>}{entry.channels.length > 0 && <small><b>{en ? "Channels" : "채널"}</b> · {entry.channels.join(" · ")}</small>}{entry.strengths.length > 0 && <small><b>{en ? "Strengths" : "강점"}</b> · {entry.strengths.join(" · ")}</small>}{entry.weaknesses.length > 0 && <small><b>{en ? "Weaknesses" : "약점"}</b> · {entry.weaknesses.join(" · ")}</small>}<small><b>{en ? "Differentiation opportunity" : "차별화 기회"}</b> · {entry.differentiationGap}</small><span className="research-source-links">{entry.sources.map((source) => { const href = safeExternalUrl(source.url); return href ? <a key={`${entry.name}-${source.url}`} href={href} target="_blank" rel="noreferrer">{source.title}{source.publisher ? ` · ${source.publisher}` : ""} ↗</a> : <span key={`${entry.name}-${source.title}`}>{source.title}{source.publisher ? ` · ${source.publisher}` : ""}</span>; })}</span></li>)}</ul>;
+}
+
+function coverageGapLabel(gap: string, en: boolean) {
+  if (en) return gap.replaceAll(":", " · ").replaceAll("-", " ");
+  const labels: Record<string, string> = {
+    "lane:demand": "수요·성장 조사",
+    "lane:customer_behavior": "고객 행동 조사",
+    "lane:channel": "유통·채널 조사",
+    "lane:regulation": "규제 조사",
+    "lane:product_culture": "제품·문화 조사",
+    "lane:direct_competitors": "직접 경쟁사 조사",
+    "lane:adjacent_competitors": "인접 경쟁사 조사",
+    "lane:substitutes": "대체재 조사",
+    "sources:min-8": "출처 8개 이상",
+    "domains:min-8": "고유 도메인 8개 이상",
+    "competitors:min-10": "경쟁 후보 10개 이상",
+    "competitors:direct:min-3": "직접 경쟁 후보 3개 이상",
+    "competitors:adjacent:min-2": "인접 경쟁 후보 2개 이상",
+    "competitors:alternative:min-2": "대체재 2개 이상",
+    "competitors:local:min-2": "현지 경쟁 후보 2개 이상",
+    "competitors:regional-global:min-2": "지역·글로벌 경쟁 후보 2개 이상",
+    "source-type:government:min-1": "정부·규제 출처 1개 이상",
+    "source-type:industry:min-2": "산업자료 2개 이상",
+    "source-type:retail:min-2": "현지 유통 출처 2개 이상",
+    "source-type:company:min-3": "기업 공식 출처 3개 이상",
+    "source-type:consumer:min-1": "소비자 출처 1개 이상"
+  };
+  return labels[gap] ?? gap;
 }
 
 export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion, locale }: Props) {
@@ -202,13 +259,14 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
         planId?: string;
         result?: GtmMarketResearch;
         needsEvidence?: boolean;
+        confirmed?: boolean;
       };
       if (!response.ok || !payload.result || !payload.planId) {
         throw new Error(payload.message ?? (en ? "We couldn't complete the market and competitive research." : "시장·경쟁 사전조사를 만들지 못했습니다."));
       }
       setPlanId(payload.planId);
       setMarketResearch(payload.result);
-      setResearchConfirmed(false);
+      setResearchConfirmed(Boolean(payload.confirmed));
       setResearchNeedsInputs(Boolean(payload.needsEvidence));
       setResearchDisplaySignature(marketResearchContextSignature(context));
       setNotice(payload.message ?? (en ? "The AI market and competitive research is ready. Review it before continuing." : "AI 시장·경쟁 사전조사를 만들었습니다. 내용을 확인해 주세요."));
@@ -337,13 +395,28 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
             </div>
             <p>{marketResearch.executiveSummary}</p>
             {marketResearch.scope === "market_preresearch" && <p className="notice-banner">{en ? "At Readiness Stages 1 and 2, this report does not judge commercial viability. It provides preliminary market research and the next validation tasks." : "준비 1단계와 준비 2단계에서는 실제 판매 가능성을 판정하지 않고, 시장·경쟁 사전조사와 다음 검증 과제만 제공합니다."}</p>}
+            <div className="research-coverage" aria-label={en ? "Research coverage" : "조사 커버리지"}>
+              <span><strong>{marketResearch.researchCoverage.lanes.length}</strong><small>{en ? "research areas" : "조사영역"}</small></span>
+              <span><strong>{marketResearch.researchCoverage.sourceCount}</strong><small>{en ? "unique sources" : "고유 출처"}</small></span>
+              <span><strong>{marketResearch.researchCoverage.competitorCount}</strong><small>{en ? "competitors" : "경쟁 후보"}</small></span>
+              <span><strong>{marketResearch.researchCoverage.coverageGaps.length === 0 ? (en ? "Met" : "충족") : (en ? "Limited" : "보완 필요")}</strong><small>{en ? "evidence coverage" : "근거 구성"}</small></span>
+            </div>
             <p className="market-definition"><strong>{en ? "Market boundary" : "시장 범위"}</strong>{" "}{marketResearch.marketDefinition.included}{marketResearch.marketDefinition.excluded ? ` · ${en ? "Excluded" : "제외"}: ${marketResearch.marketDefinition.excluded}` : ""}</p>
             <div className="market-size-grid">{marketResearch.marketSizing.map((entry) => <MarketSizeCard key={entry.key} entry={entry} en={en} />)}</div>
-            <div className="assistant-research-grid">
-              <div><h3>{en ? "Market trends" : "시장동향"}</h3><ul>{marketResearch.trends.map((entry) => <li key={entry.title}><strong>{entry.title}</strong><span>{entry.finding}</span>{entry.url && <a href={entry.url} target="_blank" rel="noreferrer">{entry.sourceTitle} ↗</a>}</li>)}</ul></div>
-              <div><h3>{en ? "Key competitors" : "주요 경쟁사"}</h3><ul>{marketResearch.competitors.map((entry) => <li key={`${entry.name}-${entry.type}`}><strong>{entry.name}</strong><span>{entry.relevance}</span><small>{entry.differentiationGap}</small>{entry.url && <a href={entry.url} target="_blank" rel="noreferrer">{en ? "Source" : "근거"} ↗</a>}</li>)}</ul></div>
-            </div>
+            <section className="research-section"><h3>{en ? "Market trends" : "시장동향"}</h3><TrendList entries={marketResearch.trends.slice(0, 5)} en={en} />{marketResearch.trends.length > 5 && <details><summary>{en ? `View all ${marketResearch.trends.length} findings` : `전체 ${marketResearch.trends.length}개 동향 보기`}</summary><TrendList entries={marketResearch.trends.slice(5)} en={en} /></details>}</section>
+            <section className="research-section"><h3>{en ? "Competitive landscape" : "경쟁 구도"}</h3><CompetitorList entries={marketResearch.competitors.slice(0, 6)} en={en} />{marketResearch.competitors.length > 6 && <details><summary>{en ? `View all ${marketResearch.competitors.length} competitors` : `전체 ${marketResearch.competitors.length}개 경쟁 후보 보기`}</summary><CompetitorList entries={marketResearch.competitors.slice(6)} en={en} /></details>}</section>
+            {marketResearch.contradictions.length > 0 && <section className="research-section research-contradictions"><h3>{en ? "Conflicting evidence" : "상충 근거"}</h3><ul>{marketResearch.contradictions.map((entry) => <li key={entry.topic}><strong>{entry.topic}</strong><span>{entry.summary}</span></li>)}</ul></section>}
+            <details className="research-coverage-details"><summary>{en ? "Research coverage and source mix" : "조사 범위와 출처 구성"}</summary><p>{en ? "Source mix" : "출처 구성"}: {Object.entries(marketResearch.researchCoverage.sourceTypes).map(([kind, count]) => `${en ? kind : ({ government: "정부·규제", industry: "산업자료", retail: "현지 유통", company: "기업 공식", consumer: "소비자", media: "미디어" }[kind] ?? kind)} ${count}`).join(" · ")}</p>{marketResearch.researchCoverage.coverageGaps.length > 0 && <p>{en ? "Coverage gaps" : "보완할 조사 범위"}: {marketResearch.researchCoverage.coverageGaps.map((gap) => coverageGapLabel(gap, en)).join(" · ")}</p>}</details>
             <div><h3>{en ? "Next validation tasks" : "다음 검증 과제"}</h3><ol>{marketResearch.nextExperiments.map((entry) => <li key={entry}>{entry}</li>)}</ol></div>
+            <div className="research-report-cta">
+              <span><span className="page-kicker">COMPREHENSIVE MARKET REPORT</span><strong>{en ? "Review the market, evidence, competitors, and validation tasks in one report." : "시장 범위부터 경쟁 구도와 검증 과제까지 하나의 보고서로 검토하세요."}</strong></span>
+              {planId && researchMatchesContext ? (
+                <span className="assistant-plan-actions">
+                  <a className="button button--primary" href={`${localizedPath(`/api/gtm-plans/${planId}/export`, locale)}?view=1`} target="_blank" rel="noreferrer">{en ? "View comprehensive market report ↗" : "종합 시장보고서 보기 ↗"}</a>
+                  <a className="button button--ghost" href={localizedPath(`/api/gtm-plans/${planId}/export`, locale)}>{en ? "Download HTML" : "HTML 다운로드"}</a>
+                </span>
+              ) : <small>{en ? "Run research with the current inputs to open the report." : "현재 입력으로 다시 조사하면 보고서를 열 수 있습니다."}</small>}
+            </div>
           </section>
         )}
 

@@ -65,6 +65,15 @@ describe("AI GTM assistant safeguards", () => {
     expect(JSON.stringify(format.schema)).not.toContain('"LAM"');
   });
 
+  it("requires categorized multi-source market and competitor research", () => {
+    const schema = JSON.stringify(zodTextFormat(marketResearchResponseSchema, "gtm_market_research").schema);
+
+    expect(schema).toContain("customer_behavior");
+    expect(schema).toContain("marketPresence");
+    expect(schema).toContain("contradictions");
+    expect(schema).toContain("sources");
+  });
+
   it("turns saved diagnostic actions into a bounded 30·60·90 day plan", () => {
     const plan = buildDeterministicPlan(actions, new Date("2026-08-05T00:00:00Z"));
 
@@ -140,7 +149,15 @@ describe("AI GTM assistant safeguards", () => {
       targetCustomer: "중견 제조사",
       offeringName: "제품 A",
       executiveSummary: "시장 사전조사",
-      trends: [{ title: "추세", finding: "확인", sourceTitle: "공식 자료", url: null }],
+      trends: [{
+        category: "demand",
+        title: "추세",
+        finding: "확인",
+        implication: "수요를 검증한다",
+        confidence: "medium",
+        freshness: "current",
+        sources: [{ title: "공식 자료", url: "https://example.com/trend", publisher: "기관", publishedAt: null, checkedAt: "2026-08-13", kind: "government" }]
+      }],
       marketSizingEvidence: {
         methodologyVersion: "market-sizing-v1",
         currency: "USD",
@@ -159,7 +176,23 @@ describe("AI GTM assistant safeguards", () => {
           expansionPath: [], assumptions: [], evidenceGaps: ["직접 접근 가능 고객 수"], sensitivityDrivers: []
         }
       },
-      competitors: [{ name: "대안 A", type: "alternative", relevance: "대안", differentiationGap: "확인 필요", sourceTitle: "공식 자료", url: null }],
+      competitors: [{
+        name: "대안 A",
+        type: "alternative",
+        marketPresence: "local",
+        pricePositioning: "중가",
+        targetCustomer: "현지 고객",
+        valueProposition: "대안 가치",
+        channels: ["리테일"],
+        strengths: ["인지도"],
+        weaknesses: ["차별성"],
+        relevance: "대안",
+        differentiationGap: "확인 필요",
+        confidence: "medium",
+        freshness: "current",
+        sources: [{ title: "공식 자료", url: "https://example.com/company", publisher: "기관", publishedAt: null, checkedAt: "2026-08-13", kind: "company" }]
+      }],
+      contradictions: [],
       sellability: { available: true, verdict: "promising", summary: "판정", evidenceGaps: [] },
       nextExperiments: ["고객 인터뷰"],
       limitations: ["사전조사"]

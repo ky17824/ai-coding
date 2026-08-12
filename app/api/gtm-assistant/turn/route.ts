@@ -23,6 +23,7 @@ import type {
   EvidenceInput,
   GtmAssistantMessage,
   GtmFounderContext,
+  GtmMarketResearch,
   GtmPlanDraft,
   GtmPlanItem,
   ReadinessAnswer,
@@ -82,6 +83,17 @@ const requestSchema = z.object({
       constraints: ""
     })
 });
+
+function planResearchContext(research: GtmMarketResearch) {
+  return {
+    executiveSummary: research.executiveSummary,
+    marketSizing: research.marketSizing.map(({ key, estimate, confidence }) => ({ key, estimate, confidence })),
+    trends: research.trends.slice(0, 5).map(({ category, title, finding, implication }) => ({ category, title, finding, implication })),
+    competitors: research.competitors.slice(0, 6).map(({ name, type, marketPresence, relevance, differentiationGap }) => ({ name, type, marketPresence, relevance, differentiationGap })),
+    nextExperiments: research.nextExperiments,
+    coverageGaps: research.researchCoverage.coverageGaps
+  };
+}
 
 type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdminClient>>;
 
@@ -446,7 +458,7 @@ export async function POST(request: Request) {
         },
         actions,
         founderContext: cleanContext,
-        marketResearch: confirmedResearch,
+        marketResearch: planResearchContext(confirmedResearch),
         allowedHorizons,
         recentMessages,
         approvedSources: sourceRows ?? [],

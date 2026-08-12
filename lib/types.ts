@@ -185,6 +185,67 @@ export interface GtmMarketSizingEntry {
   expansionPath: string[];
 }
 
+export type GtmResearchLane =
+  | "demand"
+  | "customer_behavior"
+  | "channel"
+  | "regulation"
+  | "product_culture"
+  | "direct_competitors"
+  | "adjacent_competitors"
+  | "substitutes";
+
+export interface GtmResearchSource {
+  title: string;
+  url: string | null;
+  publisher: string;
+  publishedAt: string | null;
+  checkedAt: string | null;
+  kind: "government" | "industry" | "retail" | "company" | "consumer" | "media";
+}
+
+export interface GtmMarketTrend {
+  category: Exclude<GtmResearchLane, "direct_competitors" | "adjacent_competitors" | "substitutes">;
+  title: string;
+  finding: string;
+  implication: string;
+  confidence: "low" | "medium" | "high";
+  freshness: "current" | "aging" | "undated";
+  sources: GtmResearchSource[];
+  /** Primary source retained for existing compact views and legacy exports. */
+  sourceTitle: string;
+  url: string | null;
+}
+
+export interface GtmMarketCompetitor {
+  name: string;
+  type: "direct" | "adjacent" | "alternative";
+  marketPresence: "local" | "regional" | "global";
+  pricePositioning: string;
+  targetCustomer: string;
+  valueProposition: string;
+  channels: string[];
+  strengths: string[];
+  weaknesses: string[];
+  relevance: string;
+  differentiationGap: string;
+  confidence: "low" | "medium" | "high";
+  freshness: "current" | "aging" | "undated";
+  sources: GtmResearchSource[];
+  /** Primary source retained for existing compact views and legacy exports. */
+  sourceTitle: string;
+  url: string | null;
+}
+
+export interface GtmResearchCoverage {
+  lanes: GtmResearchLane[];
+  sourceCount: number;
+  uniqueDomainCount: number;
+  competitorCount: number;
+  sourceTypes: Record<GtmResearchSource["kind"], number>;
+  coverageGaps: string[];
+}
+
 export interface GtmMarketResearch {
   kind: "market_research";
   scope: "market_preresearch" | "sellability_review";
@@ -192,7 +253,7 @@ export interface GtmMarketResearch {
   targetCustomer: string;
   offeringName: string;
   executiveSummary: string;
-  trends: { title: string; finding: string; sourceTitle: string; url: string | null }[];
+  trends: GtmMarketTrend[];
   marketSizing: GtmMarketSizingEntry[];
   marketSizingMethodologyVersion: "market-sizing-v1" | "legacy";
   marketSizingEvidence?: unknown;
@@ -202,14 +263,14 @@ export interface GtmMarketResearch {
     excluded: string;
     annualRevenueUnit: string;
   };
-  competitors: {
-    name: string;
-    type: "direct" | "adjacent" | "alternative";
-    relevance: string;
-    differentiationGap: string;
-    sourceTitle: string;
-    url: string | null;
+  competitors: GtmMarketCompetitor[];
+  contradictions: {
+    topic: string;
+    summary: string;
+    sources: GtmResearchSource[];
   }[];
+  researchCoverage: GtmResearchCoverage;
+  researchMethodologyVersion: "market-research-v2" | "legacy";
   sellability: {
     available: boolean;
     verdict: "not_assessed" | "weak" | "conditional" | "promising";

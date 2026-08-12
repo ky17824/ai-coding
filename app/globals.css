@@ -3239,6 +3239,30 @@ main[lang="en"] .hero h1 {
   gap: 20px;
 }
 
+.research-coverage {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.research-coverage > span {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  background: #f5faf7;
+}
+
+.research-coverage strong {
+  color: var(--green);
+  font-size: 24px;
+}
+
+.research-coverage small {
+  color: var(--muted);
+}
+
 .market-size-grid article {
   display: grid;
   gap: 8px;
@@ -3364,6 +3388,121 @@ main[lang="en"] .hero h1 {
   color: var(--green);
   font-weight: 750;
   overflow-wrap: anywhere;
+}
+
+.research-section {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.research-section > h3 {
+  color: var(--ink);
+  font-size: 24px;
+}
+
+.research-finding-list,
+.research-competitor-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.research-finding-list > li,
+.research-competitor-list > li {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.research-finding-list span,
+.research-finding-list small,
+.research-competitor-list span,
+.research-competitor-list small {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.research-tag {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #e9f6ef;
+  color: var(--green) !important;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.research-source-links {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.research-source-links a,
+.research-section summary,
+.research-coverage-details summary {
+  color: var(--green);
+  font-weight: 750;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.research-section details,
+.research-coverage-details {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.research-section details > ul {
+  margin-top: 16px;
+}
+
+.research-contradictions ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.research-contradictions li {
+  display: grid;
+  gap: 4px;
+}
+
+.research-report-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-radius: 16px;
+  padding: 24px;
+  background: var(--green-dark);
+  color: #fff;
+}
+
+.research-report-cta > span:first-child {
+  display: grid;
+  gap: 8px;
+}
+
+.research-report-cta .page-kicker,
+.research-report-cta small {
+  color: #bcebd2;
+}
+
+.research-report-cta .button--ghost {
+  border-color: #fff;
+  color: #fff;
 }
 
 .assistant-plan-actions {
@@ -3562,12 +3701,29 @@ h2.plan-summary {
   .assistant-context,
   .assistant-plan-fields,
   .market-size-grid,
-  .assistant-research-grid {
+  .assistant-research-grid,
+  .research-finding-list,
+  .research-competitor-list {
     grid-template-columns: 1fr;
+  }
+
+  .research-coverage {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .assistant-context__wide {
     grid-column: auto;
+  }
+
+  .research-report-cta {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .research-report-cta .assistant-plan-actions,
+  .research-report-cta .button {
+    width: 100%;
   }
 
   .target-market-confirmation > div {

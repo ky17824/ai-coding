@@ -11,7 +11,8 @@ import type {
 } from "./types";
 import { matchExpertSupport } from "./expert-matching";
 import { PAID_PILOT_QUESTION_ID } from "./intake-questions";
-import { calculateMarketSizing, marketResearchContextSignature, marketSizingEvidenceSchema } from "./market-sizing";
+import { buildMarketResearchCoverage, calculateMarketSizing, founderSizingOverridesSchema, marketResearchContextSignature, marketSizingEvidenceSchema } from "./market-sizing";
+import { canonicalResearchUrl } from "./research-sources";
 
 export const ASSISTANT_MODEL = "gpt-5.6-luna" as const;
 
@@ -53,27 +54,58 @@ export const assistantResponseSchema = z.object({
   result: assistantOutputSchema
 });
 
-const researchSourceUrl = z.string().max(2048).nullable();
+const researchSourceUrl = z.string().min(8).max(2048);
+export const researchSourceSchema = z.object({
+  title: z.string().min(1).max(180),
+  url: researchSourceUrl,
+  publisher: z.string().min(1).max(180),
+  publishedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  checkedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  kind: z.enum(["government", "industry", "retail", "company", "consumer", "media"])
+});
+
+export const marketTrendSchema = z.object({
+  category: z.enum(["demand", "customer_behavior", "channel", "regulation", "product_culture"]),
+  title: z.string().min(1).max(180),
+  finding: z.string().min(1).max(600),
+  implication: z.string().min(1).max(500),
+  confidence: z.enum(["low", "medium", "high"]),
+  freshness: z.enum(["current", "aging", "undated"]),
+  sources: z.array(researchSourceSchema).min(1).max(3)
+});
+
+export const marketCompetitorSchema = z.object({
+  name: z.string().min(1).max(180),
+  type: z.enum(["direct", "adjacent", "alternative"]),
+  marketPresence: z.enum(["local", "regional", "global"]),
+  pricePositioning: z.string().max(200),
+  targetCustomer: z.string().min(1).max(300),
+  valueProposition: z.string().min(1).max(400),
+  channels: z.array(z.string().min(1).max(120)).max(6),
+  strengths: z.array(z.string().min(1).max(200)).max(5),
+  weaknesses: z.array(z.string().min(1).max(200)).max(5),
+  relevance: z.string().min(1).max(500),
+  differentiationGap: z.string().min(1).max(500),
+  confidence: z.enum(["low", "medium", "high"]),
+  freshness: z.enum(["current", "aging", "undated"]),
+  sources: z.array(researchSourceSchema).min(1).max(3)
+});
+
+export const marketContradictionSchema = z.object({
+  topic: z.string().min(1).max(180),
+  summary: z.string().min(1).max(500),
+  sources: z.array(researchSourceSchema).min(1).max(4)
+});
+
 export const marketResearchOutputSchema = z.object({
   scope: z.enum(["market_preresearch", "sellability_review"]),
   targetCountry: z.string().min(1).max(100),
   targetCustomer: z.string().min(1).max(300),
   offeringName: z.string().min(1).max(180),
   executiveSummary: z.string().min(1).max(1200),
-  trends: z.array(z.object({
-    title: z.string().min(1).max(180),
-    finding: z.string().min(1).max(600),
-    sourceTitle: z.string().min(1).max(180),
-    url: researchSourceUrl
-  })).min(1).max(6),
-  competitors: z.array(z.object({
-    name: z.string().min(1).max(180),
-    type: z.enum(["direct", "adjacent", "alternative"]),
-    relevance: z.string().min(1).max(500),
-    differentiationGap: z.string().min(1).max(500),
-    sourceTitle: z.string().min(1).max(180),
-    url: researchSourceUrl
-  })).min(1).max(8),
+  trends: z.array(marketTrendSchema).min(1).max(10),
+  competitors: z.array(marketCompetitorSchema).min(1).max(12),
+  contradictions: z.array(marketContradictionSchema).max(6),
   sellability: z.object({
     available: z.boolean(),
     verdict: z.enum(["not_assessed", "weak", "conditional", "promising"]),
@@ -88,8 +120,29 @@ export const marketResearchResponseSchema = z.object({
   result: marketResearchOutputSchema
 });
 
+export const marketTrendResearchResponseSchema = z.object({
+  result: marketResearchOutputSchema.pick({
+    scope: true, targetCountry: true, targetCustomer: true, offeringName: true,
+    trends: true, contradictions: true
+  })
+});
+
+export const marketCompetitorResearchResponseSchema = z.object({
+  result: marketResearchOutputSchema.pick({ competitors: true })
+});
+
+export const marketResearchSynthesisResponseSchema = z.object({
+  result: marketResearchOutputSchema.pick({
+    executiveSummary: true, sellability: true, nextExperiments: true, limitations: true
+  })
+});
+
 export const marketSizingEvidenceResponseSchema = z.object({
   result: marketSizingEvidenceSchema
+});
+
+export const founderSizingOverridesResponseSchema = z.object({
+  result: founderSizingOverridesSchema
 });
 
 export type AssistantModelOutput = z.infer<typeof assistantOutputSchema>;
@@ -414,9 +467,64 @@ export function finalizeMarketResearch(
   founderContext: Partial<GtmFounderContext> = {}
 ): GtmMarketResearch {
   const marketSizingEvidence = { ...output.marketSizingEvidence, referenceYear: now.getUTCFullYear() };
+  const uniqueSources = <T extends { url: string }>(sources: T[]) =>
+    [...new Map(sources.map((source) => [canonicalResearchUrl(source.url), { ...source, url: canonicalResearchUrl(source.url) }])).values()];
+  const evidenceScore = (sources: z.infer<typeof researchSourceSchema>[]) => {
+    const domains = new Set(sources.map((source) => new URL(source.url).hostname.replace(/^www\./, "")));
+    const kinds = new Set(sources.map((source) => source.kind));
+    const recent = sources.filter((source) => source.publishedAt && Date.parse(source.publishedAt) >= now.getTime() - 3 * 365 * 24 * 60 * 60 * 1000).length;
+    return domains.size * 100 + kinds.size * 10 + recent;
+  };
+  const evidenceQuality = (sources: z.infer<typeof researchSourceSchema>[]) => {
+    const currentCount = sources.filter((source) => source.publishedAt && Date.parse(source.publishedAt) >= now.getTime() - 3 * 365 * 24 * 60 * 60 * 1000).length;
+    const domainCount = new Set(sources.map((source) => new URL(source.url).hostname)).size;
+    return {
+      confidence: (domainCount >= 2 ? "high" : sources.length > 0 ? "medium" : "low") as "low" | "medium" | "high",
+      freshness: (currentCount > 0 ? "current" : sources.some((source) => source.publishedAt) ? "aging" : "undated") as "current" | "aging" | "undated"
+    };
+  };
+  const trendMap = new Map<string, (typeof output.trends)[number]>();
+  for (const entry of output.trends) {
+    const key = `${entry.category}:${entry.title.normalize("NFKC").toLowerCase()}`;
+    const previous = trendMap.get(key);
+    trendMap.set(key, previous ? { ...previous, sources: uniqueSources([...previous.sources, ...entry.sources]) } : entry);
+  }
+  const trends = [...trendMap.values()].map((entry) => ({
+    ...entry,
+    ...evidenceQuality(entry.sources),
+    sources: uniqueSources(entry.sources),
+    sourceTitle: entry.sources[0].title,
+    url: entry.sources[0].url
+  })).sort((a, b) => evidenceScore(b.sources) - evidenceScore(a.sources));
+  const competitorMap = new Map<string, (typeof output.competitors)[number]>();
+  for (const entry of output.competitors) {
+    const key = entry.name.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+    const previous = competitorMap.get(key);
+    competitorMap.set(key, previous ? {
+      ...previous,
+      channels: [...new Set([...previous.channels, ...entry.channels])],
+      strengths: [...new Set([...previous.strengths, ...entry.strengths])],
+      weaknesses: [...new Set([...previous.weaknesses, ...entry.weaknesses])],
+      sources: uniqueSources([...previous.sources, ...entry.sources])
+    } : entry);
+  }
+  const competitors = [...competitorMap.values()].map((entry) => ({
+    ...entry,
+    ...evidenceQuality(entry.sources),
+    sources: uniqueSources(entry.sources),
+    sourceTitle: entry.sources[0].title,
+    url: entry.sources[0].url
+  })).sort((a, b) => evidenceScore(b.sources) - evidenceScore(a.sources));
+  for (const source of [...trends.flatMap((entry) => entry.sources), ...competitors.flatMap((entry) => entry.sources), ...output.contradictions.flatMap((entry) => entry.sources)]) {
+    if (Date.parse(source.checkedAt) > now.getTime() + 24 * 60 * 60 * 1000 ||
+        (source.publishedAt && Date.parse(source.publishedAt) > now.getTime() + 24 * 60 * 60 * 1000)) {
+      throw new Error(locale === "en" ? "Research source dates cannot be in the future." : "조사 출처의 날짜는 미래일 수 없습니다.");
+    }
+  }
   for (const url of [
-    ...output.trends.map((entry) => entry.url),
-    ...output.competitors.map((entry) => entry.url),
+    ...trends.flatMap((entry) => entry.sources.map((source) => source.url)),
+    ...competitors.flatMap((entry) => entry.sources.map((source) => source.url)),
+    ...output.contradictions.flatMap((entry) => entry.sources.map((source) => source.url)),
     ...marketSizingEvidence.tam.bottomUp.customerCountSources.map((entry) => entry.url),
     ...marketSizingEvidence.tam.bottomUp.annualRevenuePerCustomerSources.map((entry) => entry.url),
     ...marketSizingEvidence.tam.topDownPaths.flatMap((path) => path.sources.map((entry) => entry.url)),
@@ -439,6 +547,10 @@ export function finalizeMarketResearch(
   return {
     kind: "market_research",
     ...output,
+    trends,
+    competitors,
+    researchCoverage: buildMarketResearchCoverage(trends, competitors, output.contradictions),
+    researchMethodologyVersion: "market-research-v2",
     marketSizingEvidence,
     marketSizing: calculateMarketSizing(marketSizingEvidence, locale),
     marketSizingMethodologyVersion: marketSizingEvidence.methodologyVersion,

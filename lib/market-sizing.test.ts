@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { calculateMarketSizing, getMissingMarketSizingInputs, marketResearchContextSignature, marketSizingEvidenceSchema, normalizeMarketResearch, type MarketSizingEvidence } from "./market-sizing";
+import { buildMarketResearchCoverage, calculateMarketSizing, getMissingMarketSizingInputs, marketResearchContextSignature, marketSizingEvidenceSchema, mergeFounderSizingOverrides, normalizeMarketResearch, type MarketSizingEvidence } from "./market-sizing";
+import type { GtmMarketCompetitor, GtmMarketTrend, GtmResearchSource } from "./types";
 
 const range = (low: number, base: number, high: number) => ({ low, base, high });
 const source = {
@@ -98,6 +99,23 @@ function evidence(): MarketSizingEvidence {
 }
 
 describe("market sizing", () => {
+  it("merges only founder overrides without changing public evidence", () => {
+    const input = evidence();
+    const publicTopDown = structuredClone(input.tam.topDownPaths);
+    const merged = mergeFounderSizingOverrides(input, {
+      tamCustomerCount: range(30, 40, 50),
+      tamAnnualRevenuePerCustomer: range(100, 120, 140),
+      somCapacityRevenue: range(5_000, 8_000, 10_000),
+      beachheadCustomerCount: range(10, 20, 30),
+      beachheadAnnualRevenuePerCustomer: range(100, 120, 140)
+    }, "2026-08-13", "en");
+
+    expect(merged.tam.topDownPaths).toEqual(publicTopDown);
+    expect(merged.tam.bottomUp.customerCountSources[0]).toMatchObject({ kind: "founder_input", url: null });
+    expect(merged.som.capacityRevenue?.base).toBe(8_000);
+    expect(input.tam.bottomUp.customerCount?.base).toBe(1_000);
+  });
+
   it("recomputes TAM, SAM, SOM, and a directly counted Beachhead Market", () => {
     const input = evidence();
     expect(marketSizingEvidenceSchema.safeParse(input).success).toBe(true);
@@ -228,7 +246,7 @@ describe("market sizing", () => {
       targetCustomer: "Retailers",
       offeringName: "Lip balm",
       executiveSummary: "Summary",
-      trends: [],
+      trends: [{ title: "Demand", finding: "Growing", sourceTitle: "Retail report", url: "https://retail.example/market" }],
       marketSizing: [{
         label: "LAM",
         estimate: "$20K",
@@ -236,7 +254,7 @@ describe("market sizing", () => {
         assumptions: ["LAM uses the pilot scope"],
         sourceTitles: []
       }],
-      competitors: [],
+      competitors: [{ name: "Brand A", type: "direct", relevance: "Same customer", differentiationGap: "Price", sourceTitle: "Brand A", url: "https://brand.example" }],
       sellability: { available: false, verdict: "not_assessed", summary: "Not assessed", evidenceGaps: [] },
       nextExperiments: [],
       limitations: [],
@@ -250,6 +268,28 @@ describe("market sizing", () => {
       estimate: "$20K",
       formula: "Beachhead Market = reachable outlets × annual revenue",
       assumptions: ["Beachhead Market uses the pilot scope"]
+    });
+    expect(normalized).toMatchObject({
+      researchMethodologyVersion: "legacy",
+      trends: [{ category: "demand", implication: "", sources: [{ title: "Retail report" }] }],
+      competitors: [{ marketPresence: "global", channels: [], sources: [{ title: "Brand A" }] }],
+      researchCoverage: { sourceCount: 2, uniqueDomainCount: 2, competitorCount: 1 }
+    });
+  });
+
+  it("marks the eight-lane, diversified research target as covered", () => {
+    const kinds: GtmResearchSource["kind"][] = ["government", "industry", "industry", "retail", "retail", "company", "company", "company", "consumer", "media", "media", "media", "media", "media", "media"];
+    const researchSource = (index: number): GtmResearchSource => ({ title: `Source ${index}`, url: `https://source${index}.example/report`, publisher: `Publisher ${index}`, publishedAt: "2026-01-01", checkedAt: "2026-08-13", kind: kinds[index] });
+    const categories: GtmMarketTrend["category"][] = ["demand", "customer_behavior", "channel", "regulation", "product_culture"];
+    const trends = categories.map((category, index) => ({ category, title: `Trend ${index}`, finding: "Finding", implication: "Implication", confidence: "medium" as const, freshness: "current" as const, sources: [researchSource(index)], sourceTitle: `Source ${index}`, url: `https://source${index}.example/report` }));
+    const competitors = Array.from({ length: 10 }, (_, index): GtmMarketCompetitor => ({ name: `Competitor ${index}`, type: index < 4 ? "direct" : index < 7 ? "adjacent" : "alternative", marketPresence: index < 4 ? "local" : index < 7 ? "regional" : "global", pricePositioning: "mid", targetCustomer: "Target customer", valueProposition: "Value", channels: [], strengths: [], weaknesses: [], relevance: "Relevant", differentiationGap: "Gap", confidence: "medium", freshness: "current", sources: [researchSource(index + 5)], sourceTitle: `Source ${index + 5}`, url: `https://source${index + 5}.example/report` }));
+
+    expect(buildMarketResearchCoverage(trends, competitors)).toMatchObject({
+      lanes: expect.arrayContaining(["demand", "customer_behavior", "channel", "regulation", "product_culture", "direct_competitors", "adjacent_competitors", "substitutes"]),
+      sourceCount: 15,
+      uniqueDomainCount: 15,
+      competitorCount: 10,
+      coverageGaps: []
     });
   });
 });

@@ -2,10 +2,16 @@ import { z } from "zod";
 import type { Locale } from "@/lib/i18n";
 import type {
   GtmFounderContext,
+  GtmMarketCompetitor,
   GtmMarketResearch,
   GtmMarketSizingEntry,
-  GtmMarketSizingSource
+  GtmMarketSizingSource,
+  GtmMarketTrend,
+  GtmResearchCoverage,
+  GtmResearchLane,
+  GtmResearchSource
 } from "@/lib/types";
+import { canonicalResearchUrl } from "@/lib/research-sources";
 
 const rangeSchema = z.object({
   low: z.number().finite().nonnegative(),
@@ -113,6 +119,52 @@ export const marketSizingEvidenceSchema = z.object({
 
 export type MarketSizingEvidence = z.infer<typeof marketSizingEvidenceSchema>;
 type Range = z.infer<typeof rangeSchema>;
+
+export const founderSizingOverridesSchema = z.object({
+  tamCustomerCount: rangeSchema.nullable(),
+  tamAnnualRevenuePerCustomer: rangeSchema.nullable(),
+  somCapacityRevenue: rangeSchema.nullable(),
+  beachheadCustomerCount: rangeSchema.nullable(),
+  beachheadAnnualRevenuePerCustomer: rangeSchema.nullable()
+});
+
+export function mergeFounderSizingOverrides(
+  evidence: MarketSizingEvidence,
+  overrides: z.infer<typeof founderSizingOverridesSchema>,
+  checkedAt: string,
+  locale: Locale
+) {
+  const result = structuredClone(evidence);
+  const source = {
+    title: locale === "en" ? "Founder input" : "창업자 입력",
+    url: null,
+    publisher: locale === "en" ? "Founder" : "창업자",
+    publishedAt: null,
+    checkedAt,
+    kind: "founder_input" as const
+  };
+  if (overrides.tamCustomerCount) {
+    result.tam.bottomUp.customerCount = overrides.tamCustomerCount;
+    result.tam.bottomUp.customerCountSources = [source];
+  }
+  if (overrides.tamAnnualRevenuePerCustomer) {
+    result.tam.bottomUp.annualRevenuePerCustomer = overrides.tamAnnualRevenuePerCustomer;
+    result.tam.bottomUp.annualRevenuePerCustomerSources = [source];
+  }
+  if (overrides.somCapacityRevenue) {
+    result.som.capacityRevenue = overrides.somCapacityRevenue;
+    result.som.capacitySources = [source];
+  }
+  if (overrides.beachheadCustomerCount) {
+    result.beachhead.customerCount = overrides.beachheadCustomerCount;
+    result.beachhead.customerCountSources = [source];
+  }
+  if (overrides.beachheadAnnualRevenuePerCustomer) {
+    result.beachhead.annualRevenuePerCustomer = overrides.beachheadAnnualRevenuePerCustomer;
+    result.beachhead.annualRevenuePerCustomerSources = [source];
+  }
+  return result;
+}
 
 export function validateMarketSizingEvidence(evidence: MarketSizingEvidence) {
   const issues = { tam: [] as string[], sam: [] as string[], som: [] as string[], beachhead: [] as string[] };
@@ -497,6 +549,127 @@ function legacyEntry(value: Record<string, unknown>, index: number): GtmMarketSi
   };
 }
 
+const RESEARCH_LANES: GtmResearchLane[] = [
+  "demand", "customer_behavior", "channel", "regulation", "product_culture",
+  "direct_competitors", "adjacent_competitors", "substitutes"
+];
+const SOURCE_KINDS: GtmResearchSource["kind"][] = ["government", "industry", "retail", "company", "consumer", "media"];
+
+function researchSource(value: unknown, fallbackTitle = "Source", fallbackUrl: string | null = null): GtmResearchSource {
+  const source = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const kind = SOURCE_KINDS.includes(source.kind as GtmResearchSource["kind"])
+    ? source.kind as GtmResearchSource["kind"] : "media";
+  return {
+    title: typeof source.title === "string" && source.title ? source.title : fallbackTitle,
+    url: typeof source.url === "string" ? source.url : fallbackUrl,
+    publisher: typeof source.publisher === "string" ? source.publisher : "",
+    publishedAt: typeof source.publishedAt === "string" ? source.publishedAt : null,
+    checkedAt: typeof source.checkedAt === "string" ? source.checkedAt : null,
+    kind
+  };
+}
+
+function normalizeTrend(value: unknown): GtmMarketTrend {
+  const trend = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const primaryTitle = typeof trend.sourceTitle === "string" ? trend.sourceTitle : "Source";
+  const primaryUrl = typeof trend.url === "string" ? trend.url : null;
+  const sources = Array.isArray(trend.sources) && trend.sources.length > 0
+    ? trend.sources.map((source) => researchSource(source, primaryTitle, primaryUrl))
+    : [researchSource(null, primaryTitle, primaryUrl)];
+  const category = ["demand", "customer_behavior", "channel", "regulation", "product_culture"].includes(String(trend.category))
+    ? trend.category as GtmMarketTrend["category"] : "demand";
+  return {
+    category,
+    title: String(trend.title ?? ""),
+    finding: String(trend.finding ?? ""),
+    implication: String(trend.implication ?? ""),
+    confidence: ["low", "medium", "high"].includes(String(trend.confidence)) ? trend.confidence as GtmMarketTrend["confidence"] : "low",
+    freshness: ["current", "aging", "undated"].includes(String(trend.freshness)) ? trend.freshness as GtmMarketTrend["freshness"] : "undated",
+    sources,
+    sourceTitle: sources[0].title,
+    url: sources[0].url
+  };
+}
+
+function normalizeCompetitor(value: unknown): GtmMarketCompetitor {
+  const competitor = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const primaryTitle = typeof competitor.sourceTitle === "string" ? competitor.sourceTitle : "Source";
+  const primaryUrl = typeof competitor.url === "string" ? competitor.url : null;
+  const sources = Array.isArray(competitor.sources) && competitor.sources.length > 0
+    ? competitor.sources.map((source) => researchSource(source, primaryTitle, primaryUrl))
+    : [researchSource(null, primaryTitle, primaryUrl)];
+  const type = ["direct", "adjacent", "alternative"].includes(String(competitor.type))
+    ? competitor.type as GtmMarketCompetitor["type"] : "alternative";
+  const marketPresence = ["local", "regional", "global"].includes(String(competitor.marketPresence))
+    ? competitor.marketPresence as GtmMarketCompetitor["marketPresence"] : "global";
+  const strings = (input: unknown) => Array.isArray(input) ? input.map(String).filter(Boolean) : [];
+  return {
+    name: String(competitor.name ?? ""),
+    type,
+    marketPresence,
+    pricePositioning: String(competitor.pricePositioning ?? ""),
+    targetCustomer: String(competitor.targetCustomer ?? ""),
+    valueProposition: String(competitor.valueProposition ?? ""),
+    channels: strings(competitor.channels),
+    strengths: strings(competitor.strengths),
+    weaknesses: strings(competitor.weaknesses),
+    relevance: String(competitor.relevance ?? ""),
+    differentiationGap: String(competitor.differentiationGap ?? ""),
+    confidence: ["low", "medium", "high"].includes(String(competitor.confidence)) ? competitor.confidence as GtmMarketCompetitor["confidence"] : "low",
+    freshness: ["current", "aging", "undated"].includes(String(competitor.freshness)) ? competitor.freshness as GtmMarketCompetitor["freshness"] : "undated",
+    sources,
+    sourceTitle: sources[0].title,
+    url: sources[0].url
+  };
+}
+
+export function buildMarketResearchCoverage(
+  trends: GtmMarketTrend[],
+  competitors: GtmMarketCompetitor[],
+  contradictions: { sources: GtmResearchSource[] }[] = []
+): GtmResearchCoverage {
+  const lanes = new Set<GtmResearchLane>(trends.map((trend) => trend.category));
+  for (const competitor of competitors) {
+    lanes.add(competitor.type === "direct" ? "direct_competitors"
+      : competitor.type === "adjacent" ? "adjacent_competitors" : "substitutes");
+  }
+  const sources = [
+    ...trends.flatMap((trend) => trend.sources),
+    ...competitors.flatMap((competitor) => competitor.sources),
+    ...contradictions.flatMap((contradiction) => contradiction.sources)
+  ];
+  const uniqueSources = [...new Map(sources.map((source) => [source.url ? canonicalResearchUrl(source.url) : `${source.publisher}:${source.title}`, source.url ? { ...source, url: canonicalResearchUrl(source.url) } : source])).values()];
+  const domains = new Set(uniqueSources.flatMap((source) => {
+    if (!source.url) return [];
+    try { return [new URL(source.url).hostname.replace(/^www\./, "")]; } catch { return []; }
+  }));
+  const sourceTypes = Object.fromEntries(SOURCE_KINDS.map((kind) => [kind, uniqueSources.filter((source) => source.kind === kind).length])) as GtmResearchCoverage["sourceTypes"];
+  const coverageGaps = [
+    ...RESEARCH_LANES.filter((lane) => !lanes.has(lane)).map((lane) => `lane:${lane}`),
+    ...(uniqueSources.length < 8 ? ["sources:min-8"] : []),
+    ...(domains.size < 8 ? ["domains:min-8"] : []),
+    ...(competitors.length < 10 ? ["competitors:min-10"] : []),
+    ...(competitors.filter((entry) => entry.type === "direct").length < 3 ? ["competitors:direct:min-3"] : []),
+    ...(competitors.filter((entry) => entry.type === "adjacent").length < 2 ? ["competitors:adjacent:min-2"] : []),
+    ...(competitors.filter((entry) => entry.type === "alternative").length < 2 ? ["competitors:alternative:min-2"] : []),
+    ...(competitors.filter((entry) => entry.marketPresence === "local").length < 2 ? ["competitors:local:min-2"] : []),
+    ...(competitors.filter((entry) => entry.marketPresence !== "local").length < 2 ? ["competitors:regional-global:min-2"] : []),
+    ...(sourceTypes.government < 1 ? ["source-type:government:min-1"] : []),
+    ...(sourceTypes.industry < 2 ? ["source-type:industry:min-2"] : []),
+    ...(sourceTypes.retail < 2 ? ["source-type:retail:min-2"] : []),
+    ...(sourceTypes.company < 3 ? ["source-type:company:min-3"] : []),
+    ...(sourceTypes.consumer < 1 ? ["source-type:consumer:min-1"] : [])
+  ];
+  return {
+    lanes: [...lanes],
+    sourceCount: uniqueSources.length,
+    uniqueDomainCount: domains.size,
+    competitorCount: competitors.length,
+    sourceTypes,
+    coverageGaps
+  };
+}
+
 export function normalizeMarketResearch(value: unknown): GtmMarketResearch | null {
   if (!value || typeof value !== "object") return null;
   const research = value as Record<string, unknown>;
@@ -505,8 +678,24 @@ export function normalizeMarketResearch(value: unknown): GtmMarketResearch | nul
     const entry = item as Record<string, unknown>;
     return "key" in entry ? entry as unknown as GtmMarketSizingEntry : legacyEntry(entry, index);
   });
+  const trends = Array.isArray(research.trends) ? research.trends.map(normalizeTrend) : [];
+  const competitors = Array.isArray(research.competitors) ? research.competitors.map(normalizeCompetitor) : [];
+  const contradictions = Array.isArray(research.contradictions) ? research.contradictions.map((value) => {
+    const contradiction = value && typeof value === "object" ? value as Record<string, unknown> : {};
+    return {
+      topic: String(contradiction.topic ?? ""),
+      summary: String(contradiction.summary ?? ""),
+      sources: Array.isArray(contradiction.sources) ? contradiction.sources.map((source) => researchSource(source)) : []
+    };
+  }) : [];
   return {
     ...(research as unknown as GtmMarketResearch),
+    trends,
+    competitors,
+    contradictions,
+    researchCoverage: buildMarketResearchCoverage(trends, competitors, contradictions),
+    researchMethodologyVersion: research.researchMethodologyVersion === "market-research-v2"
+      ? "market-research-v2" : "legacy",
     marketSizing,
     marketSizingMethodologyVersion: research.marketSizingMethodologyVersion === "market-sizing-v1"
       ? "market-sizing-v1" : "legacy",

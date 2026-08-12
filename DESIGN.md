@@ -3,7 +3,7 @@
 ## Source of truth
 
 - Status: Active
-- Last refreshed: 2026-08-11
+- Last refreshed: 2026-08-13
 - Primary product surfaces: 랜딩, 인증·온보딩, 단계별 준비도 진단, Gate 판정, 론칭 대상 정의, AI 시장·경쟁 사전조사, 준비 3단계 후 실제 판매 가능성 예비검증, AI GTM 공동계획, 대시보드·여정, 계획 보고서, 전문가 서비스
 - Evidence reviewed: live `https://global-gtm.vercel.app/en/dashboard`, `app/page.tsx`, `app/globals.css`, `public/fonts/PretendardVariable.woff2`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `components/google-button.tsx`, `components/signin-form.tsx`, `components/signup-form.tsx`, `app/auth/callback/route.ts`, `app/account/actions.ts`, `app/api/gtm-assistant/turn/route.ts`, `app/api/gtm-plans/[id]/export/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `supabase/migrations/005_ai_gtm_assistant.sql`, `scripts/build-questionnaire-docx.js`, `docs/survey/*.docx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`, `.omx/plans/2026-08-11-kakao-login-integration.md`, `.omx/plans/2026-08-11-full-english-localization.md`
 - Observed fact: 기존 UI는 `--ink`, `--green`, `--green-dark`, `--mint`, `--paper` 토큰과 흰색 panel, 12px 내외 radius, 짧은 상태 문구를 공통으로 사용한다.
@@ -41,7 +41,7 @@
 ## Information architecture
 
 - Primary navigation: 대시보드 / 준비도 진단 / GTM 여정 / 전문가 서비스 / 계정
-- Core routes/screens: `/signin`·`/signup` 이메일·Google·카카오 인증 → `/auth/callback` 공통 OAuth 처리 → `/account/onboarding` 신규 OAuth 사용자 정보·동의 보완 → `/assessment` 현재 Gate 문항과 준비 2단계 목표시장 확인 → 단계 판정 → `/assistant/[assessmentId]` 론칭 대상 정의 → 시장·경쟁 사전조사 검토 → 준비 3단계 55문항 완료 시 실제 판매 가능성 예비검증 → 공동계획 또는 다음 Gate → `/dashboard` 목표시장·질문별 실행·증거 현황 → `/assessment/[assessmentId]/recheck` Gate 재확인 → `/journey` 실행 보드 → 계획 보고서 → `/services` 전문가 연결
+- Core routes/screens: `/signin`·`/signup` 이메일·Google·카카오 인증 → `/auth/callback` 공통 OAuth 처리 → `/account/onboarding` 신규 OAuth 사용자 정보·동의 보완 → `/assessment` 현재 Gate 문항과 준비 2단계 목표시장 확인 → 단계 판정 → `/assistant/[assessmentId]` 론칭 대상 정의 → 시장·경쟁 사전조사 검토 → `/api/gtm-plans/[id]/export?view=1` 종합 시장보고서 → 준비 3단계 55문항 완료 시 실제 판매 가능성 예비검증 → 공동계획 또는 다음 Gate → `/dashboard` 목표시장·질문별 실행·증거 현황 → `/assessment/[assessmentId]/recheck` Gate 재확인 → `/journey` 실행 보드 → 계획 보고서 → `/services` 전문가 연결
 - Content hierarchy: 현재 단계 문항 → 준비 2단계의 초기 목표국가·목표 고객군 확인 → 결정론적 Gate 판정 → 공통 상태 요약 1회와 개별 보완 항목 → 질문별 충족·근거 상태 → 론칭 대상 정의 → 시장·경쟁 사전조사와 가정 확인 → 준비 3단계 55문항 완료 여부에 따른 판매 가능성 예비검증 또는 검증 보류 안내 → 허용된 기간 범위의 계획 초안 → 질문과 연결된 실행 → 증거 제출 → Gate 재확인 → 다음 단계 해제 → 다운로드·전문가 handoff
 - The assistant is entered from a saved assessment only; it is not a global chat entry in primary navigation.
 - Later-stage questions are not visible or navigable until the immediately preceding Gate passes.
@@ -78,7 +78,7 @@
 ## Components
 
 - Existing components to reuse: `SiteHeader`, `.panel`, 짙은 녹색 3D 규격을 공유하는 `.button` variants, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, `.offering-picker`, 서비스 카드
-- New/changed components: provider별 설정을 받는 `SocialLoginButton`, 허용된 callback 오류를 설명하는 `AuthErrorNotice`, 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 통과 인정점수와 응답 분포를 분리한 `GateScoreChart`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `MarketSizingTable`, `CompetitorTable`, `SourceList`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드
+- New/changed components: provider별 설정을 받는 `SocialLoginButton`, 허용된 callback 오류를 설명하는 `AuthErrorNotice`, 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 통과 인정점수와 응답 분포를 분리한 `GateScoreChart`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `ResearchCoverageSummary`, `MarketSizingTable`, `MarketTrendSection`, `CompetitorTable`, `SourceList`, `ComprehensiveMarketReport`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드
 - Variants and states: Gate locked/active/passed/stopped, target market missing/partial/confirmed, question satisfied/evidence_needed/improvement_needed/locked, assistant context_draft/researching/review_required/confirmed/plan_draft/active, market source/assumption/estimate/confirmation_needed, offering validation deferred/preliminary_reviewed, plan draft/active/superseded/completed, item not_started/in_progress/blocked/completed, founder/vault/web/deterministic source
 - Token/component ownership: 전역 토큰과 공통 상태는 `app/globals.css`; assistant 전용 레이아웃도 같은 파일의 기존 토큰을 사용한다.
 - Do not add a component library, Tailwind layer, icon package, or design-token abstraction.
@@ -130,10 +130,14 @@ Google로 계속하기
 
 - 1단계 `론칭 정의`: 기존 진단 요약 sidebar를 유지하고 본문 첫 카드에서 론칭 유형 `제품 / 서비스 / 솔루션 / 복합`, 론칭명, 한 문장 설명, 고객 문제, 핵심 가치, 고객의 현재 대안, 차별점, 제공 방식, 수익 방식, 현재 검증 근거를 받는다. 론칭 유형·론칭명·한 문장 설명·고객 문제·핵심 가치·목표국가·목표고객은 필수다.
 - 2단계 `시장·경쟁 사전조사`: 조사 범위, 기준연도, 통화, 추정 단위와 가정을 먼저 보여준다. 결과는 시장동향, 전체시장(Total Addressable Market), 유효시장(Serviceable Available Market), 수익가능시장(Serviceable Obtainable Market), 교두보 시장(Beachhead Market), 직접·인접·대체 경쟁사, 확인이 필요한 공백 순서로 표시한다.
-- 시장동향과 주요 경쟁사는 데스크톱에서 2개의 독립 카드로 나란히 배치하고, 모바일에서는 충분한 간격을 둔 1열 카드로 쌓는다. 각 카드의 긴 문장과 출처 URL은 다른 카드로 넘치지 않아야 한다.
+- 시장동향과 경쟁 구도는 각각 전체 폭의 독립 섹션으로 배치하고, 섹션 내부 항목만 데스크톱에서 다열·모바일에서 1열로 전환한다. 각 카드의 긴 문장과 출처 URL은 다른 카드로 넘치지 않아야 한다.
 - 교두보 시장(Beachhead Market)은 유사 제품을 사고, 판매주기가 비슷하며, 입소문이 가능한 최초의 응집 고객군으로 정의한다. 직접 접근 가능한 고객 수와 연간 고객당 매출로 계산하고 인접시장 확장 경로를 함께 제시한다.
 - 시장규모는 단일 숫자 대신 `낮음 / 기준 / 높음` 범위, 산식, 입력값, 기준연도·통화, 출처, 신뢰도와 제한을 함께 표시한다. 상향식 입력이 없으면 최근 공개자료의 독립적인 하향식 경로 2개 이상을 교차검증해 보수적으로 추정하고 대리 가정을 명시한다.
 - 경쟁사는 최소 직접·인접·대체 유형을 구분하고 기업명, 대상 고객, 제공 가치, 가격·판매 방식, 강점, 차별화 기회, 출처·확인일을 표 또는 모바일 카드로 보여준다. 근거가 부족하면 개수를 채우기 위해 이름을 만들지 않는다.
+- 조사는 `수요·성장`, `고객 행동`, `유통·채널`, `규제`, `제품·문화`, `직접 경쟁`, `인접 경쟁`, `대체재`의 8개 영역으로 나누어 수집한 뒤 하나의 결과로 합친다. 동일 URL과 동일 경쟁사는 서버에서 중복 제거하고, 정부·규제기관, 산업자료, 현지 유통·커머스, 기업 공식자료, 소비자·리뷰 자료의 구성과 고유 도메인 수를 함께 표시한다.
+- 시장동향은 최대 10개, 경쟁 후보는 직접·현지·글로벌·인접·대체 유형을 합쳐 최대 12개까지 표시한다. 각 항목은 여러 출처와 시사점을 담을 수 있으며, 서로 충돌하는 자료는 숨기지 않고 `상충 근거`로 별도 표시한다.
+- 조사 결과 상단에는 `조사영역 / 고유 출처 / 경쟁 후보` 요약을 제공하고, 핵심 인사이트와 핵심 경쟁 후보를 먼저 보여준 뒤 전체 결과를 펼쳐 볼 수 있게 한다. 같은 목표국가·제품 범주의 7일 이내 종합 조사 결과는 재사용하되, 입력이 바뀌면 새 조사 세대로 무효화한다.
+- 조사 카드 하단의 `종합 시장보고서 보기`는 인증·조직 범위를 유지한 웹페이지 보고서로 이동한다. 보고서는 경영진 요약, 시장 정의와 규모, 영역별 동향, 경쟁 구도, 상충 근거, 다음 검증 과제, 전체 출처와 한계를 동일한 언어로 한 화면에 제공하고 인쇄 가능한 구조를 사용한다.
 - 창업자는 `가정 수정`, `조사 다시 실행`, `이 조사로 계획 만들기` 가운데 하나를 선택한다. 명시적으로 확인하기 전에는 조사 결과를 계획 근거로 확정하지 않는다.
 - `준비 1단계`와 `준비 2단계`에서는 `판매 가능성은 아직 판단하지 않습니다` 안내와 함께 조사 결과, 검증 가설, 다음에 모을 증거를 보고서에 넣는다. 뒤 단계의 미응답 문항은 실패나 0점으로 계산하지 않는다.
 - `준비 3단계`까지 55문항이 모두 응답되면 2단계 하단에 `실제 판매 가능성 예비검증`을 표시한다. 결과는 `고객 문제 적합성 / 차별 가치 / 현지 적합성 / 지불 의사 / 증거 강도`별로 `확인 / 보완 필요 / 근거 부족` 상태와 근거 문항·증거를 보여준다. 하나의 성공확률 점수나 판매 보장은 표시하지 않는다.
@@ -196,7 +200,7 @@ Google로 계속하기
 - Framework/styling system: Next.js App Router, React 19, 단일 `app/globals.css`, 서버 컴포넌트 우선
 - Design-token constraints: `:root` 기존 변수와 현재 버튼/panel 패턴만 확장한다. 전역 글꼴은 `--font-sans` 하나로 관리하고 화면별 `font-family` 재정의를 추가하지 않는다.
 - Performance constraints: 최초 페이지 렌더에 AI 호출 금지, 상태 변경에 AI 호출 금지, 클라이언트 번들에 OpenAI/Supabase service key 코드 금지
-- Research constraints: 기존 Responses API의 `file_search`와 `web_search`만 사용하고 새 검색 SDK를 추가하지 않는다. 공개 웹 검색에는 고객명·연락처·계약서·기밀 수치를 보내지 않는다. 공식 통계·규제기관·기업 공식 자료를 우선하고 모든 외부 사실에 URL·게시자·확인일을 저장한다.
+- Research constraints: 기존 Responses API의 `file_search`와 `web_search`만 사용하고 새 검색 SDK를 추가하지 않는다. 공개 웹 검색에는 고객명·연락처·계약서·기밀 수치를 보내지 않는다. 쿼리 계획 뒤 영역별 조사를 병렬 실행하고, 공식 통계·규제기관·산업자료·현지 유통·기업 공식자료·소비자 자료를 교차검증한다. 일반 시장·경쟁 조사는 최대 10회, 시장규모 조사는 최대 8회의 웹 검색 지침을 사용하며 모든 외부 사실에 URL·게시자·자료 유형·확인일을 저장한다.
 - Compatibility constraints: 55문항의 문구·배점·Critical 규칙은 유지하되 한 진단 세션에서 통과한 단계까지만 저장하며, Supabase RLS와 비로그인 진단 후 인증 복귀 흐름을 유지한다. 초기 목표국가·목표 고객군은 질문 답변에서 추론하지 않고 assessment의 구조화된 확정값으로 저장하며 Gate B에만 추가 선결 조건으로 사용한다. 미응답·잠김 문항을 판매 가능성의 부정 근거로 사용하지 않으며 `readiness_answers` 55개가 모두 있을 때만 실제 판매 가능성 예비검증을 계산한다.
 - Auth constraints: Supabase Kakao provider와 기존 PKCE callback을 재사용하고 Kakao JavaScript SDK·별도 callback·신규 인증 dependency는 추가하지 않는다. 첫 버전은 확인 이메일을 필수로 하며 `Allow users without an email`을 켜지 않는다. Kakao REST key와 Client Secret은 Supabase에, 탈퇴용 Admin Key는 Vercel server-only 변수에만 저장한다. 카카오 unlink의 `target_id`는 스테이징에서 확인된 숫자형 `identity_data.sub`만 사용한다. 동일 이메일 계정 연결, unlink 재시도, soft delete 뒤 식별자 잔존, 개인정보 처리방침 검토가 끝나기 전에는 공개 feature flag를 활성화하지 않는다. 제한 베타를 넘어 공개 운영할 때는 카카오 외부 unlink callback도 처리한다.
 - Test/screenshot expectations: 단계별 미통과·통과·최종 부분통과 화면, 반복 접두문이 없는 선결 조건 카드, Gate A에서 목표시장 미확정 허용, Gate B에서 목표국가·목표 고객군 중 0/1/2개 확정 상태와 준비 3단계 잠금, 확정값의 AI 어시스턴트 재사용, 목표시장 변경 후 조사 재확인 상태, 준비 1단계·준비 2단계의 검증 보류와 사전조사 보고서, 준비 3단계 55문항 완료 후 판매 가능성 예비검증, 론칭 정의 필수값, 조사 로딩·성공·근거부족·실패, 시장규모 산식과 출처, 경쟁사 카드·표, 창업자 확인 전 계획 차단, 질문 상태 필터, 계획-질문 연결, 증거 제출, Gate 재확인, 잠금 해제, AI 기간 범위, HTML 다운로드를 typecheck/build와 수동 브라우저로 확인한다. 새 UI·검색·PDF 의존성은 추가하지 않는다.
