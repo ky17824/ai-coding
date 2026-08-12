@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { translateTextFields } from "@/lib/content-localization";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
+import { marketResearchContextSignature, normalizeMarketResearch } from "@/lib/market-sizing";
 
 const localeSchema = z.enum(["ko", "en"]).default("ko");
 const requestSchema = z.discriminatedUnion("action", [
@@ -35,7 +36,7 @@ export async function PATCH(
   const { id } = await params;
   const { data: plan } = await admin
     .from("gtm_plans")
-    .select("id,organization_id,market_research,market_research_confirmed_at,content_locale")
+    .select("id,organization_id,founder_context,market_research,market_research_confirmed_at,content_locale")
     .eq("id", id)
     .maybeSingle();
   const { data: profile } = await admin
@@ -48,7 +49,11 @@ export async function PATCH(
   }
 
   if (parsed.data.action === "approve") {
-    if (!plan.market_research || !plan.market_research_confirmed_at) {
+    const research = normalizeMarketResearch(plan.market_research);
+    const legacyConfirmed = research?.marketSizingMethodologyVersion === "legacy" && Boolean(plan.market_research_confirmed_at);
+    if (!research || !plan.market_research_confirmed_at || (!legacyConfirmed && (
+        research.marketSizing.some((entry) => entry.status === "insufficient_evidence") ||
+        research.researchContextSignature !== marketResearchContextSignature(plan.founder_context ?? {})))) {
       return NextResponse.json(
         { message: en ? "Review and confirm the market and competitive research before approving the plan." : "시장·경쟁 사전조사를 확인한 뒤 계획을 승인해 주세요." },
         { status: 409 }
@@ -64,8 +69,15 @@ export async function PATCH(
   }
 
   if (parsed.data.action === "confirm_research") {
-    if (!plan.market_research) {
+    const research = normalizeMarketResearch(plan.market_research);
+    if (!research) {
       return NextResponse.json({ message: en ? "There is no market research to confirm." : "확인할 시장 조사 결과가 없습니다." }, { status: 409 });
+    }
+    if (research.marketSizing.some((entry) => entry.status === "insufficient_evidence")) {
+      return NextResponse.json({ message: en ? "Add the missing market-sizing evidence and run the research again before confirming it." : "부족한 시장규모 근거를 입력하고 다시 조사한 뒤 확인해 주세요." }, { status: 409 });
+    }
+    if (!research.researchContextSignature || research.researchContextSignature !== marketResearchContextSignature(plan.founder_context ?? {})) {
+      return NextResponse.json({ message: en ? "Inputs changed. Run the market research again before confirming it." : "입력 내용이 변경되었습니다. 시장 조사를 다시 실행한 뒤 확인해 주세요." }, { status: 409 });
     }
     const { error } = await admin
       .from("gtm_plans")

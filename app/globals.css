@@ -3247,6 +3247,29 @@ main[lang="en"] .hero h1 {
   padding: 18px;
 }
 
+.market-size-card__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.market-size-card__heading em {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: #e9f6ef;
+  color: var(--green);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.market-size-card__heading em[data-status="insufficient_evidence"] {
+  background: #fff3df;
+  color: #8c5a16;
+}
+
 .market-size-grid strong {
   color: var(--green);
   font-family: var(--font-sans);
@@ -3261,6 +3284,39 @@ main[lang="en"] .hero h1 {
 .assistant-research-grid span,
 .assistant-research-grid small {
   color: var(--muted);
+}
+
+.market-size-grid p,
+.market-definition {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.market-size-grid details {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.market-size-grid summary {
+  cursor: pointer;
+  color: var(--green);
+  font-weight: 750;
+}
+
+.market-size-grid details ul {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding-left: 18px;
+}
+
+.market-size-grid details li,
+.market-size-grid details a {
+  overflow-wrap: anywhere;
+}
+
+.market-size-grid details li small {
+  display: block;
 }
 
 .assistant-research-grid > div {

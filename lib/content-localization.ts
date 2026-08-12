@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Locale } from "@/lib/i18n";
 import type { StoredGtmPlan } from "@/lib/types";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { normalizeMarketResearch } from "@/lib/market-sizing";
 
 type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdminClient>>;
 type Path = (string | number)[];
@@ -19,7 +20,8 @@ const translationSchema = z.object({
 const NON_TRANSLATABLE_KEYS = new Set([
   "id", "url", "checkedAt", "generatedAt", "dueDate", "deadline",
   "kind", "scope", "status", "priority", "serviceTag", "role",
-  "questionKey", "inputType", "label", "offeringType", "generatedBy"
+  "questionKey", "inputType", "label", "offeringType", "generatedBy",
+  "key", "methodologyVersion", "currency", "confidence", "method", "researchContextSignature"
 ]);
 
 function pathKey(path: Path) {
@@ -69,6 +71,7 @@ export async function localizeStoredGtmPlan(
   plan: StoredGtmPlan,
   targetLocale: Locale
 ): Promise<StoredGtmPlan> {
+  plan = { ...plan, marketResearch: normalizeMarketResearch(plan.marketResearch) };
   const document = {
     summary: plan.summary,
     assumptions: plan.assumptions,

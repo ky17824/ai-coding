@@ -72,7 +72,19 @@ export async function GET(
   const research = localizedPlan.marketResearch;
   if (!research) return NextResponse.json({ message: en ? "There is no market research to download." : "다운로드할 시장 조사 결과가 없습니다." }, { status: 409 });
 
-  const marketSizes = research.marketSizing.map((entry) => `<article><h3>${entry.label}</h3><strong>${escapeHtml(entry.estimate)}</strong><p>${escapeHtml(entry.method)}</p>${list(entry.assumptions)}</article>`).join("");
+  const marketSizes = research.marketSizing.map((entry) => {
+    const title = entry.key === "beachhead" ? (en ? "Beachhead Market" : "교두보 시장(Beachhead Market)") : entry.label;
+    const method = entry.method === "triangulated" ? (en ? "triangulated" : "상향식·하향식 교차검증") : (en ? "bottom up" : "상향식");
+    const confidence = en ? entry.confidence : ({ high: "높음", medium: "보통", low: "낮음" }[entry.confidence]);
+    const sourceKind = (kind: string) => en ? kind.replaceAll("_", " ") : ({ fact: "공개 사실", founder_input: "창업자 입력", proxy_assumption: "대리 가정" }[kind] ?? kind);
+    const sources = entry.sources.length > 0
+      ? `<h4>${en ? "Sources" : "근거 자료"}</h4><ul>${entry.sources.map((source) => `<li>${source.url ? `<a href="${escapeHtml(source.url)}">${escapeHtml(source.title)}</a>` : escapeHtml(source.title)}${source.publishedAt ? ` · ${escapeHtml(source.publishedAt)}` : ""}${source.checkedAt ? ` · ${en ? "checked" : "확인"} ${escapeHtml(source.checkedAt)}` : ""} · ${escapeHtml(sourceKind(source.kind))}</li>`).join("")}</ul>`
+      : "";
+    const calculationInputs = entry.calculationInputs.length > 0 ? `<h4>${en ? "Calculation inputs" : "계산 입력값"}</h4>${list(entry.calculationInputs.map((input) => `${input.name}: ${input.low}–${input.high} (${en ? "base" : "기준"} ${input.base}) ${input.unit} · ${input.sourceTitles.join(", ")}`))}` : "";
+    const validation = entry.validation.length ? `<h4>${en ? "Validation" : "검증"}</h4>${list(entry.validation)}` : "";
+    const cohesion = entry.cohesion ? `<p><strong>${en ? "Beachhead checks" : "교두보 시장 점검"}</strong><br>${escapeHtml(`${entry.cohesion.buysSimilarProducts ? "✓" : "✕"} ${en ? "similar products" : "유사 제품"} · ${entry.cohesion.similarSalesCycle ? "✓" : "✕"} ${en ? "similar sales cycle" : "유사 판매주기"} · ${entry.cohesion.wordOfMouthPotential ? "✓" : "✕"} ${en ? "word of mouth" : "입소문 가능성"} · ${entry.cohesion.notes}`)}</p>` : "";
+    return `<article><h3>${escapeHtml(title)}</h3><strong>${escapeHtml(entry.estimate)}</strong><p>${entry.range ? `${entry.range.referenceYear} · ${escapeHtml(entry.range.currency)} · ` : ""}${escapeHtml(method)}</p><p><strong>${en ? "Formula" : "산식"}</strong><br>${escapeHtml(entry.formula)}</p>${calculationInputs}<p><strong>${en ? "Confidence" : "신뢰도"}</strong><br>${escapeHtml(confidence)}</p>${validation}${cohesion}${entry.assumptions.length ? `<h4>${en ? "Assumptions" : "가정"}</h4>${list(entry.assumptions)}` : ""}${entry.evidenceGaps.length ? `<h4>${en ? "Evidence gaps" : "근거 공백"}</h4>${list(entry.evidenceGaps)}` : ""}${entry.expansionPath.length ? `<p><strong>${en ? "Expansion path" : "인접시장 확장 경로"}</strong><br>${escapeHtml(entry.expansionPath.join(" → "))}</p>` : ""}${sources}</article>`;
+  }).join("");
   const competitors = research.competitors.map((entry) => `<tr><td>${escapeHtml(entry.name)}</td><td>${escapeHtml(entry.type)}</td><td>${escapeHtml(entry.relevance)}</td><td>${escapeHtml(entry.differentiationGap)}</td></tr>`).join("");
   const planItems = localizedPlan.items.map((item) => `<article><p><strong>${item.horizon} ${en ? "days" : "일"} · ${escapeHtml(item.priority)}</strong></p><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.rationale)}</p><dl><dt>${en ? "Owner" : "담당"}</dt><dd>${escapeHtml(item.ownerLabel)}</dd><dt>${en ? "Due date" : "기한"}</dt><dd>${escapeHtml(item.dueDate)}</dd><dt>${en ? "Completion evidence" : "완료 근거"}</dt><dd>${escapeHtml(item.completionEvidence)}</dd></dl></article>`).join("");
   const fontUrl = escapeHtml(new URL("/fonts/PretendardVariable.woff2", request.url).toString());

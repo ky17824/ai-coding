@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { localizedPath, type Locale } from "@/lib/i18n";
+import { marketResearchContextSignature } from "@/lib/market-sizing";
 import type {
   GtmAssistantQuestion,
   GtmFounderContext,
   GtmMarketResearch,
+  GtmMarketSizingEntry,
   GtmPlanDraft,
   GtmPlanItem,
   StoredGtmPlan
@@ -34,6 +36,43 @@ interface Props {
   initialQuestion: GtmAssistantQuestion | null;
 }
 
+function MarketSizeCard({ entry, en }: { entry: GtmMarketSizingEntry; en: boolean }) {
+  const title = entry.key === "beachhead"
+    ? en ? "Beachhead Market" : "교두보 시장(Beachhead Market)"
+    : entry.label;
+  const confidence = en
+    ? `${entry.confidence} confidence`
+    : `신뢰도 ${entry.confidence === "high" ? "높음" : entry.confidence === "medium" ? "보통" : "낮음"}`;
+  const method = entry.method === "triangulated"
+    ? en ? "triangulated" : "상향식·하향식 교차검증"
+    : en ? "bottom up" : "상향식";
+  const sourceKind = (kind: string) => en
+    ? kind.replaceAll("_", " ")
+    : ({ fact: "공개 사실", founder_input: "창업자 입력", proxy_assumption: "대리 가정" }[kind] ?? kind);
+  return (
+    <article>
+      <div className="market-size-card__heading"><strong>{title}</strong><em data-status={entry.status}>{entry.status === "estimated" ? confidence : en ? "Needs evidence" : "근거 보완 필요"}</em></div>
+      <span>{entry.estimate}</span>
+      {entry.range && <small>{entry.range.referenceYear} · {entry.range.currency} · {method}</small>}
+      <p>{entry.formula}</p>
+      <details>
+        <summary>{en ? "Formula, evidence, and assumptions" : "산식·근거·가정 보기"}</summary>
+        {entry.calculationInputs.length > 0 && <><b>{en ? "Calculation inputs" : "계산 입력값"}</b><ul>{entry.calculationInputs.map((input) => <li key={`${input.name}-${input.unit}`}><strong>{input.name}</strong>: {input.low.toLocaleString()}–{input.high.toLocaleString()} ({en ? "base" : "기준"} {input.base.toLocaleString()}) {input.unit}<small>{input.sourceTitles.join(" · ")}</small></li>)}</ul></>}
+        {entry.validation.length > 0 && <ul>{entry.validation.map((item) => <li key={item}>{item}</li>)}</ul>}
+        {entry.assumptions.length > 0 && <><b>{en ? "Assumptions" : "가정"}</b><ul>{entry.assumptions.map((item) => <li key={item}>{item}</li>)}</ul></>}
+        {entry.evidenceGaps.length > 0 && <><b>{en ? "Evidence gaps" : "근거 공백"}</b><ul>{entry.evidenceGaps.map((item) => <li key={item}>{item}</li>)}</ul></>}
+        {entry.cohesion && <p>{en ? "Beachhead checks" : "교두보 시장 점검"}: {[
+          entry.cohesion.buysSimilarProducts && (en ? "similar products" : "유사 제품"),
+          entry.cohesion.similarSalesCycle && (en ? "similar sales cycle" : "유사 판매주기"),
+          entry.cohesion.wordOfMouthPotential && (en ? "word of mouth" : "입소문 가능성")
+        ].filter(Boolean).join(" · ") || (en ? "Not yet verified" : "아직 확인되지 않음")}</p>}
+        {entry.expansionPath.length > 0 && <p>{en ? "Expansion path" : "인접시장 확장 경로"}: {entry.expansionPath.join(" → ")}</p>}
+        {entry.sources.length > 0 && <><b>{en ? "Sources" : "근거 자료"}</b><ul>{entry.sources.map((source) => <li key={`${source.title}-${source.url ?? source.kind}`}>{source.url ? <a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a> : source.title}<small>{source.publisher}{source.publishedAt ? ` · ${source.publishedAt}` : ""}{source.checkedAt ? ` · ${en ? "checked" : "확인"} ${source.checkedAt}` : ""} · {sourceKind(source.kind)}</small></li>)}</ul></>}
+      </details>
+    </article>
+  );
+}
+
 export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion, locale }: Props) {
   const en = locale === "en";
   const [planId, setPlanId] = useState(initialPlan?.id ?? "");
@@ -52,6 +91,10 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
     differentiation: initialPlan?.founderContext.differentiation ?? "",
     deliveryModel: initialPlan?.founderContext.deliveryModel ?? "",
     revenueModel: initialPlan?.founderContext.revenueModel ?? "",
+    expectedPrice: initialPlan?.founderContext.expectedPrice ?? "",
+    annualPurchaseFrequency: initialPlan?.founderContext.annualPurchaseFrequency ?? "",
+    initialReachableCustomers: initialPlan?.founderContext.initialReachableCustomers ?? "",
+    threeYearSalesCapacity: initialPlan?.founderContext.threeYearSalesCapacity ?? "",
     validationEvidence: initialPlan?.founderContext.validationEvidence ?? "",
     targetCountry: initialPlan?.founderContext.targetCountry ?? assessment.targetCountry,
     targetCustomer: initialPlan?.founderContext.targetCustomer ?? assessment.targetCustomer,
@@ -65,14 +108,19 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
   const [researchConfirmed, setResearchConfirmed] = useState(
     Boolean(initialPlan?.marketResearchConfirmedAt)
   );
+  const [researchNeedsInputs, setResearchNeedsInputs] = useState(
+    initialPlan?.marketResearch?.marketSizingMethodologyVersion === "legacy" && initialPlan?.marketResearchConfirmedAt
+      ? false
+      : Boolean(initialPlan?.marketResearch?.marketSizing.some((entry) => entry.status === "insufficient_evidence"))
+  );
+  const [researchDisplaySignature, setResearchDisplaySignature] = useState(
+    initialPlan?.marketResearch ? marketResearchContextSignature(initialPlan.founderContext) : ""
+  );
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [workshopFailed, setWorkshopFailed] = useState(false);
   const researchMatchesContext = Boolean(
-    marketResearch &&
-      marketResearch.offeringName === context.offeringName.trim() &&
-      marketResearch.targetCountry === context.targetCountry.trim() &&
-      marketResearch.targetCustomer === context.targetCustomer.trim()
+    marketResearch && researchDisplaySignature === marketResearchContextSignature(context)
   );
 
   async function runWorkshop(answerOverride?: string, forcePlan = false) {
@@ -149,6 +197,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
         message?: string;
         planId?: string;
         result?: GtmMarketResearch;
+        needsEvidence?: boolean;
       };
       if (!response.ok || !payload.result || !payload.planId) {
         throw new Error(payload.message ?? (en ? "We couldn't complete the market and competitive research." : "시장·경쟁 사전조사를 만들지 못했습니다."));
@@ -156,7 +205,9 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
       setPlanId(payload.planId);
       setMarketResearch(payload.result);
       setResearchConfirmed(false);
-      setNotice(en ? "The AI market and competitive research is ready. Review it before continuing." : "AI 시장·경쟁 사전조사를 만들었습니다. 내용을 확인해 주세요.");
+      setResearchNeedsInputs(Boolean(payload.needsEvidence));
+      setResearchDisplaySignature(marketResearchContextSignature(context));
+      setNotice(payload.message ?? (en ? "The AI market and competitive research is ready. Review it before continuing." : "AI 시장·경쟁 사전조사를 만들었습니다. 내용을 확인해 주세요."));
     } catch (error) {
       setNotice(error instanceof Error ? error.message : en ? "Something went wrong." : "오류가 발생했습니다.");
     } finally {
@@ -165,7 +216,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
   }
 
   async function confirmResearch() {
-    if (!planId) return;
+    if (!planId || researchNeedsInputs) return;
     const response = await fetch(`/api/gtm-plans/${planId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -259,6 +310,10 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
           <label>{en ? "Differentiation" : "차별성"}<input value={context.differentiation} onChange={(event) => setContext({ ...context, differentiation: event.target.value })} placeholder={en ? "Why would customers switch?" : "고객이 바꿀 이유"} /></label>
           <label>{en ? "Delivery model" : "제공 방식"}<input value={context.deliveryModel} onChange={(event) => setContext({ ...context, deliveryModel: event.target.value })} placeholder={en ? "e.g., SaaS, export, or local partner" : "예: SaaS, 수출, 현지 파트너"} /></label>
           <label>{en ? "Revenue model" : "수익 방식"}<input value={context.revenueModel} onChange={(event) => setContext({ ...context, revenueModel: event.target.value })} placeholder={en ? "e.g., Monthly subscription or project fee" : "예: 월 구독, 건별 계약"} /></label>
+          <label>{en ? "Expected price or annual contract value" : "예상 가격·연간 계약금액"}<input value={context.expectedPrice} onChange={(event) => setContext({ ...context, expectedPrice: event.target.value })} placeholder={en ? "e.g., US$120/year or US$20K ACV" : "예: 연 US$120 또는 연간 계약금액 US$20K"} /></label>
+          <label>{en ? "Annual purchase frequency or term" : "연간 구매 빈도·계약기간"}<input value={context.annualPurchaseFrequency} onChange={(event) => setContext({ ...context, annualPurchaseFrequency: event.target.value })} placeholder={en ? "e.g., 2 purchases/year or 12-month contract" : "예: 연 2회 또는 12개월 계약"} /></label>
+          <label>{en ? "Initially reachable customers" : "초기에 직접 접근 가능한 고객 수"}<input value={context.initialReachableCustomers} onChange={(event) => setContext({ ...context, initialReachableCustomers: event.target.value })} placeholder={en ? "e.g., 30 qualified retailers through one partner" : "예: 파트너를 통해 접촉 가능한 유통사 30곳"} /></label>
+          <label>{en ? "Three-year sales capacity" : "3년 판매·공급 가능 범위"}<input value={context.threeYearSalesCapacity} onChange={(event) => setContext({ ...context, threeYearSalesCapacity: event.target.value })} placeholder={en ? "e.g., US$500K or 5,000 units" : "예: US$500K 또는 5,000개"} /></label>
           <label>{en ? "Target country" : "목표국가(Target Country)"}<input value={context.targetCountry} onChange={(event) => setContext({ ...context, targetCountry: event.target.value })} placeholder={en ? "e.g., Japan" : "예: 일본"} /></label>
           <label>{en ? "Target customer" : "목표 고객"}<input value={context.targetCustomer} onChange={(event) => setContext({ ...context, targetCustomer: event.target.value })} placeholder={en ? "e.g., Mid-sized manufacturers in Tokyo" : "예: 도쿄 소재 중견 제조사"} /></label>
           <label className="assistant-context__wide">{en ? "Current validation evidence" : "현재 검증 근거"}<textarea rows={2} value={context.validationEvidence} onChange={(event) => setContext({ ...context, validationEvidence: event.target.value })} placeholder={en ? "List only confirmed evidence, such as interviews, paying customers, or market tests." : "인터뷰, 유료 고객, 실증시험(Market Testing) 등 현재 확인된 사실만 적어 주세요."} /></label>
@@ -274,11 +329,12 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
           <section className="assistant-research panel">
             <div className="dashboard-section__heading">
               <span><span className="page-kicker">{en ? "AI MARKET & COMPETITIVE RESEARCH" : "AI 시장·경쟁 사전조사"}</span><h2>{marketResearch.offeringName} · {marketResearch.targetCountry}</h2></span>
-              {researchMatchesContext && researchConfirmed ? <strong className="research-confirmed">{en ? "Confirmed" : "확인 완료"}</strong> : researchMatchesContext ? <button className="button button--dark" type="button" onClick={confirmResearch}>{en ? "Confirm research" : "조사 결과 확인"}</button> : <strong>{en ? "Inputs changed · run research again" : "입력 변경됨 · 다시 조사 필요"}</strong>}
+              {researchNeedsInputs ? <strong>{en ? "Evidence needed · add inputs and rerun" : "근거 보완 필요 · 입력 후 다시 조사"}</strong> : researchMatchesContext && researchConfirmed ? <strong className="research-confirmed">{en ? "Confirmed" : "확인 완료"}</strong> : researchMatchesContext ? <button className="button button--dark" type="button" onClick={confirmResearch}>{en ? "Confirm research" : "조사 결과 확인"}</button> : <strong>{en ? "Inputs changed · run research again" : "입력 변경됨 · 다시 조사 필요"}</strong>}
             </div>
             <p>{marketResearch.executiveSummary}</p>
             {marketResearch.scope === "market_preresearch" && <p className="notice-banner">{en ? "At Readiness Stages 1 and 2, this report does not judge commercial viability. It provides preliminary market research and the next validation tasks." : "준비 1단계와 준비 2단계에서는 실제 판매 가능성을 판정하지 않고, 시장·경쟁 사전조사와 다음 검증 과제만 제공합니다."}</p>}
-            <div className="market-size-grid">{marketResearch.marketSizing.map((entry) => <article key={entry.label}><strong>{entry.label}</strong><span>{entry.estimate}</span><small>{entry.method}</small></article>)}</div>
+            <p className="market-definition"><strong>{en ? "Market boundary" : "시장 범위"}</strong>{" "}{marketResearch.marketDefinition.included}{marketResearch.marketDefinition.excluded ? ` · ${en ? "Excluded" : "제외"}: ${marketResearch.marketDefinition.excluded}` : ""}</p>
+            <div className="market-size-grid">{marketResearch.marketSizing.map((entry) => <MarketSizeCard key={entry.key} entry={entry} en={en} />)}</div>
             <div className="assistant-research-grid">
               <div><h3>{en ? "Market trends" : "시장동향"}</h3><ul>{marketResearch.trends.map((entry) => <li key={entry.title}><strong>{entry.title}</strong><span>{entry.finding}</span>{entry.url && <a href={entry.url} target="_blank" rel="noreferrer">{entry.sourceTitle} ↗</a>}</li>)}</ul></div>
               <div><h3>{en ? "Key competitors" : "주요 경쟁사"}</h3><ul>{marketResearch.competitors.map((entry) => <li key={`${entry.name}-${entry.type}`}><strong>{entry.name}</strong><span>{entry.relevance}</span><small>{entry.differentiationGap}</small>{entry.url && <a href={entry.url} target="_blank" rel="noreferrer">{en ? "Source" : "근거"} ↗</a>}</li>)}</ul></div>

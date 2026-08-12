@@ -30,6 +30,7 @@ import type {
 } from "@/lib/types";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { preserveFounderContextLocale } from "@/lib/content-localization";
+import { marketResearchContextSignature, normalizeMarketResearch } from "@/lib/market-sizing";
 
 const requestSchema = z.object({
   assessmentId: z.string().uuid(),
@@ -48,6 +49,10 @@ const requestSchema = z.object({
       differentiation: z.string().trim().max(1000).default(""),
       deliveryModel: z.string().trim().max(500).default(""),
       revenueModel: z.string().trim().max(500).default(""),
+      expectedPrice: z.string().trim().max(300).default(""),
+      annualPurchaseFrequency: z.string().trim().max(300).default(""),
+      initialReachableCustomers: z.string().trim().max(500).default(""),
+      threeYearSalesCapacity: z.string().trim().max(500).default(""),
       validationEvidence: z.string().trim().max(1200).default(""),
       targetCountry: z.string().trim().max(100).default(""),
       targetCustomer: z.string().trim().max(300).default(""),
@@ -65,6 +70,10 @@ const requestSchema = z.object({
       differentiation: "",
       deliveryModel: "",
       revenueModel: "",
+      expectedPrice: "",
+      annualPurchaseFrequency: "",
+      initialReachableCustomers: "",
+      threeYearSalesCapacity: "",
       validationEvidence: "",
       targetCountry: "",
       targetCustomer: "",
@@ -237,10 +246,14 @@ export async function POST(request: Request) {
       sanitizeFounderText(value)
     ])
   ) as unknown as GtmFounderContext;
+  const contextSourceLocale = existingPlan?.founder_context_locale ?? existingPlan?.content_locale ?? "ko";
+  const storedContext = (existingPlan?.founder_context as Partial<GtmFounderContext> | null) ?? {};
   const cleanContext = {
-    ...((existingPlan?.founder_context as Partial<GtmFounderContext> | null) ?? {}),
-    ...submittedContext
+    ...storedContext,
+    ...(contextSourceLocale === locale ? submittedContext : {})
   } as GtmFounderContext;
+  const confirmedResearch = normalizeMarketResearch(existingPlan?.market_research);
+  const legacyConfirmed = confirmedResearch?.marketSizingMethodologyVersion === "legacy" && Boolean(existingPlan?.market_research_confirmed_at);
   const message = sanitizeFounderText(parsed.data.message);
   if (parsed.data.questionKey && !isFounderQuestionKey(parsed.data.questionKey)) {
     return NextResponse.json({ message: en ? "The clarification question is invalid." : "확인 질문 정보가 올바르지 않습니다." }, { status: 400 });
@@ -252,8 +265,15 @@ export async function POST(request: Request) {
     ? parsed.data.questionKey
     : undefined;
   if (questionKey && message) cleanContext[questionKey] = message;
+  const expectedResearchSignature = legacyConfirmed
+    ? marketResearchContextSignature(storedContext)
+    : confirmedResearch?.researchContextSignature;
+  if (!existingPlan?.market_research_confirmed_at || !confirmedResearch ||
+      confirmedResearch.marketSizing.some((entry) => entry.status === "insufficient_evidence") ||
+      expectedResearchSignature !== marketResearchContextSignature(cleanContext)) {
+    return NextResponse.json({ message: en ? "Create and confirm market research for the current inputs before drafting the plan." : "현재 입력값으로 시장 조사를 만들고 확인한 뒤 실행 계획을 작성해 주세요." }, { status: 409 });
+  }
 
-  const contextSourceLocale = existingPlan?.founder_context_locale ?? existingPlan?.content_locale ?? "ko";
   const storedMessages = (contextSourceLocale === locale
     ? ((existingPlan?.recent_messages as GtmAssistantMessage[] | null) ?? [])
     : [])
@@ -426,7 +446,7 @@ export async function POST(request: Request) {
         },
         actions,
         founderContext: cleanContext,
-        marketResearch: existingPlan?.market_research ?? null,
+        marketResearch: confirmedResearch,
         allowedHorizons,
         recentMessages,
         approvedSources: sourceRows ?? [],

@@ -11,6 +11,7 @@ import type {
 } from "./types";
 import { matchExpertSupport } from "./expert-matching";
 import { PAID_PILOT_QUESTION_ID } from "./intake-questions";
+import { calculateMarketSizing, marketResearchContextSignature, marketSizingEvidenceSchema } from "./market-sizing";
 
 export const ASSISTANT_MODEL = "gpt-5.6-luna" as const;
 
@@ -65,13 +66,6 @@ export const marketResearchOutputSchema = z.object({
     sourceTitle: z.string().min(1).max(180),
     url: researchSourceUrl
   })).min(1).max(6),
-  marketSizing: z.array(z.object({
-    label: z.enum(["TAM", "SAM", "SOM", "LAM"]),
-    estimate: z.string().min(1).max(300),
-    method: z.string().min(1).max(500),
-    assumptions: z.array(z.string().max(300)).max(6),
-    sourceTitles: z.array(z.string().max(180)).max(6)
-  })).length(4),
   competitors: z.array(z.object({
     name: z.string().min(1).max(180),
     type: z.enum(["direct", "adjacent", "alternative"]),
@@ -92,6 +86,10 @@ export const marketResearchOutputSchema = z.object({
 
 export const marketResearchResponseSchema = z.object({
   result: marketResearchOutputSchema
+});
+
+export const marketSizingEvidenceResponseSchema = z.object({
+  result: marketSizingEvidenceSchema
 });
 
 export type AssistantModelOutput = z.infer<typeof assistantOutputSchema>;
@@ -410,13 +408,23 @@ export function validatePlanDraft(
 }
 
 export function finalizeMarketResearch(
-  output: z.infer<typeof marketResearchOutputSchema>,
+  output: z.infer<typeof marketResearchOutputSchema> & { marketSizingEvidence: z.infer<typeof marketSizingEvidenceSchema> },
   now = new Date(),
-  locale: Locale = "ko"
+  locale: Locale = "ko",
+  founderContext: Partial<GtmFounderContext> = {}
 ): GtmMarketResearch {
+  const marketSizingEvidence = { ...output.marketSizingEvidence, referenceYear: now.getUTCFullYear() };
   for (const url of [
     ...output.trends.map((entry) => entry.url),
-    ...output.competitors.map((entry) => entry.url)
+    ...output.competitors.map((entry) => entry.url),
+    ...marketSizingEvidence.tam.bottomUp.customerCountSources.map((entry) => entry.url),
+    ...marketSizingEvidence.tam.bottomUp.annualRevenuePerCustomerSources.map((entry) => entry.url),
+    ...marketSizingEvidence.tam.topDownPaths.flatMap((path) => path.sources.map((entry) => entry.url)),
+    ...marketSizingEvidence.sam.filters.flatMap((filter) => filter.sources.map((entry) => entry.url)),
+    ...marketSizingEvidence.som.shareSources.map((entry) => entry.url),
+    ...marketSizingEvidence.som.capacitySources.map((entry) => entry.url),
+    ...marketSizingEvidence.beachhead.customerCountSources.map((entry) => entry.url),
+    ...marketSizingEvidence.beachhead.annualRevenuePerCustomerSources.map((entry) => entry.url)
   ]) {
     if (!url) continue;
     const parsed = new URL(url);
@@ -431,6 +439,11 @@ export function finalizeMarketResearch(
   return {
     kind: "market_research",
     ...output,
+    marketSizingEvidence,
+    marketSizing: calculateMarketSizing(marketSizingEvidence, locale),
+    marketSizingMethodologyVersion: marketSizingEvidence.methodologyVersion,
+    marketDefinition: marketSizingEvidence.marketDefinition,
+    researchContextSignature: marketResearchContextSignature(founderContext),
     generatedAt: now.toISOString(),
     generatedBy: ASSISTANT_MODEL
   };

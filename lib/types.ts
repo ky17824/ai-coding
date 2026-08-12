@@ -126,12 +126,63 @@ export interface GtmFounderContext {
   differentiation: string;
   deliveryModel: string;
   revenueModel: string;
+  expectedPrice: string;
+  annualPurchaseFrequency: string;
+  initialReachableCustomers: string;
+  threeYearSalesCapacity: string;
   validationEvidence: string;
   targetCountry: string;
   targetCustomer: string;
   resources: string;
   deadline: string;
   constraints: string;
+}
+
+export interface GtmMarketSizingSource {
+  title: string;
+  url: string | null;
+  publisher: string;
+  publishedAt: string | null;
+  checkedAt: string;
+  kind: "fact" | "founder_input" | "proxy_assumption";
+}
+
+export interface GtmMarketSizingEntry {
+  key: "tam" | "sam" | "som" | "beachhead";
+  label: "TAM" | "SAM" | "SOM" | "Beachhead Market";
+  status: "estimated" | "insufficient_evidence";
+  estimate: string;
+  range: {
+    low: number;
+    base: number;
+    high: number;
+    currency: string;
+    referenceYear: number;
+  } | null;
+  method: string;
+  formula: string;
+  calculationInputs: {
+    name: string;
+    low: number;
+    base: number;
+    high: number;
+    unit: string;
+    sourceTitles: string[];
+    sources: GtmMarketSizingSource[];
+  }[];
+  assumptions: string[];
+  sources: GtmMarketSizingSource[];
+  confidence: "high" | "medium" | "low";
+  evidenceGaps: string[];
+  sensitivityDrivers: string[];
+  validation: string[];
+  cohesion: {
+    buysSimilarProducts: boolean;
+    similarSalesCycle: boolean;
+    wordOfMouthPotential: boolean;
+    notes: string;
+  } | null;
+  expansionPath: string[];
 }
 
 export interface GtmMarketResearch {
@@ -142,13 +193,15 @@ export interface GtmMarketResearch {
   offeringName: string;
   executiveSummary: string;
   trends: { title: string; finding: string; sourceTitle: string; url: string | null }[];
-  marketSizing: {
-    label: "TAM" | "SAM" | "SOM" | "LAM";
-    estimate: string;
-    method: string;
-    assumptions: string[];
-    sourceTitles: string[];
-  }[];
+  marketSizing: GtmMarketSizingEntry[];
+  marketSizingMethodologyVersion: "market-sizing-v1" | "legacy";
+  marketSizingEvidence?: unknown;
+  researchContextSignature: string;
+  marketDefinition: {
+    included: string;
+    excluded: string;
+    annualRevenueUnit: string;
+  };
   competitors: {
     name: string;
     type: "direct" | "adjacent" | "alternative";

@@ -7,6 +7,7 @@ describe("content localization", () => {
       summary: "한국 고객 검증이 필요합니다.",
       founderContext: { offeringName: "서울랩", targetCountry: "미국", targetCustomer: "중소 제조사" },
       marketResearch: { competitors: [{ name: "Acme", relevance: "주요 대안입니다." }] },
+      researchContextSignature: "{\"targetCountry\":\"미국\"}",
       url: "https://example.com"
     }, "ko");
     expect(values.map((entry) => entry.path.join("."))).toEqual([

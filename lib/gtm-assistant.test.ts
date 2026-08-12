@@ -6,6 +6,8 @@ import {
   classifyFounderContextValue,
   finalizeMarketResearch,
   getPendingFounderQuestion,
+  marketResearchResponseSchema,
+  marketSizingEvidenceResponseSchema,
   sanitizeFounderText,
   selectFounderQuestion,
   shouldUseWebSearch,
@@ -34,6 +36,10 @@ const completeContext: GtmFounderContext = {
   differentiation: "실시간 분석",
   deliveryModel: "수출",
   revenueModel: "제품 판매",
+  expectedPrice: "개당 100달러",
+  annualPurchaseFrequency: "연 2회",
+  initialReachableCustomers: "현지 유통사 20곳",
+  threeYearSalesCapacity: "3년간 1,000개",
   validationEvidence: "고객 인터뷰",
   targetCountry: "싱가포르",
   targetCustomer: "현지 중견 제조사",
@@ -49,6 +55,14 @@ describe("AI GTM assistant safeguards", () => {
     expect(format.schema).toMatchObject({ type: "object" });
     expect(JSON.stringify(format.schema)).not.toContain('"format":"uri"');
     expect(JSON.stringify(format.schema)).not.toContain("next_question");
+  });
+
+  it("keeps structured market-sizing evidence compatible with OpenAI output schemas", () => {
+    const format = zodTextFormat(marketSizingEvidenceResponseSchema, "gtm_market_sizing_evidence");
+
+    expect(format.schema).toMatchObject({ type: "object" });
+    expect(JSON.stringify(format.schema)).toContain("beachhead");
+    expect(JSON.stringify(format.schema)).not.toContain('"LAM"');
   });
 
   it("turns saved diagnostic actions into a bounded 30·60·90 day plan", () => {
@@ -127,9 +141,24 @@ describe("AI GTM assistant safeguards", () => {
       offeringName: "제품 A",
       executiveSummary: "시장 사전조사",
       trends: [{ title: "추세", finding: "확인", sourceTitle: "공식 자료", url: null }],
-      marketSizing: (["TAM", "SAM", "SOM", "LAM"] as const).map((label) => ({
-        label, estimate: "추정 전", method: "가정 확인 필요", assumptions: [], sourceTitles: []
-      })),
+      marketSizingEvidence: {
+        methodologyVersion: "market-sizing-v1",
+        currency: "USD",
+        referenceYear: 2026,
+        marketDefinition: { included: "목표 고객", excluded: "기타 시장", annualRevenueUnit: "연간 고객 지출" },
+        tam: {
+          status: "insufficient_evidence",
+          bottomUp: { customerCount: null, annualRevenuePerCustomer: null, formula: "고객 수 × 연간 고객 지출", customerCountSources: [], annualRevenuePerCustomerSources: [] },
+          topDownPaths: [], cagrPercent: null, assumptions: [], evidenceGaps: ["고객 수"], sensitivityDrivers: []
+        },
+        sam: { status: "insufficient_evidence", filters: [], regulationPrerequisite: "", assumptions: [], evidenceGaps: ["시장 비율"], sensitivityDrivers: [] },
+        som: { status: "insufficient_evidence", horizonYears: 3, sharePercent: null, capacityRevenue: null, shareSources: [], capacitySources: [], assumptions: [], evidenceGaps: ["판매 역량"], sensitivityDrivers: [] },
+        beachhead: {
+          status: "insufficient_evidence", segment: "초기 목표 고객", customerCount: null, annualRevenuePerCustomer: null, customerCountSources: [], annualRevenuePerCustomerSources: [],
+          cohesion: { buysSimilarProducts: false, similarSalesCycle: false, wordOfMouthPotential: false, notes: "" },
+          expansionPath: [], assumptions: [], evidenceGaps: ["직접 접근 가능 고객 수"], sensitivityDrivers: []
+        }
+      },
       competitors: [{ name: "대안 A", type: "alternative", relevance: "대안", differentiationGap: "확인 필요", sourceTitle: "공식 자료", url: null }],
       sellability: { available: true, verdict: "promising", summary: "판정", evidenceGaps: [] },
       nextExperiments: ["고객 인터뷰"],
