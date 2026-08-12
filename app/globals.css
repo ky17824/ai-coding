@@ -1035,8 +1035,12 @@ main[lang="en"] .hero h1 {
   margin-bottom: 32px;
 }
 
-.section--steps .section-heading h2 {
-  font-size: clamp(11.33px, 1.333vw, 17.33px);
+.section--steps .section-heading h2,
+.cta-band h2 {
+  font-size: 21px;
+  font-weight: 700;
+  line-height: normal;
+  letter-spacing: normal;
 }
 
 .section-heading {
@@ -1216,7 +1220,6 @@ main[lang="en"] .hero h1 {
 
 .cta-band h2 {
   margin: 4px 0 0;
-  font-size: 30px;
 }
 
 /* App surfaces */
