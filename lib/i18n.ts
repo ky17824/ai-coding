@@ -154,9 +154,9 @@ const en: typeof ko = {
   hero: {
     eyebrow: "Global GTM Journey",
     headline: [
-      { em: "Build", after: "" },
-      { em: "A", after: " Global Company" },
-      { em: "That", after: " Scale" }
+      { em: "Go Global", after: "" },
+      { em: "Prepared", after: " to" },
+      { em: "Succeed", after: "" }
     ],
     body:
       "We assess your readiness using evidence and connect you with the right actions and experts at the right time. Manage your entire global expansion in one place.",

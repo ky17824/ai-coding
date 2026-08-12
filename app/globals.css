@@ -306,7 +306,7 @@ main[lang="en"] .hero h1 {
   animation: line-rise 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-main[lang="ko"] .hero h1 span:first-child {
+.hero h1 span:first-child {
   font-size: 1.333em;
 }
 
