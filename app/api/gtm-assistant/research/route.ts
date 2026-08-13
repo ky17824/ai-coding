@@ -5,13 +5,12 @@ import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import {
   ASSISTANT_MODEL,
+  buildMarketSizingInstructions,
   finalizeMarketResearch,
   founderSizingOverridesResponseSchema,
-  hasMoreEstimatedMarketSizes,
   marketCompetitorResearchResponseSchema,
   marketResearchSynthesisResponseSchema,
   MARKET_SIZING_MODEL,
-  MARKET_SIZING_REVIEW_MODEL,
   marketSizingEvidenceResponseSchema,
   marketTrendResearchResponseSchema,
   sanitizeFounderText
@@ -115,6 +114,7 @@ export async function POST(request: Request) {
     : {};
   const cacheAge = existingResearch?.generatedAt ? Date.now() - new Date(existingResearch.generatedAt).getTime() : Number.POSITIVE_INFINITY;
   if (existingPlan?.id && existingResearch?.researchMethodologyVersion === "market-research-v2" &&
+      existingResearch.marketSizingMethodologyVersion === "market-sizing-v2" &&
       existingResearch.researchContextSignature === marketResearchContextSignature(parsed.data.founderContext) &&
       existingPlan.market_research_locale === locale && cacheAge >= 0 && cacheAge < 7 * 24 * 60 * 60 * 1000) {
     return NextResponse.json({
@@ -127,16 +127,26 @@ export async function POST(request: Request) {
   }
   let planId = existingPlan?.id;
   let reservationCount = existingPlan?.market_research_count ?? 0;
-  if (existingPlan?.id && researchQuotaDecision(reservationCount, existingResearch?.researchMethodologyVersion, storedResearch.v2UpgradeAttemptedAt) === "legacy_upgrade") {
+  let sizingUpgradeAttemptedAt: string | null = null;
+  const quotaDecision = researchQuotaDecision(
+    reservationCount,
+    existingResearch?.researchMethodologyVersion,
+    storedResearch.v2UpgradeAttemptedAt,
+    existingResearch?.marketSizingMethodologyVersion,
+    storedResearch.marketSizingV2UpgradeAttemptedAt
+  );
+  if (existingPlan?.id && ["legacy_upgrade", "sizing_upgrade"].includes(quotaDecision)) {
     const upgradeAttemptedAt = new Date().toISOString();
+    if (quotaDecision === "sizing_upgrade") sizingUpgradeAttemptedAt = upgradeAttemptedAt;
+    const marker = quotaDecision === "legacy_upgrade" ? "v2UpgradeAttemptedAt" : "marketSizingV2UpgradeAttemptedAt";
     const { data: migrated, error } = await admin.from("gtm_plans").update({
       market_research_count: 2,
-      market_research: { ...storedResearch, v2UpgradeAttemptedAt: upgradeAttemptedAt },
+      market_research: { ...storedResearch, [marker]: upgradeAttemptedAt },
       updated_at: upgradeAttemptedAt
     }).eq("id", existingPlan.id)
       .eq("organization_id", profile.organization_id)
       .eq("market_research_count", reservationCount)
-      .is("market_research->>v2UpgradeAttemptedAt", null)
+      .is(`market_research->>${marker}`, null)
       .select("market_research_count")
       .maybeSingle();
     if (error) return NextResponse.json({ message: en ? "We couldn't prepare the comprehensive research upgrade." : "종합 시장조사 업그레이드를 준비하지 못했습니다." }, { status: 503 });
@@ -229,9 +239,7 @@ export async function POST(request: Request) {
         ...(tools.some((tool) => tool.type === "file_search") ? ["file_search_call.results" as const] : [])
       ]
     } satisfies Omit<OpenAI.Responses.ResponseCreateParamsNonStreaming, "instructions" | "text">;
-    const sizingInstructions = en
-      ? `Collect market-sizing evidence only. Never use LAM. Return TAM, SAM, SOM, and Beachhead inputs; the server recomputes all arithmetic. Missing private founder inputs: ${missingSizingInputs.join(", ") || "none"}. Private founder prices, capacity, resources, contracts, and validation details are intentionally not shared with web search. Use public external evidence only, label inferred inputs proxy_assumption, and never label them founder_input. Triangulate annual low/base/high ranges instead of stopping. TAM must use two independent recent public top-down fact URLs; bottom-up values may be null. SAM must apply separately sourced geography, customer-fit, channel, and regulatory factors. SOM must use a sourced 0.5–5% benchmark share and a conservative externally benchmarked 3–5 year capacity proxy; state that actual company sales capacity is not reflected. Beachhead must estimate a countable cohesive first segment and annual revenue per customer from sourced channel/population/price proxies, verify all three cohesion conditions, name an expansion path, and state that it is an external-evidence Beachhead candidate. Use insufficient_evidence only when no defensible numeric proxy exists. Every fact/proxy needs URL, publisher, publication date, checked date, and kind. Use up to eight web searches. Write English evidence labels.`
-      : `시장규모 근거만 수집하세요. LAM은 사용하지 말고 TAM·SAM·SOM·교두보 시장의 계산 입력값을 반환하세요. 서버가 산술을 다시 계산합니다. 누락된 비공개 창업자 입력: ${missingSizingInputs.join(", ") || "없음"}. 창업자의 가격·판매역량·자원·계약·검증 상세는 공개 웹 검색에 의도적으로 제공하지 않습니다. 공개 외부자료만 사용하고 추론값은 proxy_assumption으로 표시하며 founder_input으로 표시하지 마세요. 입력이 없어도 중단하지 말고 공개 외부자료를 교차검증하여 연간 낮음·기준·높음 범위를 산정하세요. TAM은 최근 3년 이내 서로 독립적인 공개 하향식 사실 URL 2개를 반드시 사용하며 상향식 값은 null이어도 됩니다. SAM은 지역·고객적합성·채널·규제 비율을 각각 최신 근거로 추정하세요. SOM은 공개 벤치마크 기반 0.5~5% 점유율과 보수적인 3~5년 외부 판매역량 대리값을 사용하고 귀사의 실제 판매역량이 반영되지 않았음을 밝히세요. 교두보 시장은 채널·인구·가격 자료로 응집된 최초 고객군 수와 연간 고객당 매출을 추정하고 세 응집성 조건과 인접시장 확장 경로를 제시하며 외부 자료 기반 교두보 후보임을 밝히세요. 방어 가능한 수치 대리값 자체가 없을 때만 insufficient_evidence를 사용하세요. 사실·대리 가정에는 URL·발행기관·발행일·확인일·유형을 넣고 웹 검색은 최대 8회 사용하세요. 제품명·회사명·공식 자료명을 제외한 모든 항목은 한국어로 작성하세요.`;
+    const sizingInstructions = buildMarketSizingInstructions(locale, missingSizingInputs);
     const [trendResponse, competitorResponse, sizingResponse] = await Promise.all([
       client.responses.parse({
         ...sharedRequest,
@@ -310,64 +318,12 @@ export async function POST(request: Request) {
       researchNow.toISOString().slice(0, 10),
       locale
     );
-    let result = finalizeMarketResearch({
+    const result = finalizeMarketResearch({
       ...trendResponse.output_parsed.result,
       ...synthesisResponse.output_parsed.result,
       competitors: competitorResponse.output_parsed.result.competitors,
       marketSizingEvidence
     }, researchNow, locale, parsed.data.founderContext, MARKET_SIZING_MODEL);
-
-    if (result.marketSizing.some((entry) => entry.status === "insufficient_evidence")) {
-      try {
-        const unresolvedMarketSizes = result.marketSizing
-          .filter((entry) => entry.status === "insufficient_evidence")
-          .map((entry) => ({ key: entry.key, evidenceGaps: entry.evidenceGaps, validation: entry.validation }));
-        const reviewResponse = await client.responses.parse({
-          ...sharedRequest,
-          model: MARKET_SIZING_REVIEW_MODEL,
-          reasoning: { effort: "high", context: "current_turn" },
-          max_tool_calls: 8,
-          parallel_tool_calls: true,
-          instructions: en
-            ? `${sizingInstructions} This is a quality-escalation review. Resolve only the supplied failed ranges and conflicts, preserve the currency and valid evidence, and replace a value only when stronger public evidence supports it.`
-            : `${sizingInstructions} 이번 호출은 품질 승격 검토입니다. 전달된 산정 실패 범위와 충돌만 해결하고 통화와 유효한 근거는 유지하며, 더 강한 공개 근거가 있을 때만 값을 교체하세요.`,
-          input: JSON.stringify({
-            scope,
-            founderContext: publicResearchContext,
-            priorPublicMarketSizingEvidence: sizingResponse.output_parsed.result,
-            unresolvedMarketSizes
-          }),
-          text: { format: zodTextFormat(marketSizingEvidenceResponseSchema, "gtm_market_sizing_review") }
-        });
-        if (reviewResponse.output_parsed?.result &&
-            reviewResponse.output_parsed.result.currency === sizingResponse.output_parsed.result.currency) {
-          const reviewAllowedUrls = new Set([
-            ...allowedUrls,
-            ...collectAllowedResearchUrls([reviewResponse.output], sources ?? [])
-          ]);
-          const reviewCitedUrls = collectCitedUrls([reviewResponse.output_parsed.result]);
-          if ([...reviewCitedUrls].every((url) => reviewAllowedUrls.has(url))) {
-            const reviewedEvidence = mergeFounderSizingOverrides(
-              reviewResponse.output_parsed.result,
-              privateSizingResponse.output_parsed.result,
-              researchNow.toISOString().slice(0, 10),
-              locale
-            );
-            const reviewedResult = finalizeMarketResearch({
-              ...trendResponse.output_parsed.result,
-              ...synthesisResponse.output_parsed.result,
-              competitors: competitorResponse.output_parsed.result.competitors,
-              marketSizingEvidence: reviewedEvidence
-            }, researchNow, locale, parsed.data.founderContext, MARKET_SIZING_REVIEW_MODEL);
-            if (hasMoreEstimatedMarketSizes(result.marketSizing, reviewedResult.marketSizing)) {
-              result = reviewedResult;
-            }
-          }
-        }
-      } catch (error) {
-        console.warn("[market-sizing-review] Sol escalation failed; keeping the verified Terra result.", error);
-      }
-    }
 
     const needsEvidence = result.marketSizing.some((entry) => entry.status === "insufficient_evidence");
     const preserveConfirmedResearch = needsEvidence && Boolean(existingPlan?.market_research_confirmed_at);
@@ -432,6 +388,15 @@ export async function POST(request: Request) {
         : undefined
     });
   } catch (error) {
+    if (sizingUpgradeAttemptedAt && planId) {
+      await admin.from("gtm_plans").update({
+        market_research_count: 2,
+        updated_at: new Date().toISOString()
+      }).eq("id", planId)
+        .eq("organization_id", profile.organization_id)
+        .eq("market_research_count", 3)
+        .eq("market_research->>marketSizingV2UpgradeAttemptedAt", sizingUpgradeAttemptedAt);
+    }
     return NextResponse.json(
       { message: error instanceof Error ? error.message : en ? "We couldn't complete the market and competitive research." : "시장·경쟁 사전조사를 만들지 못했습니다." },
       { status: 500 }

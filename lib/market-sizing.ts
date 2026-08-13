@@ -32,15 +32,15 @@ const cagrRangeSchema = z.object({
 });
 
 const somShareRangeSchema = z.object({
-  low: z.number().finite().min(0.5).max(5),
-  base: z.number().finite().min(0.5).max(5),
-  high: z.number().finite().min(0.5).max(5)
+  low: z.number().finite().min(1).max(5),
+  base: z.number().finite().min(1).max(5),
+  high: z.number().finite().min(1).max(5)
 });
 
 export const marketSizingSourceSchema = z.object({
   title: z.string().min(1).max(180),
   url: z.string().max(2048).nullable(),
-  publisher: z.string().max(180),
+  publisher: z.string().min(1).max(180),
   publishedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   checkedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   kind: z.enum(["fact", "founder_input", "proxy_assumption"])
@@ -53,13 +53,35 @@ const evidenceMeta = {
 };
 
 export const marketSizingEvidenceSchema = z.object({
-  methodologyVersion: z.literal("market-sizing-v1"),
+  methodologyVersion: z.literal("market-sizing-v2"),
   currency: z.string().regex(/^[A-Z]{3}$/),
   referenceYear: z.number().int().min(2000).max(2100),
   marketDefinition: z.object({
     included: z.string().min(1).max(500),
     excluded: z.string().min(1).max(500),
     annualRevenueUnit: z.string().min(1).max(180)
+  }),
+  scenarioAnalysis: z.object({
+    decisionVariable: z.string().min(1).max(180),
+    selectedScenario: z.enum(["A", "B"]),
+    scenarios: z.array(z.object({
+      key: z.enum(["A", "B", "C"]),
+      country: z.string().min(1).max(100),
+      definition: z.string().min(1).max(300),
+      startingPopulation: rangeSchema,
+      startingPopulationSources: z.array(marketSizingSourceSchema).min(1).max(6),
+      filters: z.array(z.object({
+        kind: z.enum(["demographic", "employment", "income", "behavior", "channel"]),
+        name: z.string().min(1).max(180),
+        active: z.boolean(),
+        factor: factorRangeSchema,
+        sources: z.array(marketSizingSourceSchema).min(1).max(4)
+      })).length(5),
+      annualRevenuePerCustomer: rangeSchema,
+      annualRevenuePerCustomerSources: z.array(marketSizingSourceSchema).min(1).max(6),
+      recommendation: z.enum(["selected", "review", "rejected"]),
+      rationale: z.string().min(1).max(400)
+    })).length(3)
   }),
   tam: z.object({
     status: z.enum(["estimated", "insufficient_evidence"]),
@@ -177,8 +199,48 @@ export function validateMarketSizingEvidence(evidence: MarketSizingEvidence) {
       if (source.kind !== "founder_input" && !isRecent(source, evidence.referenceYear)) {
         issues[key].push(`${label} requires fact and proxy sources from the last three years.`);
       }
+      if (!source.publisher.trim()) issues[key].push(`${label} requires a publisher.`);
+      if (!isValidIsoDate(source.checkedAt) || (source.publishedAt && !isValidIsoDate(source.publishedAt))) {
+        issues[key].push(`${label} source dates must be valid ISO calendar dates.`);
+      } else if (Date.parse(source.checkedAt) > Date.now() + 24 * 60 * 60 * 1000 ||
+          (source.publishedAt && Date.parse(source.publishedAt) > Date.now() + 24 * 60 * 60 * 1000)) {
+        issues[key].push(`${label} source dates cannot be in the future.`);
+      }
     });
   };
+  const scenarioKeys = evidence.scenarioAnalysis.scenarios.map((scenario) => scenario.key);
+  if (new Set(scenarioKeys).size !== 3 || !["A", "B", "C"].every((key) => scenarioKeys.includes(key as "A" | "B" | "C"))) {
+    issues.tam.push("ICP scenario analysis requires unique A, B, and C scenarios.");
+  }
+  const selectedScenario = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === evidence.scenarioAnalysis.selectedScenario);
+  if (!selectedScenario || selectedScenario.recommendation !== "selected" || evidence.scenarioAnalysis.scenarios.filter((scenario) => scenario.recommendation === "selected").length !== 1) {
+    issues.tam.push("ICP scenario analysis requires exactly one selected A or B scenario.");
+  }
+  const scenarioA = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === "A");
+  const scenarioB = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === "B");
+  const scenarioC = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === "C");
+  if (scenarioA && scenarioB && scenarioA.country.normalize("NFKC").trim().toLowerCase() !== scenarioB.country.normalize("NFKC").trim().toLowerCase()) {
+    issues.tam.push("Scenario A and B must use the same country.");
+  }
+  if (scenarioA && scenarioC && scenarioA.country.normalize("NFKC").trim().toLowerCase() === scenarioC.country.normalize("NFKC").trim().toLowerCase()) {
+    issues.tam.push("Scenario C must use an alternate country.");
+  }
+  for (const scenario of evidence.scenarioAnalysis.scenarios) {
+    const kinds = scenario.filters.map((filter) => filter.kind);
+    if (new Set(kinds).size !== 5) issues.tam.push(`Scenario ${scenario.key} requires one demographic, employment, income, behavior, and channel stage.`);
+    const inactiveCount = scenario.filters.filter((filter) => !filter.active).length;
+    if ((scenario.key === "B" && inactiveCount !== 1) || (scenario.key !== "B" && inactiveCount !== 0)) {
+      issues.tam.push(`Scenario ${scenario.key} has an invalid active-filter pattern.`);
+    }
+    if (scenario.key === "B" && scenarioA) {
+      const removed = scenario.filters.find((filter) => !filter.active);
+      const original = scenarioA.filters.find((filter) => filter.kind === removed?.kind);
+      if (!removed || !original || original.factor.base >= 1) issues.tam.push("Scenario B must remove a restrictive Scenario A filter.");
+    }
+    requireSources(scenario.startingPopulationSources, `Scenario ${scenario.key} starting population`, "tam");
+    scenario.filters.forEach((filter) => requireSources(filter.sources, `Scenario ${scenario.key} filter ${filter.name}`, "tam"));
+    requireSources(scenario.annualRevenuePerCustomerSources, `Scenario ${scenario.key} annual revenue per customer`, "tam");
+  }
   if (evidence.tam.bottomUp.customerCount || evidence.tam.bottomUp.annualRevenuePerCustomer || evidence.tam.topDownPaths.length > 0) {
     if (evidence.tam.bottomUp.customerCount) {
       requireSources(evidence.tam.bottomUp.customerCountSources, "TAM customer count", "tam");
@@ -272,12 +334,21 @@ function average(ranges: Range[]): Range {
   };
 }
 
-function multiplyFactors(filters: MarketSizingEvidence["sam"]["filters"]): Range {
-  return filters.reduce((result, filter) => multiply(result, filter.factor), {
+function multiplyFactors(filters: { factor: Range; active?: boolean }[]): Range {
+  return filters.filter((filter) => filter.active !== false).reduce((result, filter) => multiply(result, filter.factor), {
     low: 1,
     base: 1,
     high: 1
   });
+}
+
+function scenarioCustomerCount(scenario: MarketSizingEvidence["scenarioAnalysis"]["scenarios"][number]): Range {
+  return multiply(scenario.startingPopulation, multiplyFactors(scenario.filters));
+}
+
+export function marketSizingScenarioMatchesCountry(evidence: MarketSizingEvidence, targetCountry: string) {
+  const selected = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === evidence.scenarioAnalysis.selectedScenario);
+  return Boolean(selected && selected.country.normalize("NFKC").trim().toLowerCase() === targetCountry.normalize("NFKC").trim().toLowerCase());
 }
 
 function minRange(left: Range, right: Range): Range {
@@ -303,8 +374,15 @@ function uniqueSources(sources: GtmMarketSizingSource[]) {
 
 function isRecent(source: GtmMarketSizingSource, referenceYear: number) {
   if (source.kind === "founder_input") return true;
+  if (!source.publishedAt || !isValidIsoDate(source.publishedAt)) return false;
   const year = Number(source.publishedAt?.slice(0, 4));
   return Number.isFinite(year) && year <= referenceYear && referenceYear - year <= 3;
+}
+
+function isValidIsoDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 function formatCurrency(value: number, currency: string, locale: Locale) {
@@ -347,6 +425,11 @@ export function calculateMarketSizing(
 ): GtmMarketSizingEntry[] {
   const sourceIssues = validateMarketSizingEvidence(evidence);
   [
+    ...evidence.scenarioAnalysis.scenarios.flatMap((scenario) => [
+      scenario.startingPopulation,
+      ...scenario.filters.map((filter) => filter.factor),
+      scenario.annualRevenuePerCustomer
+    ]),
     evidence.tam.bottomUp.customerCount,
     evidence.tam.bottomUp.annualRevenuePerCustomer,
     ...evidence.tam.topDownPaths.map((path) => path.range),
@@ -356,8 +439,16 @@ export function calculateMarketSizing(
     evidence.beachhead.customerCount,
     evidence.beachhead.annualRevenuePerCustomer
   ].filter((range): range is Range => Boolean(range)).forEach(assertOrderedRange);
-  const bottomUp = evidence.tam.bottomUp.customerCount && evidence.tam.bottomUp.annualRevenuePerCustomer
-    ? multiply(evidence.tam.bottomUp.customerCount, evidence.tam.bottomUp.annualRevenuePerCustomer)
+  const selectedScenario = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === evidence.scenarioAnalysis.selectedScenario);
+  const founderCustomerCount = evidence.tam.bottomUp.customerCountSources.some((source) => source.kind === "founder_input")
+    ? evidence.tam.bottomUp.customerCount : null;
+  const founderAnnualRevenue = evidence.tam.bottomUp.annualRevenuePerCustomerSources.some((source) => source.kind === "founder_input")
+    ? evidence.tam.bottomUp.annualRevenuePerCustomer : null;
+  const derivedCustomerCount = selectedScenario ? scenarioCustomerCount(selectedScenario) : null;
+  const bottomUpCustomerCount = founderCustomerCount ?? derivedCustomerCount;
+  const bottomUpAnnualRevenue = founderAnnualRevenue ?? selectedScenario?.annualRevenuePerCustomer ?? null;
+  const bottomUp = bottomUpCustomerCount && bottomUpAnnualRevenue
+    ? multiply(bottomUpCustomerCount, bottomUpAnnualRevenue)
     : null;
   const topDown = evidence.tam.topDownPaths.length > 0
     ? average(evidence.tam.topDownPaths.map((path) => path.range))
@@ -394,6 +485,11 @@ export function calculateMarketSizing(
     ? multiply(evidence.beachhead.customerCount, evidence.beachhead.annualRevenuePerCustomer)
     : null;
   const tamSources = uniqueSources([
+    ...evidence.scenarioAnalysis.scenarios.flatMap((scenario) => [
+      ...scenario.startingPopulationSources,
+      ...scenario.filters.flatMap((filter) => filter.sources),
+      ...scenario.annualRevenuePerCustomerSources
+    ]),
     ...evidence.tam.bottomUp.customerCountSources,
     ...evidence.tam.bottomUp.annualRevenuePerCustomerSources,
     ...evidence.tam.topDownPaths.flatMap((path) => path.sources)
@@ -409,6 +505,24 @@ export function calculateMarketSizing(
   const sourceRecencyMessage = [locale === "en"
     ? `recent-source gate ${topDownIsCurrent ? "passed" : "needs review"}`
     : `최근 3년 자료 검증 ${topDownIsCurrent ? "통과" : "재검토 필요"}`];
+  const scenarioValidation = selectedScenario
+    ? [locale === "en"
+        ? `Selected ICP scenario ${selectedScenario.key} · ${evidence.scenarioAnalysis.decisionVariable}`
+        : `선택 ICP 시나리오 ${selectedScenario.key} · ${evidence.scenarioAnalysis.decisionVariable}`]
+    : [];
+  const scenarioAssumptions = evidence.scenarioAnalysis.scenarios
+    .filter((scenario) => scenario.key !== evidence.scenarioAnalysis.selectedScenario)
+    .map((scenario) => {
+      const scenarioTam = multiply(scenarioCustomerCount(scenario), scenario.annualRevenuePerCustomer);
+      return `Scenario ${scenario.key} TAM ${estimate(scenarioTam, evidence.currency, locale)}: ${scenario.definition} — ${scenario.rationale}`;
+    });
+  const bottomUpFormula = selectedScenario
+    ? [
+        founderCustomerCount ? (locale === "en" ? "founder customer count" : "창업자 입력 고객 수") : (locale === "en" ? `Scenario ${selectedScenario.key} starting population` : `시나리오 ${selectedScenario.key} 시작 인구`),
+        ...(!founderCustomerCount ? selectedScenario.filters.filter((filter) => filter.active).map((filter) => filter.name) : []),
+        founderAnnualRevenue ? (locale === "en" ? "founder annual revenue per customer" : "창업자 입력 연간 고객당 매출") : (locale === "en" ? "annual category revenue per customer" : "연간 카테고리 고객당 매출")
+      ].join(" × ")
+    : locale === "en" ? "Public customer count × annual revenue per customer" : "공개 고객 수 × 연간 고객당 매출";
   const tamGaps = [
     ...evidence.tam.evidenceGaps,
     ...(locale === "en" ? sourceIssues.tam : sourceIssues.tam.map(() => "수치 입력의 근거 URL·발행일·최근 3년 자료를 확인해 주세요.")),
@@ -434,21 +548,24 @@ export function calculateMarketSizing(
       range: tamRange,
       method: topDown ? "triangulated" : "bottom_up",
       formula: bottomUp
-        ? evidence.tam.bottomUp.formula
+        ? bottomUpFormula
         : locale === "en"
           ? "Triangulated range from two independent recent public market paths"
           : "최근 공개자료의 독립적인 시장 경로 2개를 교차검증한 범위",
       calculationInputs: [
-        ...(evidence.tam.bottomUp.customerCount ? [{ name: locale === "en" ? "Customer/end-user count" : "고객·최종사용자 수", ...evidence.tam.bottomUp.customerCount, unit: locale === "en" ? "count" : "개", sourceTitles: evidence.tam.bottomUp.customerCountSources.map((source) => source.title), sources: evidence.tam.bottomUp.customerCountSources }] : []),
-        ...(evidence.tam.bottomUp.annualRevenuePerCustomer ? [{ name: locale === "en" ? "Annual revenue per customer" : "연간 고객당 매출", ...evidence.tam.bottomUp.annualRevenuePerCustomer, unit: `${evidence.currency}/${locale === "en" ? "year" : "년"}`, sourceTitles: evidence.tam.bottomUp.annualRevenuePerCustomerSources.map((source) => source.title), sources: evidence.tam.bottomUp.annualRevenuePerCustomerSources }] : []),
+        ...(selectedScenario && !founderCustomerCount ? [{ name: locale === "en" ? `Scenario ${selectedScenario.key} starting population` : `시나리오 ${selectedScenario.key} 시작 인구`, ...selectedScenario.startingPopulation, unit: locale === "en" ? "count" : "명", sourceTitles: selectedScenario.startingPopulationSources.map((source) => source.title), sources: selectedScenario.startingPopulationSources }] : []),
+        ...(selectedScenario && !founderCustomerCount ? selectedScenario.filters.filter((filter) => filter.active).map((filter) => ({ name: filter.name, ...filter.factor, unit: "ratio", sourceTitles: filter.sources.map((source) => source.title), sources: filter.sources })) : []),
+        ...(selectedScenario && !founderAnnualRevenue ? [{ name: locale === "en" ? `Scenario ${selectedScenario.key} annual revenue per customer` : `시나리오 ${selectedScenario.key} 연간 고객당 매출`, ...selectedScenario.annualRevenuePerCustomer, unit: `${evidence.currency}/${locale === "en" ? "year" : "년"}`, sourceTitles: selectedScenario.annualRevenuePerCustomerSources.map((source) => source.title), sources: selectedScenario.annualRevenuePerCustomerSources }] : []),
+        ...(founderCustomerCount ? [{ name: locale === "en" ? "Founder customer/end-user count" : "창업자 입력 고객·최종사용자 수", ...founderCustomerCount, unit: locale === "en" ? "count" : "개", sourceTitles: evidence.tam.bottomUp.customerCountSources.map((source) => source.title), sources: evidence.tam.bottomUp.customerCountSources }] : []),
+        ...(founderAnnualRevenue ? [{ name: locale === "en" ? "Founder annual revenue per customer" : "창업자 입력 연간 고객당 매출", ...founderAnnualRevenue, unit: `${evidence.currency}/${locale === "en" ? "year" : "년"}`, sourceTitles: evidence.tam.bottomUp.annualRevenuePerCustomerSources.map((source) => source.title), sources: evidence.tam.bottomUp.annualRevenuePerCustomerSources }] : []),
         ...evidence.tam.topDownPaths.map((path) => ({ name: path.name, ...path.range, unit: `${evidence.currency}/year`, sourceTitles: path.sources.map((source) => source.title), sources: path.sources }))
       ],
-      assumptions: evidence.tam.assumptions,
+      assumptions: [...evidence.tam.assumptions, ...scenarioAssumptions],
       sources: tamSources,
       confidence,
       evidenceGaps: [...new Set(tamGaps)],
       sensitivityDrivers: evidence.tam.sensitivityDrivers,
-      validation: [...varianceMessage, ...sourceRecencyMessage],
+      validation: [...varianceMessage, ...sourceRecencyMessage, ...scenarioValidation],
       cohesion: null,
       expansionPath: []
     }, evidence, locale),
@@ -507,7 +624,11 @@ export function calculateMarketSizing(
       confidence: beachheadRange ? "medium" : "low",
       evidenceGaps: [...new Set(beachheadGaps)],
       sensitivityDrivers: evidence.beachhead.sensitivityDrivers,
-      validation: [],
+      validation: beachheadRange && beachheadRange.base < 5_000_000
+        ? [locale === "en"
+            ? "Beachhead is below the US$5 million planning benchmark; treat this as a warning, not a hard rejection."
+            : "교두보 시장이 US$5 million 기획 기준보다 작습니다. 탈락 조건이 아닌 경고로 해석하세요."]
+        : [],
       cohesion: evidence.beachhead.cohesion,
       expansionPath: evidence.beachhead.expansionPath
     }, evidence, locale)
@@ -697,8 +818,8 @@ export function normalizeMarketResearch(value: unknown): GtmMarketResearch | nul
     researchMethodologyVersion: research.researchMethodologyVersion === "market-research-v2"
       ? "market-research-v2" : "legacy",
     marketSizing,
-    marketSizingMethodologyVersion: research.marketSizingMethodologyVersion === "market-sizing-v1"
-      ? "market-sizing-v1" : "legacy",
+    marketSizingMethodologyVersion: ["market-sizing-v1", "market-sizing-v2"].includes(String(research.marketSizingMethodologyVersion))
+      ? research.marketSizingMethodologyVersion as "market-sizing-v1" | "market-sizing-v2" : "legacy",
     marketDefinition: research.marketDefinition && typeof research.marketDefinition === "object"
       ? research.marketDefinition as GtmMarketResearch["marketDefinition"]
       : { included: "", excluded: "", annualRevenueUnit: "" },

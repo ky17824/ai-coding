@@ -35,8 +35,15 @@ export function collectAllowedResearchUrls(outputs: unknown[], approvedSources: 
   return result;
 }
 
-export function researchQuotaDecision(count: number, methodologyVersion: unknown, attemptedAt: unknown) {
+export function researchQuotaDecision(
+  count: number,
+  methodologyVersion: unknown,
+  attemptedAt: unknown,
+  sizingMethodologyVersion: unknown,
+  sizingAttemptedAt: unknown
+) {
   if (count < 3) return "reserve" as const;
   if (!attemptedAt && methodologyVersion !== "market-research-v2") return "legacy_upgrade" as const;
+  if (methodologyVersion === "market-research-v2" && sizingMethodologyVersion !== "market-sizing-v2" && !sizingAttemptedAt) return "sizing_upgrade" as const;
   return "limit" as const;
 }
