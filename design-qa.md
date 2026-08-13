@@ -47,3 +47,35 @@
 - [x] Link destinations and console check
 
 final result: passed
+
+---
+
+# Design QA — market research sections
+
+- Source visual truth: `/var/folders/1_/p9pmlbcj5mxg2k5fpf61nd040000gn/T/codex-clipboard-13ea34a8-b360-4fa1-8cb6-b044aca6e4da.png`, `/var/folders/1_/p9pmlbcj5mxg2k5fpf61nd040000gn/T/codex-clipboard-fffb9510-7eee-4710-97a1-059cf7ad6b58.png`, plus the requested structural corrections.
+- Implementation screenshot: `/private/tmp/global-gtm-research-qa-implementation.png`
+- Focused comparisons: `/private/tmp/global-gtm-research-qa-comparison.png`, `/private/tmp/global-gtm-market-qa-comparison.png`
+- Viewport: 1280 × 720 CSS px, device pixel ratio 2; browser capture normalized to 1265 px width.
+- State: Korean, market overview collapsed; market-trend evidence expanded and collapsed during interaction testing.
+
+## Findings
+
+- No actionable P0/P1/P2 mismatch remains.
+- Typography: existing Pretendard hierarchy and weights are unchanged; section headings remain at the shared section-title level.
+- Spacing/layout: `시장 범위` is outside the card surface and directly groups the TAM, SAM, SOM, and 교두보 시장 grid. Each evidence disclosure is now inside its corresponding overview card.
+- Colors/tokens: existing green, muted text, border, radius, and white surface tokens are preserved.
+- Image quality: no image assets are used in these research sections.
+- Copy: the Korean section title is exactly `경쟁구도`.
+- Interaction: opening `전체 5개 조사 근거 보기` displayed all five evidence items inside the overview card; closing restored the compact card. A fresh QA tab reported no console warnings or errors.
+
+## Comparison history
+
+1. Initial screenshots showed two structural mismatches: evidence disclosure outside the overview card and `시장 범위` inside an empty card.
+2. The DOM was corrected by nesting each disclosure inside `ResearchOverviewCard` and restoring `시장 범위` as the section heading above the market-size grid.
+3. Post-fix DOM inspection, focused visual comparison, expansion testing, and console inspection found no remaining P0/P1/P2 issue.
+
+## Follow-up polish
+
+- None required for this correction.
+
+final result: passed
