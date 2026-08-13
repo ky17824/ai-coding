@@ -72,22 +72,6 @@ export function Landing({ locale }: { locale: Locale }) {
         </section>
       </div>
 
-      <section className="trust-strip" aria-label={m.trust.ariaLabel}>
-        <div className="trust-strip__track">
-          {[false, true].map((duplicate) => (
-            <div
-              className="trust-strip__group"
-              aria-hidden={duplicate || undefined}
-              key={duplicate ? "duplicate" : "primary"}
-            >
-              {m.trust.items.map((principle) => (
-                <span key={principle}>{principle}</span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </section>
-
       <section className="section section--steps">
         <div className="section-heading">
           <span className="eyebrow">{m.steps.eyebrow}</span>

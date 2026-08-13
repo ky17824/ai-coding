@@ -72,19 +72,10 @@ const ko = {
     windowTitle: "시장진입 준비도(Global Readiness) 개요",
     scoreEyebrow: "시장진입 준비도(Global Readiness)",
     scoreLabel: "진출 준비도",
-    chartLabels: ["시장", "리더십", "선정", "현지화(Localization)", "조직", "GTM"],
+    chartLabels: ["시장", "리더십", "선정", "현지화", "조직", "GTM"],
     actionEyebrow: "가장 먼저 할 일",
     actionLabel: "보안·법규 준수(Compliance) 차이 분석(Gap Analysis)",
     priority: "우선순위 0(Priority 0)"
-  },
-  trust: {
-    ariaLabel: "서비스 원칙",
-    items: [
-      "실리콘밸리 현지화(Localization) 방법론 기반",
-      "근거 중심 시장진입 준비도(Global Readiness) 예비진단",
-      "AI-GTM 어시스턴트 계획 작성 지원",
-      "실전 경험을 갖춘 전문가 서비스"
-    ]
   },
   steps: {
     eyebrow: "이용 방법(How It Works)",
@@ -180,15 +171,6 @@ const en: typeof ko = {
     actionEyebrow: "Do This First",
     actionLabel: "Security & Compliance Gap Analysis",
     priority: "Priority 0"
-  },
-  trust: {
-    ariaLabel: "Service principles",
-    items: [
-      "Built on Silicon Valley localization methodology",
-      "Evidence-Based Readiness Pre-Assessment",
-      "AI GTM Assistant Helps You Draft Your Plan",
-      "Experts Who Have Actually Done It"
-    ]
   },
   steps: {
     eyebrow: "HOW IT WORKS",
