@@ -15,6 +15,17 @@ import { buildMarketResearchCoverage, calculateMarketSizing, founderSizingOverri
 import { canonicalResearchUrl } from "./research-sources";
 
 export const ASSISTANT_MODEL = "gpt-5.6-luna" as const;
+export const MARKET_SIZING_MODEL = "gpt-5.6-terra" as const;
+export const MARKET_SIZING_REVIEW_MODEL = "gpt-5.6-sol" as const;
+
+export function hasMoreEstimatedMarketSizes(
+  current: { status: "estimated" | "insufficient_evidence" }[],
+  candidate: { status: "estimated" | "insufficient_evidence" }[]
+) {
+  const estimated = (entries: { status: "estimated" | "insufficient_evidence" }[]) =>
+    entries.filter((entry) => entry.status === "estimated").length;
+  return estimated(candidate) > estimated(current);
+}
 
 const sourceSchema = z.object({
   kind: z.enum(["diagnosis", "vault", "web"]),
@@ -464,7 +475,8 @@ export function finalizeMarketResearch(
   output: z.infer<typeof marketResearchOutputSchema> & { marketSizingEvidence: z.infer<typeof marketSizingEvidenceSchema> },
   now = new Date(),
   locale: Locale = "ko",
-  founderContext: Partial<GtmFounderContext> = {}
+  founderContext: Partial<GtmFounderContext> = {},
+  generatedBy: GtmMarketResearch["generatedBy"] = ASSISTANT_MODEL
 ): GtmMarketResearch {
   const marketSizingEvidence = { ...output.marketSizingEvidence, referenceYear: now.getUTCFullYear() };
   const uniqueSources = <T extends { url: string }>(sources: T[]) =>
@@ -557,7 +569,7 @@ export function finalizeMarketResearch(
     marketDefinition: marketSizingEvidence.marketDefinition,
     researchContextSignature: marketResearchContextSignature(founderContext),
     generatedAt: now.toISOString(),
-    generatedBy: ASSISTANT_MODEL
+    generatedBy
   };
 }
 

@@ -280,7 +280,7 @@ export interface GtmMarketResearch {
   nextExperiments: string[];
   limitations: string[];
   generatedAt: string;
-  generatedBy: "gpt-5.6-luna";
+  generatedBy: "gpt-5.6-luna" | "gpt-5.6-terra" | "gpt-5.6-sol";
 }
 
 export interface GtmPlanItem {

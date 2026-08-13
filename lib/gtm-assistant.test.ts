@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 import { zodTextFormat } from "openai/helpers/zod";
 import {
   assistantResponseSchema,
+  ASSISTANT_MODEL,
   buildDeterministicPlan,
   classifyFounderContextValue,
   finalizeMarketResearch,
   getPendingFounderQuestion,
+  hasMoreEstimatedMarketSizes,
+  MARKET_SIZING_MODEL,
+  MARKET_SIZING_REVIEW_MODEL,
   marketResearchResponseSchema,
   marketSizingEvidenceResponseSchema,
   sanitizeFounderText,
@@ -49,6 +53,23 @@ const completeContext: GtmFounderContext = {
 };
 
 describe("AI GTM assistant safeguards", () => {
+  it("routes broad research, market sizing, and failed-sizing review to the intended model tiers", () => {
+    expect(ASSISTANT_MODEL).toBe("gpt-5.6-luna");
+    expect(MARKET_SIZING_MODEL).toBe("gpt-5.6-terra");
+    expect(MARKET_SIZING_REVIEW_MODEL).toBe("gpt-5.6-sol");
+  });
+
+  it("uses a Sol sizing review only when it estimates more market ranges", () => {
+    expect(hasMoreEstimatedMarketSizes(
+      [{ status: "estimated" }, { status: "insufficient_evidence" }],
+      [{ status: "estimated" }, { status: "estimated" }]
+    )).toBe(true);
+    expect(hasMoreEstimatedMarketSizes(
+      [{ status: "estimated" }, { status: "insufficient_evidence" }],
+      [{ status: "estimated" }, { status: "insufficient_evidence" }]
+    )).toBe(false);
+  });
+
   it("uses an object root required by OpenAI structured outputs", () => {
     const format = zodTextFormat(assistantResponseSchema, "gtm_assistant_turn");
 
