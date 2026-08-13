@@ -3,9 +3,9 @@
 ## Source of truth
 
 - Status: Active
-- Last refreshed: 2026-08-13
+- Last refreshed: 2026-08-14
 - Primary product surfaces: 랜딩, 인증·온보딩, 단계별 준비도 진단, Gate 판정, 론칭 대상 정의, AI 시장·경쟁 사전조사, 준비 3단계 후 실제 판매 가능성 예비검증, AI GTM 공동계획, 대시보드·여정, 계획 보고서, 전문가 서비스
-- Evidence reviewed: live `https://global-gtm.vercel.app/en/dashboard`, `app/page.tsx`, `app/globals.css`, `public/fonts/PretendardVariable.woff2`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `components/google-button.tsx`, `components/signin-form.tsx`, `components/signup-form.tsx`, `app/auth/callback/route.ts`, `app/account/actions.ts`, `app/api/gtm-assistant/turn/route.ts`, `app/api/gtm-plans/[id]/export/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `supabase/migrations/005_ai_gtm_assistant.sql`, `scripts/build-questionnaire-docx.js`, `docs/survey/*.docx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`, `.omx/plans/2026-08-11-kakao-login-integration.md`, `.omx/plans/2026-08-11-full-english-localization.md`
+- Evidence reviewed: live `https://global-gtm.vercel.app/en/dashboard`, `app/page.tsx`, `app/globals.css`, `public/fonts/PretendardVariable.woff2`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `components/google-button.tsx`, `components/signin-form.tsx`, `components/signup-form.tsx`, `app/auth/callback/route.ts`, `app/account/actions.ts`, `app/api/gtm-assistant/turn/route.ts`, `app/api/gtm-plans/[id]/export/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `supabase/migrations/005_ai_gtm_assistant.sql`, `scripts/build-questionnaire-docx.js`, `docs/survey/*.docx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`, `.omx/plans/2026-08-11-kakao-login-integration.md`, `.omx/plans/2026-08-11-full-english-localization.md`, external reference `DESIGN-starbucks.md`
 - Observed fact: 기존 UI는 `--ink`, `--green`, `--green-dark`, `--mint`, `--paper` 토큰과 흰색 panel, 12px 내외 radius, 짧은 상태 문구를 공통으로 사용한다.
 - Observed fact: 현재 AI GTM 어시스턴트는 목표국가·목표고객·자원·기한·제약만 받고 바로 계획을 만들며, 론칭할 제품·서비스·솔루션과 시장규모·경쟁사 조사 결과를 수집·검토·저장하는 단계가 없다.
 - Observed fact: 대시보드의 단계 통과 카드가 `gate_messages`의 공통 접두문 `필수 선결 조건이 남았습니다 —`를 항목마다 그대로 출력해 같은 상태 문장이 반복된다.
@@ -68,20 +68,21 @@
 
 ## Visual language
 
-- Color: 화면의 버튼은 `--green-dark` 기반의 짙은 녹색으로 통일하고, hover는 한 단계 밝은 녹색, 3D 엣지는 더 어두운 녹색을 사용한다. 고신뢰/헤더는 `--ink`, 위험은 기존 P0 색을 유지한다.
-- Typography: 첨부된 `Pretendard Variable`을 웹 화면과 HTML 보고서의 기본 글꼴로 자체 호스팅하고, 내부 DOCX는 `Pretendard`로 통일한다. 웹은 45~920 가변 굵기를 사용하며 제목은 700~850, 본문은 400~500, 메타·출처는 500~650을 기본으로 한다. 숫자·단계 표시·브랜드 마크도 별도 serif 없이 같은 서체를 사용한다. 글꼴을 불러오지 못한 경우에만 Noto Sans KR·Apple SD Gothic Neo·system sans-serif 순으로 대체한다.
-- Spacing/layout rhythm: `app-container` 폭과 16/24/32px 간격을 재사용한다. 데스크톱 assistant는 요약 280~320px + 본문 1fr의 2열, 모바일은 1열.
-- Shape/radius/elevation: 기존 `.panel`과 12~18px radius를 재사용한다. 제품 액션 버튼은 기본 52px·소형 42px 높이, 12px radius, 짙은 녹색 표면과 더 어두운 하단 엣지 그림자로 규격화한다.
-- Motion: 버튼은 160ms 안에서 hover 시 2px 떠오르고 active 시 3px 눌리는 3D 피드백만 사용한다. 응답 스트리밍보다 명확한 로딩 상태를 우선하고 `prefers-reduced-motion`에서는 이동과 transition을 제거한다.
-- Imagery/iconography: 새로운 AI 일러스트나 아이콘 라이브러리를 추가하지 않는다.
+- Color: Starbucks의 색상값이나 상표 표현을 복제하지 않고 역할 기반 운영 원칙만 Borderless 팔레트로 번역한다. `brand`는 제목·수치·선택, `action`은 주요 행동, `deep`은 헤더·핵심 밴드, `uplift`는 hover·보조 강조, `tint`는 완료·선택 배경에만 사용한다. 페이지는 따뜻한 cream canvas → white content surface → deep-green feature band의 단색 리듬을 사용한다. warning·danger 색은 상태 의미에만 쓰며 장식용으로 사용하지 않는다.
+- Typography: 자체 호스팅한 `Pretendard Variable` 하나를 웹 화면과 HTML 보고서에 사용한다. Display 48px, Page title 36px, Section title 24px, Body 16px, Label/metadata 13~14px의 다섯 단계가 기본이며 화면 폭에 따라 `clamp()`로만 축소한다. 제목은 700~850, 본문은 400~500, 메타·출처는 500~650을 사용하고 영문도 같은 semantic scale을 공유한다. SoDoSans·serif·script 글꼴과 `html { font-size: 62.5% }` 방식은 도입하지 않는다.
+- Spacing/layout rhythm: 4/8/16/24/32/48/64px 간격만 기본 scale로 사용한다. 모바일 outer gutter 16px, 태블릿 24px, 데스크톱 40px을 사용하며 콘텐츠 최대 폭은 기존 1180px을 유지한다. 데스크톱 assistant는 요약 280~320px + 본문 1fr의 2열, 900px 이하에서는 1열이다. 섹션 구분은 선보다 여백과 surface 전환을 우선한다.
+- Shape/radius/elevation: 기본 panel·card radius는 12px, 큰 feature band는 16px, button·status chip은 full-pill, icon·avatar는 원형으로 제한한다. 카드 표면은 저농도 2단 shadow만 사용하고 강한 3D edge는 기본 버튼에서 제거한다. 짙은 배경의 핵심 전환 CTA에는 white inverted surface와 한 단계 더 분명한 shadow를 허용하되 geometry·focus·motion은 공통 버튼과 같다.
+- Motion: 공통 버튼은 180ms 이내 색상·shadow 전환과 active `scale(0.97)`만 사용한다. hover에서 레이아웃 위치를 이동하지 않는다. 랜딩의 설명 애니메이션은 정보 이해를 돕는 경우에만 유지하고 사용자가 상호작용하면 정지할 수 있어야 한다. `prefers-reduced-motion`에서는 이동·scale·자동 스크롤·transition을 제거한다.
+- Imagery/iconography: 새로운 AI 일러스트·stock photography·아이콘 라이브러리를 추가하지 않는다. 제품의 실제 증거를 설명하는 데이터 미리보기와 단순 선형 아이콘만 사용하며 구조적 gradient·glassmorphism·과도한 blur를 사용하지 않는다.
+- Page rhythm: 공개 랜딩은 cream hero → white explanation → deep-green conversion band, 인증은 cream canvas 위 white card, 앱은 cream canvas 위 white panels, 보고서는 같은 토큰을 사용하고 인쇄 시 shadow·고정 toolbar를 제거한다.
 
 ## Components
 
-- Existing components to reuse: `SiteHeader`, `.panel`, 짙은 녹색 3D 규격을 공유하는 `.button` variants, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, `.offering-picker`, 서비스 카드
+- Existing components to reuse: `SiteHeader`, 역할 기반 표면과 full-pill geometry를 공유하는 `.button` variants, `.panel`, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, `.offering-picker`, 서비스 카드
 - New/changed components: provider별 설정을 받는 `SocialLoginButton`, 허용된 callback 오류를 설명하는 `AuthErrorNotice`, 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 통과 인정점수와 응답 분포를 분리한 `GateScoreChart`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `ResearchCoverageSummary`, `MarketSizingTable`, `MarketTrendSection`, `CompetitorTable`, `SourceList`, `ComprehensiveMarketReport`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드
 - Variants and states: Gate locked/active/passed/stopped, target market missing/partial/confirmed, question satisfied/evidence_needed/improvement_needed/locked, assistant context_draft/researching/review_required/confirmed/plan_draft/active, market source/assumption/estimate/confirmation_needed, offering validation deferred/preliminary_reviewed, plan draft/active/superseded/completed, item not_started/in_progress/blocked/completed, founder/vault/web/deterministic source
 - Token/component ownership: 전역 토큰과 공통 상태는 `app/globals.css`; assistant 전용 레이아웃도 같은 파일의 기존 토큰을 사용한다.
-- Do not add a component library, Tailwind layer, icon package, or design-token abstraction.
+- Do not add a component library, Tailwind layer, icon package, font package, or 별도 design-token abstraction. `:root`의 작은 semantic token 집합과 기존 class를 단일 source로 사용한다.
 - 소셜 로그인은 공급자 이름과 로고가 보이는 접근 가능한 이름을 유지하면서 공통 버튼 규격을 따른다. 삭제·환불처럼 되돌리기 어려운 행동은 위험 의미를 색 이외의 문구로도 명확히 표시한다.
 
 ### 카카오 로그인
@@ -199,7 +200,7 @@ Google로 계속하기
 ## Implementation constraints
 
 - Framework/styling system: Next.js App Router, React 19, 단일 `app/globals.css`, 서버 컴포넌트 우선
-- Design-token constraints: `:root` 기존 변수와 현재 버튼/panel 패턴만 확장한다. 전역 글꼴은 `--font-sans` 하나로 관리하고 화면별 `font-family` 재정의를 추가하지 않는다.
+- Design-token constraints: `:root`의 기존 변수를 semantic role로 정리하고 버튼·panel·header·HTML 보고서가 같은 값과 geometry를 사용한다. 페이지별 one-off green·cream·radius·shadow 추가를 금지한다. 전역 글꼴은 `--font-sans` 하나로 관리하고 화면별 `font-family` 재정의를 추가하지 않는다.
 - Performance constraints: 최초 페이지 렌더에 AI 호출 금지, 상태 변경에 AI 호출 금지, 클라이언트 번들에 OpenAI/Supabase service key 코드 금지
 - Research constraints: 기존 Responses API의 `file_search`와 `web_search`만 사용하고 새 검색 SDK를 추가하지 않는다. 공개 웹 검색에는 고객명·연락처·계약서·기밀 수치를 보내지 않는다. 쿼리 계획 뒤 영역별 조사를 병렬 실행하고, 공식 통계·규제기관·산업자료·현지 유통·기업 공식자료·소비자 자료를 교차검증한다. 일반 시장·경쟁 조사는 최대 10회, 시장규모 조사는 최대 8회의 웹 검색 지침을 사용하며 모든 외부 사실에 URL·게시자·자료 유형·확인일을 저장한다.
 - Compatibility constraints: 55문항의 문구·배점·Critical 규칙은 유지하되 한 진단 세션에서 통과한 단계까지만 저장하며, Supabase RLS와 비로그인 진단 후 인증 복귀 흐름을 유지한다. 초기 목표국가·목표 고객군은 질문 답변에서 추론하지 않고 assessment의 구조화된 확정값으로 저장하며 Gate B에만 추가 선결 조건으로 사용한다. 미응답·잠김 문항을 판매 가능성의 부정 근거로 사용하지 않으며 `readiness_answers` 55개가 모두 있을 때만 실제 판매 가능성 예비검증을 계산한다.

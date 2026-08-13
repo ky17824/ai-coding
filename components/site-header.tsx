@@ -19,6 +19,13 @@ export async function SiteHeader({
   const { data: profile } = user && supabase
     ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
     : { data: null };
+  const navItems = [
+    ["/dashboard", m.header.dashboard],
+    ["/assessment", m.header.assessment],
+    ["/journey", m.header.journey],
+    ["/services", m.header.services],
+    ...(profile?.role === "admin" ? [["/admin", m.header.admin]] : [])
+  ];
   return (
     <header className={`site-header ${compact ? "site-header--compact" : ""}`}>
       <Link href={localizedPath("/", activeLocale)} className="brand" aria-label={m.header.brandHome}>
@@ -26,12 +33,26 @@ export async function SiteHeader({
         <span>Borderless</span>
       </Link>
       <nav className="main-nav" aria-label={m.header.mainNav}>
-        <Link href={localizedPath("/dashboard", activeLocale)}>{m.header.dashboard}</Link>
-        <Link href={localizedPath("/assessment", activeLocale)}>{m.header.assessment}</Link>
-        <Link href={localizedPath("/journey", activeLocale)}>{m.header.journey}</Link>
-        <Link href={localizedPath("/services", activeLocale)}>{m.header.services}</Link>
-        {profile?.role === "admin" && <Link href={localizedPath("/admin", activeLocale)}>{m.header.admin}</Link>}
+        {navItems.map(([href, label]) => <Link href={localizedPath(href, activeLocale)} key={href}>{label}</Link>)}
       </nav>
+      <details className="mobile-nav">
+        <summary>{activeLocale === "en" ? "Menu" : "메뉴"}</summary>
+        <div className="mobile-nav__menu" role="navigation" aria-label={m.header.mainNav}>
+          <span className="mobile-nav__language"><LanguageSwitcher locale={activeLocale} /></span>
+          {navItems.map(([href, label]) => <Link href={localizedPath(href, activeLocale)} key={href}>{label}</Link>)}
+          {user ? (
+            <>
+              <Link href={localizedPath("/account", activeLocale)}>{m.header.account}</Link>
+              <form action={signOut}>
+                <input type="hidden" name="locale" value={activeLocale} />
+                <button>{m.header.signOut}</button>
+              </form>
+            </>
+          ) : (
+            <Link href={localizedPath("/signin", activeLocale)}>{m.header.signIn}</Link>
+          )}
+        </div>
+      </details>
       <span className="header-account">
         <LanguageSwitcher locale={activeLocale} />
         {user ? (
