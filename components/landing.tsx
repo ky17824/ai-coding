@@ -82,13 +82,12 @@ export function Landing({ locale }: { locale: Locale }) {
           </h2>
         </div>
         <div className="steps-grid">
-          {m.steps.items.map((step) => (
-            <article className="step-card" key={step.number}>
-              <span>{step.number}</span>
-              <h3>{step.title}</h3>
-              <p>{step.description}</p>
-            </article>
-          ))}
+          {m.steps.items.map((step) => {
+            const content = <><span>{step.number}</span><h3>{step.title}</h3><p>{step.description}</p></>;
+            return step.number === "04"
+              ? <Link className="step-card" href={localizedPath("/services", locale)} key={step.number}>{content}</Link>
+              : <article className="step-card" key={step.number}>{content}</article>;
+          })}
         </div>
       </section>
 

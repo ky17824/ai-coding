@@ -103,9 +103,9 @@ const ko = {
       },
       {
         number: "04",
-        title: "검증된 전문가가 여러분과 함께합니다",
+        title: "AI 전문가가 진출 과제를 해결합니다",
         description:
-          "필요한 순간에 승인된 멘토와 컨설팅 패키지를 예약하고 여정 안에서 관리합니다."
+          "시장조사부터 현지화·규제·재무·실행계획까지 필요한 AI 전문가를 선택하세요. 준비도 답변을 바탕으로 근거 있는 분석과 실행 가능한 결과물을 제공합니다."
       }
     ]
   },
@@ -198,9 +198,9 @@ const en: typeof ko = {
       },
       {
         number: "04",
-        title: "Vetted experts work alongside you",
+        title: "AI experts solve your market-entry tasks",
         description:
-          "Book approved mentors and consulting packages at the moment you need them, tracked inside your journey."
+          "Choose the AI specialist you need for market research, localization, regulatory readiness, finance, or execution planning. Your readiness answers become evidence-led analysis and actionable deliverables."
       }
     ]
   },
