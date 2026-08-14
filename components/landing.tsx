@@ -15,7 +15,7 @@ export function Landing({ locale }: { locale: Locale }) {
       <MobileAutoScroll />
       <div className="landing-shell">
         <BackgroundPaths />
-        <SiteHeader locale={locale} />
+        <SiteHeader locale={locale} landing />
         <section className="hero">
           <div className="hero__copy">
             <span className="eyebrow">

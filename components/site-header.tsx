@@ -24,20 +24,24 @@ async function HeaderAccount({ locale, mobile = false }: { locale: Locale; mobil
 export function SiteHeader({
   compact = false,
   locale,
-  assistantHref
+  assistantHref,
+  landing = false
 }: {
   compact?: boolean;
   locale: Locale;
   assistantHref?: string;
+  landing?: boolean;
 }) {
   const m = t(locale);
-  const navItems = [
-    ["/dashboard", m.header.dashboard],
-    ["/assessment", m.header.assessment],
-    ["/journey", m.header.journey],
-    ["/services", m.header.services]
-  ];
-  const desktopNavItems = assistantHref
+  const navItems = landing
+    ? [["/assessment", m.header.assessment], ["/services", m.header.aiServices]]
+    : [
+        ["/dashboard", m.header.dashboard],
+        ["/assessment", m.header.assessment],
+        ["/journey", m.header.journey],
+        ["/services", m.header.services]
+      ];
+  const desktopNavItems = !landing && assistantHref
     ? [...navItems.slice(0, 2), [assistantHref, m.header.assistant], ...navItems.slice(2)]
     : navItems;
   return (

@@ -61,4 +61,22 @@ describe("site header shell", () => {
       expect.objectContaining({ label: "AI GTM 어시스턴트" })
     );
   });
+
+  it("limits landing desktop and mobile navigation to assessment and AI expert services", () => {
+    const koHeader = SiteHeader({ locale: "ko", landing: true });
+    const enHeader = SiteHeader({ locale: "en", landing: true });
+    const koLinks = [
+      { href: "/assessment", label: "준비도 진단" },
+      { href: "/services", label: "AI 전문가 서비스" }
+    ];
+    const enLinks = [
+      { href: "/en/assessment", label: "Assessment" },
+      { href: "/en/services", label: "AI Expert Services" }
+    ];
+
+    expect(directLinks(findByClass(koHeader, "main-nav"))).toEqual(koLinks);
+    expect(directLinks(findByClass(koHeader, "mobile-nav__menu"))).toEqual(koLinks);
+    expect(directLinks(findByClass(enHeader, "main-nav"))).toEqual(enLinks);
+    expect(directLinks(findByClass(enHeader, "mobile-nav__menu"))).toEqual(enLinks);
+  });
 });
