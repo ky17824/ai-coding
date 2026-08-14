@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { ServiceCard } from "@/components/service-card";
+import { AnswerQuestionChart } from "@/components/answer-question-chart";
 import {
   buildStageAnswerInsights,
   calculateReadiness,
@@ -334,65 +335,15 @@ export default async function DashboardPage({
                   <span style={{ width: `${answerInsights.score}%` }} />
                   <i aria-hidden="true" />
                 </div>
-                <ul>
-                  {answerInsights.items.map((item) => (
-                    <li key={item.id}>
-                      <span><strong>{item.label}</strong><small>{item.positiveWeight} / {item.totalWeight} {en ? `points · ${item.positivePercent}%` : `점 · ${item.positivePercent}%`}</small></span>
-                      <div className="answer-item-bars">
-                        <div
-                          className="answer-score-meter"
-                          role="progressbar"
-                          aria-label={en ? `${item.label} gate score` : `${item.label} 통과 인정점수`}
-                          aria-valuemin={0}
-                          aria-valuemax={item.totalWeight}
-                          aria-valuenow={item.positiveWeight}
-                        >
-                          <span style={{ width: `${item.positivePercent}%` }} />
-                        </div>
-                        <div
-                          className="answer-stack"
-                          role="img"
-                          aria-label={`${item.label}: ${item.segments.map((segment) => en ? `Level ${segment.level}, ${segment.weight} points` : `${segment.level}단계 ${segment.weight}점`).join(", ")}`}
-                        >
-                          {item.segments.map((segment) => segment.weight > 0 && (
-                            <span
-                              key={segment.level}
-                              className={`answer-stack__level answer-stack__level--${segment.level}`}
-                              style={{ width: `${segment.percent}%` }}
-                              title={en ? `Level ${segment.level}, ${segment.weight} points` : `${segment.level}단계 ${segment.weight}점`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                <div className="answer-chart-legend" aria-label={en ? "Response-level legend" : "답변 단계 범례"}>
-                  <span><i className="answer-stack__level--1" />{en ? "1 Not started" : "1 미인지"}</span>
-                  <span><i className="answer-stack__level--2" />{en ? "2 Aware / planned" : "2 인지·계획"}</span>
-                  <span><i className="answer-stack__level--3" />{en ? "3 Executed" : "3 실행·사례"}</span>
-                  <span><i className="answer-stack__level--4" />{en ? "4 Repeatable / verified" : "4 반복·확인"}</span>
-                </div>
-                <p>{en ? "Formula: gate score = sum of question weights answered at Levels 3 or 4. Passing requires at least 80% of the stage maximum and every required prerequisite. The thinner bar shows the Level 1–4 response mix." : "산식: 단계 통과 점수 = 3·4단계로 답한 문항의 배점 합계입니다. 단계 최대점수의 80% 이상과 필수 선결 조건 충족이 모두 필요하며, 얇은 막대는 1~4단계 응답 구성을 보여줍니다."}</p>
+                <AnswerQuestionChart
+                  key={answerInsights.stageId}
+                  answers={answerInsights.answers}
+                  locale={locale}
+                  stageLabel={answerInsights.stageLabel}
+                />
+                <p>{en ? "Formula: gate score = sum of question weights answered at Levels 3 or 4. Passing requires at least 80% of the stage maximum and every required prerequisite. Each bar shows the selected Level 1–4 response." : "산식: 단계 통과 점수 = 3·4단계로 답한 문항의 배점 합계입니다. 단계 최대점수의 80% 이상과 필수 선결 조건 충족이 모두 필요하며, 각 막대 높이는 선택한 1~4단계 응답을 나타냅니다."}</p>
                 {answerInsights.counts.deferred > 0 && <p>{en ? "The 3-point paid-pilot item is excluded from the Stage 1 numerator and denominator while deferred, then becomes required evidence at Gate C." : "90일 검증 과제로 이월된 유료 실증시험 3점은 준비 1단계의 분자와 분모에서 제외하고, 단계 통과 기준 C에서 필수 증거로 확인합니다."}</p>}
               </article>
-
-              <div className="answer-insight-list">
-                {answerInsights.answers.map((answer) => (
-                  <details className={`panel answer-insight-card answer-insight-card--${answer.status}`} key={answer.questionId}>
-                    <summary>
-                      <span><small>Q{String(answer.number).padStart(2, "0")}</small>{answer.question}</span>
-                      <strong>{answer.statusLabel}</strong>
-                    </summary>
-                    <dl>
-                      <div><dt>{en ? "My answer" : "내 답변"}</dt><dd>{answer.answerText}</dd></div>
-                      <div><dt>{en ? "What it means" : "답변의 의미"}</dt><dd>{answer.meaning}</dd></div>
-                      {answer.action && <div><dt>{en ? "Next action" : "다음 행동"}</dt><dd>{answer.action}</dd></div>}
-                      <div><dt>{answer.hasEvidence ? (en ? "Submitted evidence" : "제출한 증거") : (en ? "Definition of done" : "완료 기준")}</dt><dd>{answer.completionEvidence}</dd></div>
-                    </dl>
-                  </details>
-                ))}
-              </div>
 
               <div className="answer-insights__cta panel">
                 <span><strong>{en ? "Turn responses that need work into an execution plan." : "보완이 필요한 답변을 실행 계획으로 전환하세요."}</strong><small>{en ? "Build a plan with the AI GTM Assistant from your current assessment." : "현재 진단 결과를 바탕으로 AI GTM 어시스턴트와 계획을 만듭니다."}</small></span>
