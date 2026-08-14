@@ -69,7 +69,7 @@ export async function generateStageSummary(
   const response = await client.responses.parse({
     model: STAGE_SUMMARY_MODEL,
     store: false,
-    reasoning: { effort: "medium", context: "assessment_summary" },
+    reasoning: { effort: "medium", context: "current_turn" },
     instructions,
     input: JSON.stringify(input),
     text: { format: zodTextFormat(stageSummarySchema, "stage_readiness_summary") }
