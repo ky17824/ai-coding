@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { ServiceCard } from "@/components/service-card";
 import { AnswerQuestionChart } from "@/components/answer-question-chart";
+import { StageSummaryPanel } from "@/components/stage-summary-panel";
 import {
   buildStageAnswerInsights,
   calculateReadiness,
@@ -18,6 +19,7 @@ import type { EvidenceInput, GtmPlanItem, ReadinessAnswer, ReadinessLevel, Store
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { localizeStoredGtmPlan } from "@/lib/content-localization";
+import { stageSummarySchema, type StageSummaryStatus } from "@/lib/stage-summary";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "GTM Journey Dashboard" : "GTM 여정 대시보드" };
@@ -43,7 +45,7 @@ export default async function DashboardPage({
   const [{ data: organization }, { data: assessment }] = await Promise.all([
     admin.from("organizations").select("name").eq("id", profile.organization_id).single(),
     admin.from("assessments")
-      .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,completed_at,target_country,target_customer_segment,target_market_confirmed_at")
+      .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,completed_at,target_country,target_customer_segment,target_market_confirmed_at,stage_summary,stage_summary_status")
       .eq("organization_id", profile.organization_id)
       .order("completed_at", { ascending: false }).limit(1).maybeSingle()
   ]);
@@ -177,22 +179,10 @@ export default async function DashboardPage({
   const displayIsOnHold = readinessAnswers.length > 0
     ? readinessResult.isOnHold
     : assessment.is_on_hold;
-  const targetPrerequisites = [
-    { label: en ? "Initial target country" : "초기 목표국가", value: assessment.target_country },
-    { label: en ? "Target customer segment" : "목표 고객군", value: assessment.target_customer_segment }
-  ];
-  const showTargetPrerequisites = readinessResult.currentStageId === "preparing" &&
-    targetPrerequisites.some((entry) => !entry.value || !assessment.target_market_confirmed_at);
-  const questionGateMessages = gateMessages.filter(
-    (message) => ![
-      "초기 목표국가를 확정해 주세요.",
-      "초기 목표국가의 목표 고객군을 확정해 주세요.",
-      "초기 목표시장 정보를 확인해 주세요.",
-      "Confirm your initial target country.",
-      "Confirm the initial customer segment in your target country.",
-      "Confirm the initial target-market information."
-    ].includes(message)
-  );
+  const storedStageSummary = stageSummarySchema.safeParse(assessment.stage_summary);
+  const stageSummaryStatus = ["pending", "generating", "complete", "failed"].includes(assessment.stage_summary_status)
+    ? assessment.stage_summary_status as StageSummaryStatus
+    : storedStageSummary.success ? "complete" : "pending";
   const defaultStageId = availableStages.some(
     (stage) => stage.id === readinessResult.currentStageId
   )
@@ -249,36 +239,13 @@ export default async function DashboardPage({
           </article>
         </section>
 
-        {gateMessages.length > 0 && (
-          <section className="hold-banner hold-banner--dashboard">
-            <div>
-              <span>{en ? "STAGE GATE REVIEW" : "단계 통과 기준(Stage Gate) 확인"}</span>
-              <h2>{en ? "Prerequisites to resolve first" : "먼저 해결해야 할 선결 조건"}</h2>
-              <strong>{en ? `${gateMessages.length} remaining` : `${gateMessages.length}개 남음`}</strong>
-            </div>
-            <div className="hold-banner__content">
-              {showTargetPrerequisites && (
-                <div className="gate-prerequisites">
-                  <header><strong>{en ? "Define your initial target market" : "초기 목표시장 정의"}</strong><small>{targetPrerequisites.filter((entry) => entry.value && assessment.target_market_confirmed_at).length}/2</small></header>
-                  <ul>
-                    {targetPrerequisites.map((entry) => (
-                      <li key={entry.label}><span>{entry.label}</span><strong>{entry.value && assessment.target_market_confirmed_at ? (en ? "Confirmed" : "확정") : (en ? "Not confirmed" : "미확정")}</strong></li>
-                    ))}
-                  </ul>
-                  <Link href={path("/assessment?new=1")} className="button button--small">
-                    {en ? "Set initial target market" : "초기 목표시장 정하기"}<span aria-hidden="true">→</span>
-                  </Link>
-                </div>
-              )}
-              <div>
-                <strong>{en ? "Assessment responses" : "진단 답변"}</strong>
-                {questionGateMessages.length > 0
-                  ? <ul>{questionGateMessages.map((message) => <li key={message}>{message}</li>)}</ul>
-                  : <p>{en ? "Question scores and required evidence conditions are satisfied." : "질문 점수와 필수 근거 조건은 충족했습니다."}</p>}
-              </div>
-            </div>
-          </section>
-        )}
+        <StageSummaryPanel
+          assessmentId={assessment.id}
+          locale={locale}
+          initialSummary={storedStageSummary.success ? storedStageSummary.data : null}
+          initialStatus={stageSummaryStatus}
+          score={displayDomainScores.early ?? 0}
+        />
 
         <section className="dashboard-section answer-insights" id="answer-insights">
           <div className="dashboard-section__heading">
