@@ -761,11 +761,25 @@ main[lang="en"] .hero h1 {
   outline-offset: 2px;
 }
 
-.button__kakao-image {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: contain;
+.button__kakao-logo {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  flex: 0 0 30px;
+}
+
+.button__kakao-logo-source {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  width: 300px;
+  max-width: none;
+  height: 45px;
+}
+
+.button__kakao-label {
+  font-weight: 800;
 }
 
 .button--google {

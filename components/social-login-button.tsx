@@ -70,15 +70,18 @@ export function SocialLoginButton({
         aria-label={pending ? pendingLabel : idleLabel}
       >
         {provider === "kakao" && !pending ? (
-          <img
-            className="button__kakao-image"
-            src={`/auth/kakao-login-${locale}-600.png`}
-            srcSet={`/auth/kakao-login-${locale}-300.png 300w, /auth/kakao-login-${locale}-600.png 600w`}
-            sizes="(max-width: 600px) 100vw, 600px"
-            alt=""
-            width="600"
-            height="90"
-          />
+          <>
+            <span className="button__kakao-logo" aria-hidden="true">
+              <img
+                className="button__kakao-logo-source"
+                src="/auth/kakao-login-ko-300.png"
+                alt=""
+                width="300"
+                height="45"
+              />
+            </span>
+            <span className="button__kakao-label">{idleLabel}</span>
+          </>
         ) : provider === "google" && (
           <img
             className="button__google-logo"
