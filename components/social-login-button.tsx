@@ -31,6 +31,11 @@ export function SocialLoginButton({
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const config = providers[provider];
+  const providerLabel = provider === "kakao" && locale === "en" ? "Kakao" : config.label;
+  const idleLabel = provider === "kakao"
+    ? locale === "en" ? "Login with Kakao" : "카카오 로그인"
+    : locale === "en" ? `Continue with ${providerLabel}` : `${providerLabel}로 계속하기`;
+  const pendingLabel = locale === "en" ? `Connecting to ${providerLabel}…` : `${providerLabel}로 이동 중…`;
 
   async function signIn() {
     setError("");
@@ -42,7 +47,8 @@ export function SocialLoginButton({
       const result = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          scopes: provider === "kakao" ? "account_email" : undefined
         }
       });
       if (result.error) {
@@ -62,8 +68,19 @@ export function SocialLoginButton({
         type="button"
         onClick={signIn}
         disabled={pending}
+        aria-label={pending ? pendingLabel : idleLabel}
       >
-        {provider === "google" && (
+        {provider === "kakao" && !pending ? (
+          <img
+            className="button__kakao-image"
+            src={`/auth/kakao-login-${locale}-600.png`}
+            srcSet={`/auth/kakao-login-${locale}-300.png 300w, /auth/kakao-login-${locale}-600.png 600w`}
+            sizes="(max-width: 600px) 100vw, 600px"
+            alt=""
+            width="600"
+            height="90"
+          />
+        ) : provider === "google" && (
           <img
             className="button__google-logo"
             src="/google-g.svg"
@@ -72,9 +89,7 @@ export function SocialLoginButton({
             height="18"
           />
         )}
-        {pending
-          ? locale === "en" ? `Connecting to ${config.label}…` : `${config.label}로 이동 중…`
-          : locale === "en" ? `Continue with ${config.label}` : `${config.label}로 계속하기`}
+        {(provider !== "kakao" || pending) && (pending ? pendingLabel : idleLabel)}
       </button>
       {error && <p className="field-error" role="alert">{error}</p>}
     </>

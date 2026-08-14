@@ -738,20 +738,34 @@ main[lang="en"] .hero h1 {
 }
 
 .button--kakao {
-  border-color: rgba(191, 243, 209, 0.22);
-  background: var(--button-green);
-  color: var(--white);
+  aspect-ratio: 20 / 3;
+  min-height: 42px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: #fee500;
+  color: rgba(0, 0, 0, 0.85);
+  box-shadow: none;
 }
 
 .button--kakao:hover:not(:disabled) {
-  border-color: rgba(191, 243, 209, 0.4);
-  background: var(--button-green-hover);
-  color: var(--white);
+  border-color: transparent;
+  background: #fee500;
+  color: rgba(0, 0, 0, 0.85);
+  box-shadow: var(--button-shadow-small);
 }
 
 .button--kakao:focus-visible {
   outline: 3px solid rgba(29, 123, 76, 0.25);
   outline-offset: 2px;
+}
+
+.button__kakao-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
 }
 
 .button--google {
