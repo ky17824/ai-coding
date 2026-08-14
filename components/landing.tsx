@@ -36,9 +36,6 @@ export function Landing({ locale }: { locale: Locale }) {
                 {m.hero.primaryCta}
                 <ArrowIcon />
               </Link>
-              <Link href={localizedPath("/dashboard", locale)} className="text-link">
-                {m.hero.secondaryCta}
-              </Link>
             </div>
             <p className="privacy-note">
               <LockIcon /> {m.hero.privacyNote}

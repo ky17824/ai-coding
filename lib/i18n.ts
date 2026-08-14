@@ -66,7 +66,6 @@ const ko = {
     body:
       "준비도를 객관적으로 진단해 드리고 지금 필요한 액션과 전문가를 연결해 드립니다. 글로벌 진출의 전 과정을 한눈에 관리하세요.",
     primaryCta: "무료 준비도 진단 시작",
-    secondaryCta: "데모 대시보드 보기",
     privacyNote: "이메일로 참여하는 비공개 베타입니다."
   },
   preview: {
@@ -156,7 +155,6 @@ const en: typeof ko = {
     body:
       "We assess your readiness using evidence and connect you with the right actions and experts at the right time. Manage your entire global expansion in one place.",
     primaryCta: "Start the Assessment",
-    secondaryCta: "See demo dashboard",
     privacyNote: "Beta version 0.1."
   },
   preview: {
