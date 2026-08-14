@@ -19,4 +19,10 @@ describe("dashboard execution summary", () => {
     expect(source).not.toContain('en ? "PRIORITY ACTIONS" : "우선 실행항목(Priority Actions)"');
     expect(source).not.toContain('en ? "Actions from this assessment" : "이번 진단의 실행 액션"');
   });
+
+  it("links the dashboard header and no-plan CTA to the current assistant", () => {
+    expect(source).toContain('assistantHref={`/assistant/${assessment.id}`}');
+    expect(source).toContain('en ? "Create plan with AI" : "AI로 계획 만들기"');
+    expect(source).toContain('`/assistant/${assessment.id}`');
+  });
 });

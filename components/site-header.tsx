@@ -23,10 +23,12 @@ async function HeaderAccount({ locale, mobile = false }: { locale: Locale; mobil
 
 export function SiteHeader({
   compact = false,
-  locale
+  locale,
+  assistantHref
 }: {
   compact?: boolean;
   locale: Locale;
+  assistantHref?: string;
 }) {
   const m = t(locale);
   const navItems = [
@@ -35,6 +37,9 @@ export function SiteHeader({
     ["/journey", m.header.journey],
     ["/services", m.header.services]
   ];
+  const desktopNavItems = assistantHref
+    ? [...navItems.slice(0, 2), [assistantHref, m.header.assistant], ...navItems.slice(2)]
+    : navItems;
   return (
     <header className={`site-header ${compact ? "site-header--compact" : ""}`}>
       <Link href={localizedPath("/", locale)} className="brand" aria-label={m.header.brandHome}>
@@ -42,7 +47,7 @@ export function SiteHeader({
         <span>Borderless</span>
       </Link>
       <nav className="main-nav" aria-label={m.header.mainNav}>
-        {navItems.map(([href, label]) => <Link href={localizedPath(href, locale)} key={href}>{label}</Link>)}
+        {desktopNavItems.map(([href, label]) => <Link href={localizedPath(href, locale)} key={href}>{label}</Link>)}
       </nav>
       <details className="mobile-nav">
         <summary>{locale === "en" ? "Menu" : "메뉴"}</summary>

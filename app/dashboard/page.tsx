@@ -139,11 +139,11 @@ export default async function DashboardPage({
   const planHref = plan?.status === "active" ? "/journey" : `/assistant/${assessment.id}`;
   const planCta = plan?.status === "active"
     ? (en ? "View execution plan" : "실행 계획 보기")
-    : plan ? (en ? "Continue AI plan" : "AI 계획 이어가기") : (en ? "Create AI plan" : "AI 계획 만들기");
+    : plan ? (en ? "Continue AI plan" : "AI 계획 이어가기") : (en ? "Create plan with AI" : "AI로 계획 만들기");
 
   return (
     <main className="app-page dashboard-page">
-      <SiteHeader compact locale={locale} />
+      <SiteHeader compact locale={locale} assistantHref={`/assistant/${assessment.id}`} />
       <div className="app-container dashboard">
         {incomplete && <IncompleteProfile locale={locale} />}
         <div className="dashboard-heading">
