@@ -149,7 +149,7 @@ export default async function DashboardPage({
         <div className="dashboard-heading">
           <span>
             <span className="page-kicker">{organization?.name ?? (en ? "YOUR COMPANY" : "우리 회사")} · {en ? "GLOBAL GTM JOURNEY" : "글로벌 진출 여정(Global Journey)"}</span>
-            <h1 className="page-title">{en ? `${profile.display_name}, continue your global expansion journey.` : `${profile.display_name}님, 이어서 진출 준비를 진행하세요.`}</h1>
+            <h1 className="page-title">{en ? `${profile.display_name}, continue your global expansion journey.` : "준비도를 확인하시고 AI와 함께 실행계획을 작성하세요"}</h1>
             <p className="page-description">{en ? "Your latest assessment and open actions are organized below." : "최근 진단 결과와 아직 완료하지 않은 액션을 기준으로 정리해 드렸습니다."}</p>
           </span>
           <Link href={path("/assessment?new=1")} className="button button--primary">{en ? "Retake assessment" : "재진단 시작"}</Link>

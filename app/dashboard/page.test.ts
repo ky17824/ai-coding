@@ -4,6 +4,11 @@ import { describe, expect, it } from "vitest";
 const source = readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
 
 describe("dashboard execution summary", () => {
+  it("uses the readiness-to-plan dashboard heading", () => {
+    expect(source).toContain("준비도를 확인하시고 AI와 함께 실행계획을 작성하세요");
+    expect(source).not.toContain("이어서 진출 준비를 진행하세요");
+  });
+
   it("removes duplicate execution summaries from the dashboard", () => {
     expect(source).not.toContain('en ? "AI GTM PLAN" : "AI GTM 계획(AI GTM Plan)"');
     expect(source).not.toContain('className="plan-summary"');
