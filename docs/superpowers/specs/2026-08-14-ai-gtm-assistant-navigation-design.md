@@ -11,8 +11,8 @@
 - 메뉴 링크는 현재 대시보드가 표시하는 최신 진단의 `/assistant/{assessmentId}`를 사용한다.
 - 모바일 메뉴와 대시보드 이외의 페이지에는 이 메뉴를 표시하지 않는다.
 - 진단이 없는 대시보드에는 이 메뉴를 표시하지 않는다.
-- 준비도 진단만 완료하고 실행계획이 없는 경우, 하단 CTA는 `AI GTM 어시스턴트로 실행계획 작성하기`로 표시하고 같은 `/assistant/{assessmentId}`로 연결한다.
-- 위 CTA의 영문 문구는 `Create an execution plan with AI GTM Assistant`로 표시한다.
+- 준비도 진단만 완료하고 실행계획이 없는 경우, 하단 CTA는 `AI로 계획 만들기`로 표시하고 같은 `/assistant/{assessmentId}`로 연결한다.
+- 위 CTA의 영문 문구는 `Create plan with AI`로 표시한다.
 
 ## 구현 범위
 
