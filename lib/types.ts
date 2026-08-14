@@ -11,7 +11,7 @@ export type ReadinessStatus =
   | "Readiness Stage 2"
   | "Readiness Stage 3"
   | "Ready to Enter";
-export type ServiceType = "mentoring" | "consulting";
+export type ServiceType = "mentoring" | "consulting" | "ai_agent";
 export type OrderStatus =
   | "pending"
   | "paid"
@@ -104,6 +104,13 @@ export interface ServiceOffering {
     startsAt: string;
     endsAt: string;
   }[];
+  productKind?: "specialist" | "package";
+  includedAgentIds?: string[];
+  requiredInputs?: string[];
+  humanVerification?: string[];
+  questionIds?: string[];
+  officialSourceQuestionIds?: string[];
+  completionInstructions?: string[];
 }
 
 export type GtmPlanStatus = "draft" | "active" | "superseded" | "completed";

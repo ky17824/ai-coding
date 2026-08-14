@@ -85,7 +85,7 @@ export function AssessmentForm({
     roadmap: "Roadmap",
     fullSequence: "Full readiness sequence",
     weighted: "Weighted score",
-    expertServices: "Expert Services",
+    expertServices: "AI Expert Services",
     matchedExperts: "Experts matched to your current actions",
     expertPrompt: "Move forward with the expert support you need now",
     allServices: "View all services →",
@@ -464,7 +464,7 @@ export function AssessmentForm({
         <section className="result-section">
           <div className="section-heading section-heading--row">
             <span>
-              <span className="page-kicker">{c?.expertServices ?? "전문가 서비스(Expert Services)"}</span>
+              <span className="page-kicker">{c?.expertServices ?? "AI 전문가 서비스"}</span>
               <h2>
                 {matched.length > 0
                   ? c?.matchedExperts ?? "현재 액션에 맞는 전문가"

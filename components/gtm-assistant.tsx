@@ -482,7 +482,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
             <div className="assistant-plan-list">
               {items.map((item, index) => (
                 <article className="assistant-plan-item panel" key={item.id ?? `${item.title}-${index}`}>
-                  <header><span className={`priority priority--${item.priority}`}>{en ? `Priority ${item.priority === "P0" ? "0" : "1"}` : item.priority === "P0" ? "우선순위 0" : "우선순위 1"}</span><strong>{item.horizon} {en ? "days" : "일"}</strong>{item.expertRequired && <Link className="button button--ghost button--small" href={localizedPath(`/services?tag=${encodeURIComponent(item.serviceTag)}`, locale)}>{en ? "Find an expert →" : "전문가 연결 →"}</Link>}</header>
+                  <header><span className={`priority priority--${item.priority}`}>{en ? `Priority ${item.priority === "P0" ? "0" : "1"}` : item.priority === "P0" ? "우선순위 0" : "우선순위 1"}</span><strong>{item.horizon} {en ? "days" : "일"}</strong>{item.expertRequired && <Link className="button button--ghost button--small" href={localizedPath(`/services?tag=${encodeURIComponent(item.serviceTag)}`, locale)}>{en ? "Use an AI expert →" : "AI 전문가 사용 →"}</Link>}</header>
                   <h3>{item.title}</h3>
                   <p>{item.rationale}</p>
                   <div className="assistant-plan-fields">

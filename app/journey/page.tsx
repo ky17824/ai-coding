@@ -156,9 +156,9 @@ export default async function JourneyPage() {
                               <Link
                                 className="button button--ghost button--small journey-expert-cta"
                                 href={path(`/services?tag=${encodeURIComponent(expert.tag)}`)}
-                                aria-label={en ? `Find an expert for ${item.title}` : `${item.title} 전문가 연결`}
+                                aria-label={en ? `Use an AI expert for ${item.title}` : `${item.title} AI 전문가 사용`}
                               >
-                                {en ? "Find an expert" : "전문가 연결"} <span aria-hidden="true">→</span>
+                                {en ? "Use an AI expert" : "AI 전문가 사용"} <span aria-hidden="true">→</span>
                               </Link>
                             )}
                           </div>

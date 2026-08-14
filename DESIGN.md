@@ -4,7 +4,7 @@
 
 - Status: Active
 - Last refreshed: 2026-08-14
-- Primary product surfaces: 랜딩, 인증·온보딩, 단계별 준비도 진단, Gate 판정, 론칭 대상 정의, AI 시장·경쟁 사전조사, 준비 3단계 후 실제 판매 가능성 예비검증, AI GTM 공동계획, 대시보드·여정, 계획 보고서, 전문가 서비스
+- Primary product surfaces: 랜딩, 인증·온보딩, 단계별 준비도 진단, Gate 판정, 론칭 대상 정의, AI 시장·경쟁 사전조사, 준비 3단계 후 실제 판매 가능성 예비검증, AI GTM 공동계획, 대시보드·여정, 계획 보고서, 유료 AI 전문가 서비스
 - Evidence reviewed: live `https://global-gtm.vercel.app/en/dashboard`, `app/page.tsx`, `app/globals.css`, `public/fonts/PretendardVariable.woff2`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `components/google-button.tsx`, `components/signin-form.tsx`, `components/signup-form.tsx`, `app/auth/callback/route.ts`, `app/account/actions.ts`, `app/api/gtm-assistant/turn/route.ts`, `app/api/gtm-plans/[id]/export/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `supabase/migrations/005_ai_gtm_assistant.sql`, `scripts/build-questionnaire-docx.js`, `docs/survey/*.docx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`, `.omx/plans/2026-08-11-kakao-login-integration.md`, `.omx/plans/2026-08-11-full-english-localization.md`, external reference `DESIGN-starbucks.md`
 - Observed fact: 기존 UI는 `--ink`, `--green`, `--green-dark`, `--mint`, `--paper` 토큰과 흰색 panel, 12px 내외 radius, 짧은 상태 문구를 공통으로 사용한다.
 - Observed fact: 현재 AI GTM 어시스턴트는 목표국가·목표고객·자원·기한·제약만 받고 바로 계획을 만들며, 론칭할 제품·서비스·솔루션과 시장규모·경쟁사 조사 결과를 수집·검토·저장하는 단계가 없다.
@@ -27,8 +27,8 @@
 
 ## Product goals
 
-- Goals: 창업자가 이메일·Google·카카오 중 익숙한 인증 수단으로 같은 진단·계획 이력에 안전하게 접근하고, 현재 통과 가능한 단계까지만 답해 즉시 가치를 받도록 한다. 첫 미통과 Gate의 질문별 격차를 계획·실행·증거·재진단으로 닫아 다음 단계로 이동하게 한다. 준비 2단계까지 초기 목표국가와 목표 고객군을 직접 확정하고, 계획을 만들기 전에는 `무엇을·누구에게·어디에서` 론칭하는지 정의하며, 출처가 있는 시장·경쟁 사전조사와 창업자 확인을 거친다. 실제 판매 가능성 예비검증은 준비 3단계까지 55문항이 모두 응답된 경우에만 제공한다.
-- Non-goals: 자유 채팅, AI 재채점, 자동 예약·결제, 법률·세무·규제 확정 판단
+- Goals: 창업자가 이메일·Google·카카오 중 익숙한 인증 수단으로 같은 진단·계획 이력에 안전하게 접근하고, 현재 통과 가능한 단계까지만 답해 즉시 가치를 받도록 한다. 첫 미통과 Gate의 질문별 격차를 계획·실행·증거·재진단으로 닫아 다음 단계로 이동하게 한다. 준비 2단계까지 초기 목표국가와 목표 고객군을 직접 확정하고, 계획을 만들기 전에는 `무엇을·누구에게·어디에서` 론칭하는지 정의하며, 출처가 있는 시장·경쟁 사전조사와 창업자 확인을 거친다. 실제 판매 가능성 예비검증은 준비 3단계까지 55문항이 모두 응답된 경우에만 제공한다. 사용자는 진단 문항과 연결된 AI 전문가 또는 패키지를 결제한 뒤, 부족한 정보를 보완하고 GPT-5.6 Sol의 조사·분석·실행계획을 주문별 작업공간에서 받는다.
+- Non-goals: 자유 채팅, AI 재채점, 실제 인터뷰 수행, 파트너 확보 보장, 법률·세무·규제·계약 효력 확정 판단
 - Success signals: 단계별 완료율, 론칭 정의 완료율, 사전조사 검토·보고서 포함률, 준비 3단계 진단의 실제 판매 가능성 예비검증 확인률, 첫 Gate 판정 후 AI 계획 시작률, 계획 승인·30일 실행률, 재진단 통과율, 보고서 다운로드율, 전문가 brief 확인률
 
 ## Personas and jobs
@@ -40,8 +40,8 @@
 
 ## Information architecture
 
-- Primary navigation: 대시보드 / 준비도 진단 / GTM 여정 / 전문가 서비스 / 계정
-- Core routes/screens: `/signin`·`/signup` 이메일·Google·카카오 인증 → `/auth/callback` 공통 OAuth 처리 → `/account/onboarding` 신규 OAuth 사용자 정보·동의 보완 → `/assessment` 현재 Gate 문항과 준비 2단계 목표시장 확인 → 단계 판정 → `/assistant/[assessmentId]` 론칭 대상 정의 → 시장·경쟁 사전조사 검토 → `/api/gtm-plans/[id]/export?view=1` 종합 시장보고서 → 준비 3단계 55문항 완료 시 실제 판매 가능성 예비검증 → 공동계획 또는 다음 Gate → `/dashboard` 목표시장·질문별 실행·증거 현황 → `/assessment/[assessmentId]/recheck` Gate 재확인 → `/journey` 실행 보드 → 계획 보고서 → `/services` 전문가 연결
+- Primary navigation: 대시보드 / 준비도 진단 / GTM 여정 / AI 전문가 서비스 / 계정
+- Core routes/screens: `/signin`·`/signup` 이메일·Google·카카오 인증 → `/auth/callback` 공통 OAuth 처리 → `/account/onboarding` 신규 OAuth 사용자 정보·동의 보완 → `/assessment` 현재 Gate 문항과 준비 2단계 목표시장 확인 → 단계 판정 → `/assistant/[assessmentId]` 론칭 대상 정의 → 시장·경쟁 사전조사 검토 → `/api/gtm-plans/[id]/export?view=1` 종합 시장보고서 → 준비 3단계 55문항 완료 시 실제 판매 가능성 예비검증 → 공동계획 또는 다음 Gate → `/dashboard` 목표시장·질문별 실행·증거 현황 → `/assessment/[assessmentId]/recheck` Gate 재확인 → `/journey` 실행 보드 → 계획 보고서 → `/services` AI 전문가·패키지 선택 → `/services/[id]` 범위·가격 확인 → 결제 → `/orders/[id]` 입력·보완질문·가정 확인·보고서
 - Content hierarchy: 현재 단계 문항 → 준비 2단계의 초기 목표국가·목표 고객군 확인 → 결정론적 Gate 판정 → 공통 상태 요약 1회와 개별 보완 항목 → 질문별 충족·근거 상태 → 론칭 대상 정의 → 시장·경쟁 사전조사와 가정 확인 → 준비 3단계 55문항 완료 여부에 따른 판매 가능성 예비검증 또는 검증 보류 안내 → 허용된 기간 범위의 계획 초안 → 질문과 연결된 실행 → 증거 제출 → Gate 재확인 → 다음 단계 해제 → 다운로드·전문가 handoff
 - The assistant is entered from a saved assessment only; it is not a global chat entry in primary navigation.
 - Later-stage questions are not visible or navigable until the immediately preceding Gate passes.
@@ -61,6 +61,7 @@
 - 긴 조사 결과도 영역을 침범하지 않는다: 시장동향과 주요 경쟁사는 각각 경계가 있는 카드로 구분하고, 긴 출처·URL은 카드 안에서 줄바꿈한다.
 - 시장 정의는 추정하지 않는다: 목표국가와 목표 고객군은 창업자가 명시적으로 확인한 구조화 값만 Gate B와 AI 조사 입력에 사용한다.
 - AI와 사람의 경계를 보인다: 내부 근거, 외부 사실, AI 가정, 전문가 확인을 라벨로 구분한다.
+- 결제 후에도 통제권은 사용자에게 있다: AI 전문가는 저장된 답변을 재사용하고 결과를 바꾸는 누락정보만 최대 2회 질문한다. `모름`은 중단이 아니라 유사사례 가정으로 전환하며, 사용자가 가정을 확인한 뒤에만 최종 보고서를 만든다.
 - 인증 수단이 달라도 계정은 하나다: 확인 이메일이 같은 OAuth identity는 같은 사용자 이력으로 연결하고 provider별로 별도 제품 경험을 만들지 않는다.
 - 인증 실패는 복구 행동을 말한다: callback 코드나 provider 오류를 노출하지 않고 재시도·이메일 로그인의 다음 행동을 안내한다.
 - 실패해도 진단은 남는다: AI·검색 장애 시 결정론적 액션을 사용할 수 있어야 한다.
@@ -78,8 +79,8 @@
 
 ## Components
 
-- Existing components to reuse: `SiteHeader`, 역할 기반 표면과 full-pill geometry를 공유하는 `.button` variants, `.panel`, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, `.offering-picker`, 서비스 카드
-- New/changed components: provider별 설정을 받는 `SocialLoginButton`, 허용된 callback 오류를 설명하는 `AuthErrorNotice`, 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 통과 인정점수와 응답 분포를 분리한 `GateScoreChart`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `ResearchCoverageSummary`, `MarketSizingTable`, `MarketTrendSection`, `CompetitorTable`, `SourceList`, `ComprehensiveMarketReport`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드
+- Existing components to reuse: `SiteHeader`, 역할 기반 표면과 full-pill geometry를 공유하는 `.button` variants, `.panel`, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, `.offering-picker`, 서비스 카드, 기존 PortOne `CheckoutButton`, 주문 상세 화면
+- New/changed components: provider별 설정을 받는 `SocialLoginButton`, 허용된 callback 오류를 설명하는 `AuthErrorNotice`, 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 통과 인정점수와 응답 분포를 분리한 `GateScoreChart`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `ResearchCoverageSummary`, `MarketSizingTable`, `MarketTrendSection`, `CompetitorTable`, `SourceList`, `ComprehensiveMarketReport`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드, AI 상품 카드·상세, 결제 후 `AiAgentWorkspace`, AI 결과 보고서
 - Variants and states: Gate locked/active/passed/stopped, target market missing/partial/confirmed, question satisfied/evidence_needed/improvement_needed/locked, assistant context_draft/researching/review_required/confirmed/plan_draft/active, market source/assumption/estimate/confirmation_needed, offering validation deferred/preliminary_reviewed, plan draft/active/superseded/completed, item not_started/in_progress/blocked/completed, founder/vault/web/deterministic source
 - Token/component ownership: 전역 토큰과 공통 상태는 `app/globals.css`; assistant 전용 레이아웃도 같은 파일의 기존 토큰을 사용한다.
 - Do not add a component library, Tailwind layer, icon package, font package, or 별도 design-token abstraction. `:root`의 작은 semantic token 집합과 기존 class를 단일 source로 사용한다.

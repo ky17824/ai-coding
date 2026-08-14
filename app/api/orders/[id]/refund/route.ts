@@ -15,18 +15,15 @@ export async function POST(
   const { id } = await params;
   const { data: order } = await admin
     .from("orders")
-    .select("id,buyer_id,payment_id,status,scheduled_at,service_started_at")
+    .select("id,buyer_id,payment_id,status,order_kind,scheduled_at,service_started_at")
     .eq("id", id)
     .single();
   if (!order || order.buyer_id !== user.id) {
     return NextResponse.json({ message: en ? "We couldn't find the order." : "주문을 찾을 수 없습니다." }, { status: 404 });
   }
-  if (
-    order.service_started_at ||
-    order.status === "service_started" ||
-    order.status === "completed"
-  ) {
-    await admin.from("orders").update({ status: "disputed" }).eq("id", id);
+  if (order.service_started_at || order.status === "service_started" || order.status === "completed") {
+    const { error } = await admin.from("orders").update({ refund_requested_at: new Date().toISOString() }).eq("id", id);
+    if (error) return NextResponse.json({ message: en ? "We couldn't record the review request." : "검토 요청을 기록하지 못했습니다." }, { status: 500 });
     return NextResponse.json(
       { message: en ? "Our operations team reviews requests submitted after the service starts." : "서비스 시작 후 요청은 관리자가 기록을 검토합니다." },
       { status: 202 }
@@ -39,11 +36,21 @@ export async function POST(
     );
   }
   if (order.status === "pending") {
-    await admin.from("orders").update({ status: "cancelled" }).eq("id", id);
+    if (order.order_kind === "ai_agent") {
+      return NextResponse.json(
+        { message: en ? "Payment is still being confirmed. Cancellation is available after the payment status is resolved." : "결제 상태를 확인 중입니다. 결제 상태가 확정된 뒤 취소할 수 있습니다." },
+        { status: 409 }
+      );
+    }
+    const { data } = await admin.from("orders").update({ status: "cancelled" }).eq("id", id).eq("status", "pending").select("id").maybeSingle();
+    if (!data) return NextResponse.json({ message: en ? "The order state changed. Try again." : "주문 상태가 변경되었습니다. 다시 확인해 주세요." }, { status: 409 });
     return NextResponse.json({ status: "cancelled" });
   }
+  const { data: reserved } = await admin.from("orders").update({ status: "disputed", refund_requested_at: new Date().toISOString() }).eq("id", id).eq("status", "paid").select("id").maybeSingle();
+  if (!reserved) return NextResponse.json({ message: en ? "The service already started or the order state changed." : "서비스가 이미 시작되었거나 주문 상태가 변경되었습니다." }, { status: 409 });
   const secret = process.env.PORTONE_API_SECRET;
   if (!secret) {
+    await admin.from("orders").update({ status: "paid" }).eq("id", id).eq("status", "disputed");
     return NextResponse.json(
       { message: en ? "Payment refunds are not configured." : "결제 환불 환경이 구성되지 않았습니다." },
       { status: 503 }
@@ -61,12 +68,14 @@ export async function POST(
     }
   );
   if (!response.ok) {
+    await admin.from("orders").update({ status: "paid" }).eq("id", id).eq("status", "disputed");
     return NextResponse.json(
       { message: en ? "The payment gateway could not process the refund." : "결제대행 서비스(Payment Gateway) 환불 요청에 실패했습니다." },
       { status: 502 }
     );
   }
-  await admin.from("orders").update({ status: "refunded" }).eq("id", id);
+  const { data: refunded } = await admin.from("orders").update({ status: "refunded" }).eq("id", id).eq("status", "disputed").select("id").maybeSingle();
+  if (!refunded) return NextResponse.json({ message: en ? "The refund succeeded but the local order needs an operations review." : "환불은 완료되었으나 주문 상태는 운영 확인이 필요합니다." }, { status: 202 });
   await admin
     .from("settlements")
     .update({ status: "cancelled" })

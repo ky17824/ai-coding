@@ -12,11 +12,11 @@ export function ServiceCard({ service, locale = "ko" }: { service: ServiceOfferi
         <span className={`pill pill--${service.type}`}>
           {service.type === "mentoring"
             ? locale === "en" ? "1:1 Mentoring" : "1:1 멘토링"
-            : locale === "en" ? "Consulting Package" : "컨설팅 패키지"}
+            : service.type === "ai_agent"
+              ? service.productKind === "package" ? (locale === "en" ? "AI Package" : "AI 패키지") : (locale === "en" ? "AI Specialist" : "AI 전문가")
+              : locale === "en" ? "Consulting Package" : "컨설팅 패키지"}
         </span>
-        <span className="rating" aria-label={`${locale === "en" ? "Rating" : "평점"} ${service.rating}`}>
-          ★ {service.rating} <small>({service.reviewCount})</small>
-        </span>
+        {service.type === "ai_agent" ? <span className="service-model">GPT-5.6 Sol</span> : <span className="rating" aria-label={`${locale === "en" ? "Rating" : "평점"} ${service.rating}`}>★ {service.rating} <small>({service.reviewCount})</small></span>}
       </div>
       <h3>{service.title}</h3>
       <p>{service.description}</p>

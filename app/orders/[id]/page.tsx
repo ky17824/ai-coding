@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { OrderActions } from "@/components/order-actions";
+import { AiAgentWorkspace } from "@/components/ai-agent-workspace";
 import { getRequestLocale } from "@/lib/i18n-server";
 import {
   createSupabaseAdminClient,
@@ -27,7 +28,7 @@ export default async function OrderPage({
     user && admin
       ? await admin
           .from("orders")
-          .select("id,buyer_id,status,amount_krw,service_snapshot,terms_snapshot,scheduled_at,created_at")
+          .select("id,organization_id,buyer_id,status,amount_krw,service_snapshot,terms_snapshot,scheduled_at,created_at,order_kind,product_key,ai_agent_runs(*)")
           .eq("id", id)
           .eq("buyer_id", user.id)
           .maybeSingle()
@@ -38,6 +39,7 @@ export default async function OrderPage({
     (demo
       ? {
           id,
+          organization_id: null,
           buyer_id: "demo",
           status: "pending",
           amount_krw: 180000,
@@ -50,7 +52,10 @@ export default async function OrderPage({
             refundPolicy: en ? "Full refund before the service begins" : "서비스 시작 전 전액 환불"
           },
           scheduled_at: new Date(Date.now() + 7 * 86400000).toISOString(),
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          order_kind: "human",
+          product_key: null,
+          ai_agent_runs: []
         }
       : null);
 
@@ -68,6 +73,20 @@ export default async function OrderPage({
     deliverables: string[];
   };
   const terms = shownOrder.terms_snapshot as { refundPolicy: string };
+  const aiRun = Array.isArray(shownOrder.ai_agent_runs) ? shownOrder.ai_agent_runs[0] : shownOrder.ai_agent_runs;
+  const isAiOrder = shownOrder.order_kind === "ai_agent";
+  const { data: readinessBaseline } = isAiOrder && admin
+    ? await admin.from("assessments").select("target_country,target_customer_segment").eq("organization_id", shownOrder.organization_id).order("completed_at", { ascending: false }).limit(1).maybeSingle()
+    : { data: null };
+  const storedIntake = (aiRun?.intake ?? {}) as Record<string, unknown>;
+  const hydratedAiRun = aiRun ? {
+    ...aiRun,
+    intake: {
+      ...storedIntake,
+      targetCountry: storedIntake.targetCountry || readinessBaseline?.target_country || "",
+      targetCustomer: storedIntake.targetCustomer || readinessBaseline?.target_customer_segment || ""
+    }
+  } : null;
 
   return (
     <main className="app-page">
@@ -83,9 +102,9 @@ export default async function OrderPage({
           <dl>
             <div>
               <dt>{en ? "Service type" : "서비스 유형"}</dt>
-              <dd>{snapshot.type === "mentoring" ? (en ? "1:1 mentoring" : "1:1 멘토링") : (en ? "Consulting package" : "컨설팅 패키지")}</dd>
+              <dd>{isAiOrder ? (en ? "AI expert service" : "AI 전문가 서비스") : snapshot.type === "mentoring" ? (en ? "1:1 mentoring" : "1:1 멘토링") : (en ? "Consulting package" : "컨설팅 패키지")}</dd>
             </div>
-            <div>
+            {!isAiOrder && <div>
               <dt>{en ? "Scheduled for" : "예정일"}</dt>
               <dd>
                 {shownOrder.scheduled_at
@@ -95,7 +114,7 @@ export default async function OrderPage({
                     }).format(new Date(shownOrder.scheduled_at))
                   : en ? "To be scheduled after payment" : "결제 후 협의"}
               </dd>
-            </div>
+            </div>}
             <div>
               <dt>{en ? "Refund policy" : "환불 정책"}</dt>
               <dd>{terms.refundPolicy}</dd>
@@ -109,10 +128,18 @@ export default async function OrderPage({
           </div>
           <OrderActions
             orderId={shownOrder.id}
-            refundable={["pending", "paid"].includes(shownOrder.status)}
+            refundable={(isAiOrder ? ["paid", "service_started", "completed"] : ["pending", "paid", "service_started", "completed"]).includes(shownOrder.status)}
+            reviewOnly={["service_started", "completed"].includes(shownOrder.status)}
             locale={locale}
           />
         </section>
+        {isAiOrder && ["paid", "service_started", "completed"].includes(shownOrder.status) && hydratedAiRun && (
+          <AiAgentWorkspace
+            locale={locale}
+            initialRun={hydratedAiRun as never}
+          />
+        )}
+        {isAiOrder && shownOrder.status === "paid" && !aiRun && <p className="notice-banner">{en ? "Payment confirmation is still being processed. Refresh in a moment." : "결제 확인을 처리 중입니다. 잠시 후 새로고침해 주세요."}</p>}
       </div>
     </main>
   );

@@ -42,7 +42,7 @@ describe("site header shell", () => {
       { href: "/assessment", label: "준비도 진단" },
       { href: "/assistant/assessment-1", label: "AI GTM 어시스턴트" },
       { href: "/journey", label: "GTM 여정" },
-      { href: "/services", label: "전문가 서비스" }
+      { href: "/services", label: "AI 전문가 서비스" }
     ]);
     expect(directLinks(findByClass(header, "mobile-nav__menu"))).not.toContainEqual(
       expect.objectContaining({ href: "/assistant/assessment-1" })

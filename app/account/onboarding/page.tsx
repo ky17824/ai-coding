@@ -30,7 +30,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
       <div className="app-container narrow-container account-page">
         <span className="page-kicker">COMPLETE PROFILE</span>
         <h1 className="page-title">{en ? "Tell us about your company." : "회사 정보를 보완해 주세요."}</h1>
-        <p className="page-description">{en ? "You can skip this and still save your assessment. We will need these details before you can order an expert service." : "진단 결과 저장은 건너뛰셔도 되지만, 전문가 서비스를 주문하시려면 필요한 정보입니다."}</p>
+        <p className="page-description">{en ? "You can skip this and still save your assessment. We will need these details before you can order an AI expert service." : "진단 결과 저장은 건너뛰셔도 되지만, AI 전문가 서비스를 주문하시려면 필요한 정보입니다."}</p>
         <AccountProfileForm onboarding next={next} locale={locale} profile={{
           displayName: profile.display_name,
           companyName: organization?.name === "새 스타트업" ? "" : organization?.name ?? "",

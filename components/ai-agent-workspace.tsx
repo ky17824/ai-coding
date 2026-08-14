@@ -1,0 +1,135 @@
+"use client";
+
+import { useState } from "react";
+import type { AiAgentReport } from "@/lib/ai-agent-report";
+
+type Run = {
+  order_id: string;
+  status: "intake" | "clarifying" | "ready" | "generating" | "completed" | "failed";
+  intake: Record<string, unknown>;
+  input_audit: { field: string; status: "confirmed" | "unclear" | "missing" | "conflicting"; reason: string }[];
+  reference_files: { storagePath: string; fileName: string; mimeType: string; sizeBytes: number }[];
+  clarification_round: number;
+  pending_questions: { id: string; question: string }[];
+  assumptions: { field: string; basis: string }[];
+  report: AiAgentReport | null;
+  generation_count: number;
+  error_message?: string | null;
+  lease_expires_at?: string | null;
+};
+
+const fieldNames = ["objective", "offering", "targetCountry", "targetCustomer", "currentEvidence", "constraints", "resources", "deadline"] as const;
+const copy = {
+  ko: {
+    objective: "이번 업무로 내릴 결정", offering: "제품·서비스", targetCountry: "목표국가·도시", targetCustomer: "목표고객", currentEvidence: "현재 보유한 증거·자료·URL", constraints: "제약·금지사항", resources: "가용 예산·인력·기간", deadline: "계획기한",
+    unknown: "모름 — 유사사례로 추론", save: "필요정보 확인하기", saving: "저장 중…", clarify: "추가정보 제출", ready: "입력 감사 완료", readyBody: "아래 정보와 유사사례 가정을 확인하면 조사와 보고서 생성을 시작합니다.", generate: "가정 확인 후 보고서 만들기", generating: "GPT-5.6 Sol이 조사·분석 중입니다. 중단되었으면 작업 이어가기를 눌러 복구할 수 있습니다.", resume: "작업 이어가기", retry: "보고서 다시 시도", correction: "사실 정정 후 재생성", correctionFailed: "사실 정정 생성에 실패해 이전 보고서는 변경되지 않았으며, 포함된 정정 시도 1회는 사용되었습니다.", download: "HTML 다운로드", report: "AI 전문가 보고서", human: "사람 검증 필요", source: "근거 출처", actions: "실행계획", assumptions: "가정", gaps: "증거 공백", limitations: "한계", contradictions: "모순·해결", coverage: "준비도 문항 추적", sizing: "시장규모 추정", files: "참고 파일", fileHelp: "PDF·PNG·JPG, 파일당 4MB, 최대 3개 · 보고서 생성을 위해 OpenAI에 비공개 전송"
+  },
+  en: {
+    objective: "Decision to make", offering: "Offering", targetCountry: "Target country and city", targetCustomer: "Target customer", currentEvidence: "Current evidence, materials, and URLs", constraints: "Constraints and exclusions", resources: "Available budget, people, and time", deadline: "Planning deadline",
+    unknown: "Unknown — infer from analogs", save: "Review required information", saving: "Saving…", clarify: "Submit details", ready: "Input audit complete", readyBody: "Review the information and analog assumptions before research and report generation.", generate: "Confirm assumptions and build report", generating: "GPT-5.6 Sol is researching and analysing. Use resume if the previous attempt was interrupted.", resume: "Resume work", retry: "Retry report", correction: "Correct facts and regenerate", correctionFailed: "The correction attempt failed. The previous report is unchanged, and the included correction attempt was used.", download: "Download HTML", report: "AI expert report", human: "Human verification", source: "Sources", actions: "Action plan", assumptions: "Assumptions", gaps: "Evidence gaps", limitations: "Limitations", contradictions: "Contradictions and resolutions", coverage: "Readiness question trace", sizing: "Market sizing", files: "Reference files", fileHelp: "PDF, PNG, or JPG; 4 MB each; up to 3 files · privately sent to OpenAI for report generation"
+  }
+};
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
+}
+
+export function AiAgentWorkspace({ initialRun, locale = "ko" }: { initialRun: Run; locale?: "ko" | "en" }) {
+  const c = copy[locale];
+  const [run, setRun] = useState(initialRun);
+  const [intake, setIntake] = useState<Record<string, string>>(() => Object.fromEntries(fieldNames.map((field) => [field, String(initialRun.intake?.[field] ?? "")])));
+  const [unknownFields, setUnknownFields] = useState<string[]>(() => Array.isArray(initialRun.intake?.unknownFields) ? initialRun.intake.unknownFields as string[] : []);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState(initialRun.status === "completed" && initialRun.report && initialRun.error_message ? c.correctionFailed : "");
+  const [editing, setEditing] = useState(initialRun.status === "intake");
+
+  async function send(body: object) {
+    const previousStatus = run.status;
+    if ((body as { action?: string }).action === "generate") setRun((current) => ({ ...current, status: "generating" }));
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/ai-agent-runs/${run.order_id}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...body, locale }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? (locale === "en" ? "The request failed." : "요청을 처리하지 못했습니다."));
+      if (result.correctionFailed) {
+        setRun((current) => ({ ...current, status: "completed", report: result.report ?? current.report, generation_count: result.generationCount ?? current.generation_count }));
+        setMessage(c.correctionFailed);
+        setEditing(false);
+        return;
+      }
+      if (result.run) setRun(result.run);
+      if (result.report) setRun((current) => ({ ...current, status: "completed", report: result.report, generation_count: current.generation_count + 1 }));
+      setEditing(false);
+    } catch (error) {
+      setRun((current) => ({ ...current, status: previousStatus }));
+      setMessage(error instanceof Error ? error.message : locale === "en" ? "The request failed." : "요청을 처리하지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function submitIntake() {
+    void send({ action: "submit_intake", intake: { ...intake, unknownFields } });
+  }
+
+  async function uploadFiles(files: FileList | null) {
+    if (!files?.length) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      let referenceFiles = run.reference_files ?? [];
+      for (const file of Array.from(files).slice(0, Math.max(0, 3 - referenceFiles.length))) {
+        const form = new FormData();
+        form.set("file", file);
+        const response = await fetch(`/api/ai-agent-runs/${run.order_id}/upload-url`, { method: "POST", body: form });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message ?? c.fileHelp);
+        referenceFiles = result.referenceFiles;
+      }
+      setRun((current) => ({ ...current, reference_files: referenceFiles }));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : c.fileHelp);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function downloadReport() {
+    if (!run.report) return;
+    const report = run.report;
+    const html = `<!doctype html><html lang="${locale}"><meta charset="utf-8"><title>${escapeHtml(report.title)}</title><style>body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 24px;color:#09271d;line-height:1.65}h1,h2{color:#07513d}section{margin:32px 0;padding:24px;border:1px solid #d9e2dd;border-radius:12px}small{color:#60726a}a{color:#087f5b}</style><h1>${escapeHtml(report.title)}</h1><p>${escapeHtml(report.executiveSummary)}</p><section><h2>${escapeHtml(c.report)}</h2>${report.findings.map((item) => `<h3>${escapeHtml(item.title)}</h3><small>${escapeHtml(item.status)} · ${escapeHtml(item.confidence)}</small><p>${escapeHtml(item.summary)}</p><p>${item.questionIds.map(escapeHtml).join(" · ")}</p>`).join("")}</section>${report.marketSizing ? `<section><h2>${escapeHtml(c.sizing)}</h2><p>${escapeHtml(report.marketSizing.currency)} · ${report.marketSizing.referenceYear}</p><p>TAM ${report.marketSizing.tam.low} / ${report.marketSizing.tam.base} / ${report.marketSizing.tam.high}<br>SAM ${report.marketSizing.sam.low} / ${report.marketSizing.sam.base} / ${report.marketSizing.sam.high}<br>SOM ${report.marketSizing.som.low} / ${report.marketSizing.som.base} / ${report.marketSizing.som.high}</p><p>${escapeHtml(report.marketSizing.formula)}</p></section>` : ""}<section><h2>${escapeHtml(c.actions)}</h2><ol>${report.actionPlan.map((item) => `<li><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.why)} (${escapeHtml(item.owner)} · ${escapeHtml(item.timing)})</li>`).join("")}</ol></section><section><h2>${escapeHtml(c.source)}</h2><ul>${report.sources.map((source) => `<li><a href="${escapeHtml(source.url)}">${escapeHtml(source.title)}</a> — ${escapeHtml(source.publisher)} · ${escapeHtml(source.publishedAt)}</li>`).join("")}</ul></section><section><h2>${escapeHtml(c.human)}</h2><ul>${report.humanVerification.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section><section><h2>${escapeHtml(c.limitations)}</h2><ul>${report.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section></html>`;
+    const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${report.title.replace(/[^\p{L}\p{N}]+/gu, "-")}.html`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  if (run.status === "generating") return <section className="ai-workspace panel"><div className="ai-workspace__progress" role="status"><span className="spinner" aria-hidden="true" /><strong>{c.generating}</strong><button type="button" className="button button--ghost button--small" onClick={() => void send({ action: "generate", assumptionsConfirmed: true })} disabled={busy}>{c.resume}</button>{message && <p className="checkout-status" role="alert">{message}</p>}</div></section>;
+
+  if (run.status === "completed" && run.report && !editing) {
+    return <section className="ai-workspace ai-report panel">
+      {message && <p className="notice-banner" role="alert">{message}</p>}
+      <header className="ai-workspace__header"><span><small>GPT-5.6 SOL</small><h2>{run.report.title}</h2></span><div><button type="button" className="button button--ghost button--small" onClick={downloadReport}>{c.download}</button>{run.generation_count < 2 && <button type="button" className="button button--small" onClick={() => setEditing(true)}>{c.correction}</button>}</div></header>
+      <p className="ai-report__summary">{run.report.executiveSummary}</p>
+      <div className="ai-report__grid">{run.report.findings.map((finding) => <article key={finding.title}><span className={`pill ai-report__status ai-report__status--${finding.status}`}>{finding.status} · {finding.confidence}</span><h3>{finding.title}</h3><p>{finding.summary}</p><small>{finding.questionIds.join(" · ")}</small>{finding.counterEvidence.length > 0 && <details><summary>{locale === "en" ? "Counter-evidence" : "반대 근거"}</summary><ul>{finding.counterEvidence.map((item) => <li key={item}>{item}</li>)}</ul></details>}{finding.actions.length > 0 && <ul>{finding.actions.map((action) => <li key={action}>{action}</li>)}</ul>}</article>)}</div>
+      {run.report.marketSizing && <div className="detail-block"><h3>{c.sizing}</h3><p>{run.report.marketSizing.currency} · {run.report.marketSizing.referenceYear}</p><ul><li>TAM {run.report.marketSizing.tam.low.toLocaleString()} / {run.report.marketSizing.tam.base.toLocaleString()} / {run.report.marketSizing.tam.high.toLocaleString()}</li><li>SAM {run.report.marketSizing.sam.low.toLocaleString()} / {run.report.marketSizing.sam.base.toLocaleString()} / {run.report.marketSizing.sam.high.toLocaleString()}</li><li>SOM {run.report.marketSizing.som.low.toLocaleString()} / {run.report.marketSizing.som.base.toLocaleString()} / {run.report.marketSizing.som.high.toLocaleString()}</li><li>{locale === "en" ? "Beachhead" : "교두보 시장"} {run.report.marketSizing.beachhead.low.toLocaleString()} / {run.report.marketSizing.beachhead.base.toLocaleString()} / {run.report.marketSizing.beachhead.high.toLocaleString()}</li></ul><p>{run.report.marketSizing.formula}</p></div>}
+      <div className="detail-block"><h3>{c.actions}</h3><ol>{run.report.actionPlan.map((item) => <li key={item.title}><strong>{item.title}</strong><p>{item.why}</p><small>{item.owner} · {item.timing} · {item.successMetric} · {item.stopCondition}</small></li>)}</ol></div>
+      <div className="ai-report__columns"><div><h3>{c.assumptions}</h3><ul>{run.report.assumptions.map((item) => <li key={item.statement}><strong>{item.statement}</strong><small>{item.basis} · {item.confidence} · {item.impact}</small></li>)}</ul></div><div><h3>{c.human}</h3><ul>{run.report.humanVerification.map((item) => <li key={item}>{item}</li>)}</ul></div></div>
+      <details><summary>{c.source} · {run.report.sources.length}</summary><ul>{run.report.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a><small>{source.publisher} · {source.checkedAt}</small></li>)}</ul></details>
+      <details><summary>{c.gaps} · {run.report.evidenceGaps.length}</summary><ul>{run.report.evidenceGaps.map((item) => <li key={item}>{item}</li>)}</ul></details>
+      <details><summary>{c.contradictions} · {run.report.contradictions.length}</summary><ul>{run.report.contradictions.map((item) => <li key={`${item.statementA}-${item.statementB}`}><strong>{item.statementA} ↔ {item.statementB}</strong><small>{item.resolution}</small></li>)}</ul></details>
+      <details><summary>{c.coverage} · {run.report.questionCoverage.length}</summary><ul>{run.report.questionCoverage.map((item) => <li key={item.questionId}><strong>{item.questionId} · {item.priority} · {item.disposition}</strong><small>{item.reason}</small></li>)}</ul></details>
+      <details><summary>{c.limitations}</summary><ul>{run.report.limitations.map((item) => <li key={item}>{item}</li>)}</ul></details>
+    </section>;
+  }
+
+  if (run.status === "clarifying" && !editing) return <section className="ai-workspace panel"><span className="page-kicker">{locale === "en" ? `CLARIFICATION ${run.clarification_round + 1}/2` : `추가질문 ${run.clarification_round + 1}/2`}</span><h2>{locale === "en" ? "Only information that can materially change the result" : "결과를 바꿀 수 있는 정보만 확인합니다"}</h2><div className="ai-intake-grid">{run.pending_questions.map((question) => <label key={question.id} className="ai-intake-field"><span>{question.question}</span><textarea value={answers[question.id] ?? ""} onChange={(event) => setAnswers((current) => ({ ...current, [question.id]: event.target.value }))} placeholder={locale === "en" ? "Enter details or unknown" : "답변 또는 모름"} /></label>)}</div><button type="button" className="button button--primary" onClick={() => void send({ action: "submit_clarification", answers })} disabled={busy}>{busy ? c.saving : c.clarify}</button>{message && <p className="checkout-status" role="alert">{message}</p>}</section>;
+
+  if ((run.status === "ready" || run.status === "failed") && !editing) return <section className="ai-workspace panel"><span className="page-kicker">INPUT AUDIT</span><h2>{c.ready}</h2><p>{c.readyBody}</p><dl className="ai-intake-review">{fieldNames.map((field) => { const audit = run.input_audit?.find((item) => item.field === field); return <div key={field}><dt>{c[field]} <span className={`pill ai-audit--${audit?.status ?? "missing"}`}>{audit?.status ?? "missing"}</span></dt><dd>{String(run.intake?.[field] || c.unknown)}</dd></div>; })}</dl>{run.reference_files?.length > 0 && <div className="notice-banner"><strong>{c.files}</strong><span>{run.reference_files.map((file) => file.fileName).join(" · ")}</span></div>}{run.assumptions.length > 0 && <div className="notice-banner"><strong>{c.assumptions}</strong><span>{run.assumptions.map((item) => c[item.field as keyof typeof c] ?? item.field).join(" · ")}</span></div>}<button type="button" className="button button--primary" onClick={() => void send({ action: "generate", assumptionsConfirmed: true })} disabled={busy}>{busy ? c.generating : run.status === "failed" ? c.retry : c.generate}</button>{message && <p className="checkout-status" role="alert">{message}</p>}</section>;
+
+  return <section className="ai-workspace panel"><span className="page-kicker">AI EXPERT INTAKE</span><h2>{locale === "en" ? "Describe what the AI expert should solve" : "AI 전문가가 해결할 업무를 기술해 주세요"}</h2><p>{locale === "en" ? "Unknown answers do not stop the work. Select unknown and the report will use labelled, lower-confidence analog assumptions." : "모르는 정보가 있어도 작업은 중단되지 않습니다. 모름을 선택하면 신뢰도를 낮춘 유사사례 가정으로 보완합니다."}</p><div className="ai-intake-grid">{fieldNames.map((field) => { const scopeLocked = run.generation_count > 0 && ["offering", "targetCountry", "targetCustomer"].includes(field); return <label key={field} className={`ai-intake-field ${["objective", "currentEvidence", "constraints", "resources"].includes(field) ? "ai-intake-field--wide" : ""}`}><span>{c[field]}</span><textarea value={intake[field]} disabled={scopeLocked || unknownFields.includes(field)} onChange={(event) => setIntake((current) => ({ ...current, [field]: event.target.value }))} /><small><input type="checkbox" checked={unknownFields.includes(field)} disabled={scopeLocked || field === "objective"} onChange={(event) => setUnknownFields((current) => event.target.checked ? [...current, field] : current.filter((item) => item !== field))} /> {scopeLocked ? (locale === "en" ? "New order required to change scope" : "범위 변경은 새 주문 필요") : c.unknown}</small></label>; })}</div><label className="ai-file-upload"><span>{c.files}</span><input type="file" accept="application/pdf,image/png,image/jpeg" multiple disabled={busy || (run.reference_files?.length ?? 0) >= 3} onChange={(event) => void uploadFiles(event.target.files)} /><small>{c.fileHelp}{run.reference_files?.length ? ` · ${run.reference_files.map((file) => file.fileName).join(" · ")}` : ""}</small></label><button type="button" className="button button--primary" onClick={submitIntake} disabled={busy}>{busy ? c.saving : c.save}</button>{message && <p className="checkout-status" role="alert">{message}</p>}</section>;
+}

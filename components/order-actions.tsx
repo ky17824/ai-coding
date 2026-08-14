@@ -6,10 +6,12 @@ import type { Locale } from "@/lib/i18n";
 export function OrderActions({
   orderId,
   refundable,
+  reviewOnly = false,
   locale
 }: {
   orderId: string;
   refundable: boolean;
+  reviewOnly?: boolean;
   locale: Locale;
 }) {
   const en = locale === "en";
@@ -42,7 +44,7 @@ export function OrderActions({
           onClick={refund}
           disabled={loading}
         >
-          {loading ? (en ? "Processing…" : "처리 중…") : (en ? "Request cancellation or refund" : "취소·환불 요청")}
+          {loading ? (en ? "Processing…" : "처리 중…") : reviewOnly ? (en ? "Request refund review" : "환불 검토 요청") : (en ? "Request cancellation or refund" : "취소·환불 요청")}
         </button>
       )}
       {message && <p role="status">{message}</p>}

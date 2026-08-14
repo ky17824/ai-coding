@@ -261,7 +261,7 @@ export default async function DashboardPage({
 
         {recommended.length > 0 && (
           <section className="dashboard-section">
-            <div className="dashboard-section__heading"><span><span className="page-kicker">{en ? "RECOMMENDED" : "추천(Recommended)"}</span><h2>{en ? "Experts matched to your current actions" : "현재 액션에 맞는 전문가 서비스"}</h2></span><Link href={path("/services")} className="button button--small">{en ? "View all" : "전체 보기"}<span aria-hidden="true">→</span></Link></div>
+            <div className="dashboard-section__heading"><span><span className="page-kicker">{en ? "RECOMMENDED AI EXPERTS" : "추천 AI 전문가"}</span><h2>{en ? "AI expert work matched to your current actions" : "현재 액션에 맞는 AI 전문가 서비스"}</h2></span><Link href={path("/services")} className="button button--small">{en ? "View all" : "전체 보기"}<span aria-hidden="true">→</span></Link></div>
             <div className="service-grid">{recommended.map((service) => <ServiceCard key={service.id} service={service} locale={locale} />)}</div>
           </section>
         )}
@@ -274,7 +274,7 @@ function IncompleteProfile({ locale }: { locale: Locale }) {
   const en = locale === "en";
   return (
     <div className="notice-banner dashboard-profile-notice">
-      <span>{en ? "Add your company details and contact information before ordering expert services." : "전문가 서비스를 주문하시려면 회사 정보와 연락처를 먼저 입력해 주세요."}</span>
+      <span>{en ? "Add your company details and contact information before ordering AI expert services." : "AI 전문가 서비스를 주문하시려면 회사 정보와 연락처를 먼저 입력해 주세요."}</span>
       <Link className="button button--small" href={`${localizedPath("/account/onboarding", locale)}?next=${encodeURIComponent(localizedPath("/dashboard", locale))}`}>
         {en ? "Complete profile" : "지금 입력"}<span aria-hidden="true">→</span>
       </Link>

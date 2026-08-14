@@ -53,10 +53,24 @@ export async function POST(request: Request) {
 
   const { data: order } = await admin
     .from("orders")
-    .select("id,amount_krw,status,provider_id,platform_fee_krw,provider_amount_krw")
+    .select("id,organization_id,buyer_id,amount_krw,status,provider_id,platform_fee_krw,provider_amount_krw,order_kind,product_key,service_snapshot")
     .eq("payment_id", paymentId)
     .single();
   if (!order) return new NextResponse(null, { status: 200 });
+  if (order.order_kind === "ai_agent") {
+    const { data: reconciledStatus, error } = await admin.rpc("reconcile_ai_payment", {
+      p_order_id: order.id,
+      p_webhook_id: webhookId,
+      p_payment_id: paymentId,
+      p_event_type: webhook.type,
+      p_payment_status: payment.status,
+      p_amount_krw: payment.amount.total,
+      p_raw_event: JSON.parse(payload)
+    });
+    if (error) return NextResponse.json({ message: "AI 결제 상태를 저장하지 못했습니다." }, { status: 500 });
+    if (reconciledStatus === "disputed") return NextResponse.json({ message: "결제 상태를 운영 검토로 전환했습니다." });
+    return new NextResponse(null, { status: 200 });
+  }
   const reconciliation = reconcilePaymentEvent({
     duplicate: false,
     orderAmountKrw: order.amount_krw,
@@ -65,11 +79,12 @@ export async function POST(request: Request) {
     paymentStatus: payment.status
   });
   if (reconciliation.nextStatus === "disputed") {
-    await admin.from("orders").update({ status: "disputed" }).eq("id", order.id);
+    const { error } = await admin.from("orders").update({ status: "disputed" }).eq("id", order.id);
+    if (error) return NextResponse.json({ message: "주문 상태를 저장하지 못했습니다." }, { status: 500 });
     return NextResponse.json({ message: "결제 금액이 일치하지 않습니다." }, { status: 409 });
   }
   const nextStatus = reconciliation.nextStatus;
-  await admin.from("payment_events").insert({
+  const { error: eventError } = await admin.from("payment_events").insert({
     order_id: order.id,
     webhook_id: webhookId,
     payment_id: paymentId,
@@ -78,12 +93,14 @@ export async function POST(request: Request) {
     amount_krw: payment.amount.total,
     raw_event: JSON.parse(payload)
   });
+  if (eventError) return NextResponse.json({ message: "결제 이벤트를 저장하지 못했습니다." }, { status: 500 });
   if (reconciliation.action === "update") {
-    await admin.from("orders").update({ status: nextStatus }).eq("id", order.id);
+    const { error } = await admin.from("orders").update({ status: nextStatus }).eq("id", order.id);
+    if (error) return NextResponse.json({ message: "주문 상태를 저장하지 못했습니다." }, { status: 500 });
   }
 
-  if (nextStatus === "paid") {
-    await admin.from("settlements").upsert({
+  if (nextStatus === "paid" && order.provider_id) {
+    const { error } = await admin.from("settlements").upsert({
       order_id: order.id,
       provider_id: order.provider_id,
       gross_amount_krw: order.amount_krw,
@@ -91,6 +108,7 @@ export async function POST(request: Request) {
       payout_amount_krw: order.provider_amount_krw,
       status: "pending"
     });
+    if (error) return NextResponse.json({ message: "정산 상태를 저장하지 못했습니다." }, { status: 500 });
   }
   if (nextStatus === "refunded") {
     await admin

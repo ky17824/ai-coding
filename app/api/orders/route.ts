@@ -8,6 +8,8 @@ import {
   requireUser
 } from "@/lib/supabase/server";
 import { calculateSettlement } from "@/lib/orders";
+import { aiExpertServicesEnabled, getAiAgentService } from "@/lib/ai-agent-services";
+import { getAiOrderAmounts } from "@/lib/ai-agent-report";
 
 const schema = z.object({
   serviceId: z.string().min(1).max(80),
@@ -30,12 +32,13 @@ export async function POST(request: Request) {
   const user = await requireUser();
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
+  const aiService = aiExpertServicesEnabled() ? getAiAgentService(parsed.data.serviceId, parsed.data.locale) : null;
 
   if (!user || !supabase || !admin) {
     if (process.env.NODE_ENV !== "development") {
       return NextResponse.json({ message: en ? "Please sign in." : "로그인이 필요합니다." }, { status: 401 });
     }
-    const sample = SAMPLE_SERVICES.find(
+    const sample = aiService ?? SAMPLE_SERVICES.find(
       (service) => service.id === parsed.data.serviceId
     );
     if (!sample) {
@@ -48,32 +51,97 @@ export async function POST(request: Request) {
     return NextResponse.json({
       orderId,
       paymentId: `payment-${orderId}`,
-      amount: sample.price,
+      amount: aiService ? getAiOrderAmounts(aiService.price).grossAmountKrw : sample.price,
       demo: true
     });
   }
 
-  const [{ data: profile }, { data: service }] = await Promise.all([
-    admin
-      .from("profiles")
-      .select("organization_id,role,job_title,phone_enc")
-      .eq("id", user.id)
-      .single(),
-    supabase
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("organization_id,role,job_title,phone_enc")
+    .eq("id", user.id)
+    .single();
+  if (!profile?.organization_id || profile.role !== "startup") {
+    return NextResponse.json(
+      { message: en ? "This service is available to startup accounts." : "스타트업 계정에서 구매할 수 있습니다." },
+      { status: 403 }
+    );
+  }
+  if (!profile.job_title || !profile.phone_enc) {
+    return NextResponse.json(
+      { message: en ? "Complete your company and contact information in My Account before ordering services." : "서비스를 주문하시려면 마이페이지에서 회사 정보와 연락처를 먼저 입력해 주세요." },
+      { status: 403 }
+    );
+  }
+
+  if (aiService) {
+    const orderId = randomUUID();
+    const paymentId = `gtm-${orderId}`;
+    const now = new Date().toISOString();
+    const amounts = getAiOrderAmounts(aiService.price);
+    const { error } = await admin.from("orders").insert({
+      id: orderId,
+      organization_id: profile.organization_id,
+      buyer_id: user.id,
+      provider_id: null,
+      service_id: null,
+      order_kind: "ai_agent",
+      product_key: aiService.id,
+      payment_id: paymentId,
+      amount_krw: amounts.grossAmountKrw,
+      supply_amount_krw: amounts.supplyAmountKrw,
+      vat_amount_krw: amounts.vatAmountKrw,
+      platform_fee_krw: amounts.platformFeeKrw,
+      provider_amount_krw: amounts.providerAmountKrw,
+      service_snapshot: {
+        contractVersion: 1,
+        productId: aiService.id,
+        locale: parsed.data.locale,
+        productKind: aiService.productKind,
+        includedAgentIds: aiService.includedAgentIds,
+        questionIds: aiService.questionIds,
+        officialSourceQuestionIds: aiService.officialSourceQuestionIds,
+        completionInstructions: aiService.completionInstructions,
+        title: aiService.title,
+        description: aiService.description,
+        type: aiService.type,
+        deliverables: aiService.deliverables,
+        requiredInputs: aiService.requiredInputs,
+        supplyPriceKrw: amounts.supplyAmountKrw,
+        vatKrw: amounts.vatAmountKrw,
+        priceKrw: amounts.grossAmountKrw
+      },
+      terms_snapshot: {
+        version: 1,
+        acceptedAt: now,
+        sellerDisclosure: en ? "Borderless provides this AI expert service." : "Borderless가 AI 전문가 서비스를 제공합니다.",
+        refundPolicy: en ? "A full refund is available before report generation begins. After generation starts, requests are reviewed using the order record." : "보고서 생성 시작 전에는 전액 환불됩니다. 생성 시작 후에는 주문 기록을 기준으로 검토합니다.",
+        includedClarificationRounds: 2,
+        includedRegenerations: 1
+      },
+      terms_accepted_at: now
+    });
+    if (error) {
+      return NextResponse.json(
+        { message: en ? "We couldn't create the order." : "주문을 생성하지 못했습니다." },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ orderId, paymentId, amount: amounts.grossAmountKrw });
+  }
+
+  const { data: service } = await supabase
       .from("service_offerings")
       .select(
         "id,provider_id,type,title,description,price_krw,duration_minutes,duration_days,deliverables,milestones,tags,is_published,provider_profiles!inner(approval_status)"
       )
       .eq("id", parsed.data.serviceId)
       .eq("is_published", true)
-      .single()
-  ]);
+      .single();
   const provider = Array.isArray(service?.provider_profiles)
     ? service.provider_profiles[0]
     : service?.provider_profiles;
   if (
-    !profile?.organization_id ||
-    profile.role !== "startup" ||
     !service ||
     provider?.approval_status !== "approved"
   ) {
@@ -82,13 +150,6 @@ export async function POST(request: Request) {
       { status: 403 }
     );
   }
-  if (!profile.job_title || !profile.phone_enc) {
-    return NextResponse.json(
-      { message: en ? "Complete your company and contact information in My Account before ordering expert services." : "전문가 서비스를 주문하시려면 마이페이지에서 회사 정보와 연락처를 먼저 입력해 주세요." },
-      { status: 403 }
-    );
-  }
-
   let scheduledAt = parsed.data.scheduledAt;
   if (service.type === "mentoring") {
     if (!parsed.data.availabilityId) {
@@ -134,7 +195,7 @@ export async function POST(request: Request) {
     priceKrw: service.price_krw
   };
 
-  const { error } = await supabase.from("orders").insert({
+  const { error } = await admin.from("orders").insert({
     id: orderId,
     organization_id: profile.organization_id,
     buyer_id: user.id,
@@ -143,6 +204,8 @@ export async function POST(request: Request) {
     availability_id: parsed.data.availabilityId,
     payment_id: paymentId,
     amount_krw: service.price_krw,
+    supply_amount_krw: service.price_krw,
+    vat_amount_krw: 0,
     platform_fee_krw: settlement.platformFeeKrw,
     provider_amount_krw: settlement.providerAmountKrw,
     service_snapshot: serviceSnapshot,
