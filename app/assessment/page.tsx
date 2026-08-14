@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { getPublishedServices } from "@/lib/services";
-import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import type { EvidenceInput, ReadinessAnswer, ReadinessLevel, TargetMarketContext } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -17,14 +17,11 @@ export default async function AssessmentPage({
 }: {
   searchParams: Promise<{ new?: string; resume?: string }>;
 }) {
-  const [user, query, locale] = await Promise.all([requireUser(), searchParams, getRequestLocale()]);
+  const [{ user, profile }, query, locale] = await Promise.all([getCurrentProfile(), searchParams, getRequestLocale()]);
   const availableServices = await getPublishedServices(locale);
   let initialAnswers: ReadinessAnswer[] = [];
   let initialTargetMarket: TargetMarketContext | undefined;
   const admin = user ? createSupabaseAdminClient() : null;
-  const { data: profile } = user && admin
-    ? await admin.from("profiles").select("organization_id").eq("id", user.id).single()
-    : { data: null };
   if (user && query.new !== "1" && query.resume !== "1") {
     const { data: previousAssessment } = profile?.organization_id
       ? await admin!.from("assessments")

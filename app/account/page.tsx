@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { decryptPhone, maskPhone } from "@/lib/pii";
-import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "My Account" : "마이페이지" };
@@ -14,13 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AccountPage() {
   const locale = await getRequestLocale();
   const en = locale === "en";
-  const user = await requireUser();
+  const { user, profile } = await getCurrentProfile();
   const admin = createSupabaseAdminClient();
   if (!user) redirect(`${localizedPath("/signin", locale)}?returnTo=${encodeURIComponent(localizedPath("/account", locale))}`);
   if (!admin) throw new Error("Supabase admin client is not configured");
-  const { data: profile } = await admin.from("profiles")
-    .select("organization_id,display_name,job_title,phone_enc,marketing_opt_in,created_at")
-    .eq("id", user.id).single();
   if (!profile) redirect(`${localizedPath("/auth/callback", locale)}?next=${encodeURIComponent(localizedPath("/account", locale))}`);
   const { data: organization } = profile.organization_id
     ? await admin.from("organizations").select("name").eq("id", profile.organization_id).single()

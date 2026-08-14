@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 export function isSupabaseConfigured() {
   return Boolean(
@@ -53,11 +54,22 @@ export function createSupabaseAdminClient() {
   );
 }
 
-export async function requireUser() {
+export const requireUser = cache(async function requireUser() {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
   const {
     data: { user }
   } = await supabase.auth.getUser();
   return user;
-}
+});
+
+export const getCurrentProfile = cache(async function getCurrentProfile() {
+  const user = await requireUser();
+  const admin = user ? createSupabaseAdminClient() : null;
+  if (!user || !admin) return { user, profile: null };
+  const { data: profile } = await admin.from("profiles")
+    .select("organization_id,display_name,role,job_title,phone_enc,marketing_opt_in,terms_agreed_at,privacy_agreed_at,deleted_at,created_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  return { user, profile };
+});

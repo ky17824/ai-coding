@@ -16,7 +16,7 @@ export function LegalPage({
   const en = locale === "en";
   return (
     <main className="app-page">
-      <SiteHeader compact />
+      <SiteHeader compact locale={locale} />
       <article className="app-container legal-page">
         <span className="page-kicker">{kicker}</span>
         <h1 className="page-title">{title}</h1>

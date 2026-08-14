@@ -48,17 +48,20 @@ export async function middleware(request: NextRequest) {
       }
     }
   });
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const startedAt = performance.now();
+  const { data } = await supabase.auth.getClaims();
+  const authTiming = `auth;dur=${(performance.now() - startedAt).toFixed(1)}`;
+  if (!data?.claims?.sub) {
     const signIn = new URL(localizedPath("/signin", locale), request.url);
     signIn.searchParams.set(
       "returnTo",
       `${request.nextUrl.pathname}${request.nextUrl.search}`
     );
-    return NextResponse.redirect(signIn);
+    const redirect = NextResponse.redirect(signIn);
+    redirect.headers.set("Server-Timing", authTiming);
+    return redirect;
   }
+  response.headers.set("Server-Timing", authTiming);
   return response;
 }
 

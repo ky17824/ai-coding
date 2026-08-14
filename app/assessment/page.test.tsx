@@ -13,22 +13,14 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 vi.mock("@/lib/supabase/server", () => ({
-  requireUser: async () => ({ id: "founder-1" }),
+  getCurrentProfile: async () => ({
+    user: { id: "founder-1" },
+    profile: { organization_id: "org-1" }
+  }),
   // 진단 페이지가 공개 서비스 목록을 조회한다. 대역이 없으면 실제 클라이언트를 부른다.
   createSupabaseServerClient: async () => null,
   createSupabaseAdminClient: () => ({
     from(table: string) {
-      if (table === "profiles") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { organization_id: "org-1" }
-              })
-            })
-          })
-        };
-      }
       return {
         select: () => ({
           eq: () => ({

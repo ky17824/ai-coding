@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { JOURNEY_PHASES } from "@/lib/readiness-data";
-import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { matchExpertSupport } from "@/lib/expert-matching";
@@ -56,7 +56,7 @@ export default async function JourneyPage() {
         : "Become a repeatable organization while preserving unit economics and quality."
   })) : JOURNEY_PHASES;
   const steps = en ? detailedStepsEn : detailedSteps;
-  const user = await requireUser();
+  const { user, profile } = await getCurrentProfile();
   const admin = createSupabaseAdminClient();
   let activePlan: StoredGtmPlan | null = null;
   let planItems: {
@@ -71,19 +71,16 @@ export default async function JourneyPage() {
     service_tag: string;
   }[] = [];
   if (user && admin) {
-    const { data: profile } = await admin.from("profiles")
-      .select("organization_id").eq("id", user.id).single();
     if (profile?.organization_id) {
       const { data: plan } = await admin.from("gtm_plans")
-        .select("id,assessment_id,summary,content_locale")
+        .select("id,assessment_id,summary,content_locale,gtm_plan_items(id,horizon,priority,title,owner_label,due_date,status,expert_required,service_tag,sort_order)")
         .eq("organization_id", profile.organization_id)
         .eq("status", "active")
         .order("updated_at", { ascending: false }).limit(1).maybeSingle();
       if (plan) {
-        const { data } = await admin.from("gtm_plan_items")
-          .select("id,horizon,priority,title,owner_label,due_date,status,expert_required,service_tag")
-          .eq("plan_id", plan.id).order("horizon").order("sort_order");
-        planItems = data ?? [];
+        planItems = [...(plan.gtm_plan_items ?? [])].sort((a, b) =>
+          a.horizon - b.horizon || a.sort_order - b.sort_order
+        );
         activePlan = await localizeStoredGtmPlan(admin, profile.organization_id, {
           id: plan.id,
           assessmentId: plan.assessment_id,

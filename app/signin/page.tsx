@@ -27,9 +27,11 @@ export default async function SignInPage({
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
   const kakaoEnabled = process.env.NEXT_PUBLIC_KAKAO_AUTH_ENABLED === "true";
   const error = authErrorMessage(query.error, locale);
+  const authOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL;
   return (
     <main className="signin-page">
       <title>{copy.title}</title>
+      {authOrigin && <link rel="preconnect" href={authOrigin} crossOrigin="anonymous" />}
       <Link href={localizedPath("/", locale)} className="brand">
         <span className="brand-mark">B</span>
         <span>Borderless</span>

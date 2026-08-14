@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { safeNextPath } from "@/lib/auth";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
-import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "Complete Your Profile" : "계정 정보 보완" };
@@ -15,12 +15,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const locale = await getRequestLocale();
   const en = locale === "en";
-  const user = await requireUser();
+  const { user, profile } = await getCurrentProfile();
   const admin = createSupabaseAdminClient();
   if (!user) redirect(localizedPath("/signin", locale));
   if (!admin) throw new Error("Supabase admin client is not configured");
   const next = safeNextPath((await searchParams).next, localizedPath("/dashboard", locale));
-  const { data: profile } = await admin.from("profiles").select("organization_id,display_name,job_title,marketing_opt_in").eq("id", user.id).single();
   if (!profile) redirect(localizedPath("/auth/callback", locale));
   const { data: organization } = profile.organization_id
     ? await admin.from("organizations").select("name").eq("id", profile.organization_id).single()

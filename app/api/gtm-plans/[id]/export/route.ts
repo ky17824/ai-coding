@@ -88,7 +88,7 @@ export async function GET(
       handoffBrief: item.handoff_brief,
       sources: item.sources ?? []
     } as GtmPlanItem))
-  } satisfies StoredGtmPlan, locale);
+  } satisfies StoredGtmPlan, locale, { waitForMissing: true });
   const context = localizedPlan.founderContext;
   const research = localizedPlan.marketResearch;
   if (!research) return NextResponse.json({ message: en ? "There is no market research to download." : "다운로드할 시장 조사 결과가 없습니다." }, { status: 409 });

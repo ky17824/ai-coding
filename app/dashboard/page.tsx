@@ -12,7 +12,7 @@ import {
 } from "@/lib/readiness";
 import { getIntakeItems, getIntakeQuestions, getIntakeStages } from "@/lib/intake-questions";
 import { getPublishedServices } from "@/lib/services";
-import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import type { EvidenceInput, GtmPlanItem, ReadinessAnswer, ReadinessLevel, StoredGtmPlan } from "@/lib/types";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
@@ -33,14 +33,11 @@ export default async function DashboardPage({
   const en = locale === "en";
   const path = (value: string) => localizedPath(value, locale);
   const stages = getIntakeStages(locale);
-  const user = await requireUser();
+  const { user, profile } = await getCurrentProfile();
   const admin = createSupabaseAdminClient();
   if (!user) redirect(`${path("/signin")}?returnTo=${encodeURIComponent(path("/dashboard"))}`);
   if (!admin) throw new Error("Supabase admin client is not configured");
 
-  const { data: profile } = await admin.from("profiles")
-    .select("organization_id,display_name,job_title,phone_enc")
-    .eq("id", user.id).single();
   if (!profile?.organization_id) redirect(`${path("/auth/callback")}?next=${encodeURIComponent(path("/dashboard"))}`);
   const [{ data: organization }, { data: assessment }] = await Promise.all([
     admin.from("organizations").select("name").eq("id", profile.organization_id).single(),
@@ -74,7 +71,7 @@ export default async function DashboardPage({
       .order("created_at"),
     getPublishedServices(locale),
     admin.from("gtm_plans")
-      .select("id,status,summary,updated_at,content_locale")
+      .select("id,status,summary,updated_at,content_locale,gtm_plan_items(id,horizon,priority,title,owner_label,due_date,status,expert_required,service_tag,sort_order)")
       .eq("assessment_id", assessment.id)
       .in("status", ["draft", "active"])
       .maybeSingle(),
@@ -82,13 +79,9 @@ export default async function DashboardPage({
       .select("question_id,level,evidence_kind,evidence_value")
       .eq("assessment_id", assessment.id)
   ]);
-  const { data: planItems } = plan
-    ? await admin.from("gtm_plan_items")
-        .select("id,horizon,priority,title,owner_label,due_date,status,expert_required,service_tag")
-        .eq("plan_id", plan.id)
-        .order("horizon")
-        .order("sort_order")
-    : { data: null };
+  const planItems = (plan?.gtm_plan_items ?? []).sort((a, b) =>
+    a.horizon - b.horizon || a.sort_order - b.sort_order
+  );
   const localizedPlan = plan ? await localizeStoredGtmPlan(
     admin,
     profile.organization_id,
@@ -106,7 +99,7 @@ export default async function DashboardPage({
       generationCount: 0,
       generatedBy: "",
       contentLocale: plan.content_locale ?? "ko",
-      items: (planItems ?? []).map((item) => ({
+      items: planItems.map((item) => ({
         id: item.id,
         sourceActionItemId: null,
         questionId: null,

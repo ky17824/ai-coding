@@ -42,81 +42,35 @@ export async function GET(request: Request) {
       failure("configuration")
     );
   }
-  const { data: existing, error: profileError } = await admin
-    .from("profiles")
-    .select("id,organization_id,role,job_title,phone_enc,terms_agreed_at,privacy_agreed_at,deleted_at")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (profileError) {
-    return NextResponse.redirect(
-      failure("onboarding")
-    );
-  }
-  if (existing?.deleted_at) {
+  const meta = user.user_metadata;
+  const displayName = [
+    meta.display_name,
+    meta.full_name,
+    meta.name,
+    meta.nickname,
+    meta.preferred_username,
+    user.email
+  ].find((value): value is string => typeof value === "string" && value.trim().length > 0)!;
+  const metadataCompany = typeof meta.company_name === "string" ? meta.company_name.trim() : "";
+  const companyName = metadataCompany ||
+    user.email.split("@")[1]?.split(".")[0]?.toUpperCase() ||
+    (locale === "en" ? "New startup" : "새 스타트업");
+  const optionalText = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
+  const { data: profile, error: profileError } = await admin.rpc("ensure_oauth_profile", {
+    p_user_id: user.id,
+    p_email: user.email,
+    p_display_name: displayName,
+    p_company_name: companyName,
+    p_job_title: optionalText(meta.job_title),
+    p_phone_enc: optionalText(meta.phone_enc),
+    p_marketing_opt_in: meta.marketing_opt_in === true,
+    p_terms_agreed_at: optionalText(meta.terms_agreed_at),
+    p_privacy_agreed_at: optionalText(meta.privacy_agreed_at)
+  });
+  if (profileError || !profile) return NextResponse.redirect(failure("onboarding"));
+  if (profile.deleted_at) {
     await supabase.auth.signOut();
     return NextResponse.redirect(failure("deleted"));
-  }
-
-  let profile = existing;
-  if (!existing?.organization_id) {
-    const meta = user.user_metadata;
-    const displayName = [
-      meta.display_name,
-      meta.full_name,
-      meta.name,
-      meta.nickname,
-      meta.preferred_username,
-      user.email
-    ].find((value): value is string => typeof value === "string" && value.trim().length > 0);
-    const companyName =
-      meta.company_name ??
-      user.email?.split("@")[1]?.split(".")[0]?.toUpperCase() ??
-      (locale === "en" ? "New startup" : "새 스타트업");
-    const { data: organization, error: organizationError } = await admin
-      .from("organizations")
-      .insert({ name: companyName })
-      .select("id")
-      .single();
-    if (organizationError || !organization) {
-      return NextResponse.redirect(
-        failure("onboarding")
-      );
-    }
-    const { error: writeError } = existing
-      ? await admin
-          .from("profiles")
-          .update({ organization_id: organization.id })
-          .eq("id", user.id)
-      : await admin.from("profiles").insert({
-          id: user.id,
-          organization_id: organization.id,
-          email: user.email,
-          display_name: displayName,
-          job_title: meta.job_title ?? null,
-          phone_enc: meta.phone_enc ?? null,
-          marketing_opt_in: meta.marketing_opt_in === true,
-          terms_agreed_at: meta.terms_agreed_at ?? null,
-          privacy_agreed_at: meta.privacy_agreed_at ?? null,
-          role: "startup"
-        });
-    if (writeError) {
-      await admin.from("organizations").delete().eq("id", organization.id);
-      return NextResponse.redirect(
-        failure("onboarding")
-      );
-    }
-    profile = existing
-      ? { ...existing, organization_id: organization.id }
-      : {
-          id: user.id,
-          organization_id: organization.id,
-          role: "startup",
-          job_title: meta.job_title ?? null,
-          phone_enc: meta.phone_enc ?? null,
-          terms_agreed_at: meta.terms_agreed_at ?? null,
-          privacy_agreed_at: meta.privacy_agreed_at ?? null,
-          deleted_at: null
-        };
   }
 
   const next = safeNextPath(

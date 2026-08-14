@@ -2,9 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   profile: null as Record<string, unknown> | null,
-  profileUpdate: vi.fn(),
-  profileInsert: vi.fn(),
-  organizationInsert: vi.fn(),
+  provisionProfile: vi.fn(),
   signOut: vi.fn(),
   user: {
     id: "user-1",
@@ -17,77 +15,56 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
     auth: {
       exchangeCodeForSession: async () => ({ data: { user: mocks.user }, error: null }),
-      getUser: async () => ({
-        data: { user: mocks.user },
-        error: null
-      }),
+      getUser: async () => ({ data: { user: mocks.user }, error: null }),
       signOut: mocks.signOut
     }
   }),
-  createSupabaseAdminClient: () => ({
-    from(table: string) {
-      if (table === "organizations") {
-        return {
-          insert(payload: unknown) {
-            mocks.organizationInsert(payload);
-            return {
-              select: () => ({
-                single: async () => ({ data: { id: "org-1" }, error: null })
-              })
-            };
-          },
-          delete: () => ({ eq: async () => ({ error: null }) })
-        };
-      }
-      return {
-        select: () => ({
-          eq: () => ({
-            maybeSingle: async () => ({ data: mocks.profile, error: null })
-          })
-        }),
-        update(payload: unknown) {
-          mocks.profileUpdate(payload);
-          return { eq: async () => ({ error: null }) };
-        },
-        insert(payload: unknown) {
-          mocks.profileInsert(payload);
-          return Promise.resolve({ error: null });
-        }
-      };
-    }
-  })
+  createSupabaseAdminClient: () => ({ rpc: mocks.provisionProfile })
 }));
 
 import { GET } from "@/app/auth/callback/route";
 
-describe("auth callback account repair", () => {
+describe("auth callback account provisioning", () => {
   beforeEach(() => {
-    mocks.profileUpdate.mockClear();
-    mocks.profileInsert.mockClear();
-    mocks.organizationInsert.mockClear();
+    mocks.profile = {
+      id: "user-1",
+      organization_id: "org-1",
+      role: "startup",
+      job_title: "CEO",
+      phone_enc: "encrypted",
+      terms_agreed_at: "2026-08-14T00:00:00.000Z",
+      privacy_agreed_at: "2026-08-14T00:00:00.000Z",
+      deleted_at: null
+    };
+    mocks.provisionProfile.mockReset();
+    mocks.provisionProfile.mockImplementation(async () => ({ data: mocks.profile, error: null }));
     mocks.signOut.mockClear();
     mocks.user.email = "founder@example.com";
     mocks.user.user_metadata = {};
   });
 
-  it("repairs an existing profile without an organization instead of redirecting forever", async () => {
+  it("provisions the OAuth profile in one transactional database call", async () => {
+    const response = await GET(
+      new Request("https://global-gtm.vercel.app/auth/callback?code=oauth-code&next=/dashboard")
+    );
+
+    expect(mocks.provisionProfile).toHaveBeenCalledOnce();
+    expect(response.headers.get("location")).toBe("https://global-gtm.vercel.app/dashboard");
+  });
+
+  it("sends an incomplete repaired profile to onboarding", async () => {
     mocks.profile = {
-      id: "user-1",
-      organization_id: null,
-      role: "startup",
+      ...mocks.profile,
       job_title: null,
       phone_enc: null,
       terms_agreed_at: null,
-      privacy_agreed_at: null,
-      deleted_at: null
+      privacy_agreed_at: null
     };
 
     const response = await GET(
       new Request("https://global-gtm.vercel.app/auth/callback?next=/dashboard")
     );
 
-    expect(mocks.organizationInsert).toHaveBeenCalledOnce();
-    expect(mocks.profileUpdate).toHaveBeenCalledWith({ organization_id: "org-1" });
     expect(response.headers.get("location")).toBe(
       "https://global-gtm.vercel.app/account/onboarding?next=%2Fdashboard"
     );
@@ -98,13 +75,13 @@ describe("auth callback account repair", () => {
       new Request("https://global-gtm.vercel.app/auth/callback?error=access_denied&next=/dashboard")
     );
 
-    expect(mocks.organizationInsert).not.toHaveBeenCalled();
+    expect(mocks.provisionProfile).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe(
       "https://global-gtm.vercel.app/signin?error=oauth_cancelled"
     );
   });
 
-  it("rejects OAuth users without an email before creating an organization", async () => {
+  it("rejects OAuth users without an email before provisioning an account", async () => {
     mocks.user.email = null;
 
     const response = await GET(
@@ -112,22 +89,35 @@ describe("auth callback account repair", () => {
     );
 
     expect(mocks.signOut).toHaveBeenCalledOnce();
-    expect(mocks.organizationInsert).not.toHaveBeenCalled();
+    expect(mocks.provisionProfile).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe(
       "https://global-gtm.vercel.app/signin?error=email_required"
     );
   });
 
-  it("uses the Kakao nickname when creating a new OAuth profile", async () => {
-    mocks.profile = null;
+  it("signs out a deleted profile returned by the provisioning boundary", async () => {
+    mocks.profile = { ...mocks.profile, deleted_at: "2026-08-14T00:00:00.000Z" };
+
+    const response = await GET(
+      new Request("https://global-gtm.vercel.app/auth/callback?code=oauth-code")
+    );
+
+    expect(mocks.signOut).toHaveBeenCalledOnce();
+    expect(response.headers.get("location")).toBe(
+      "https://global-gtm.vercel.app/signin?error=deleted"
+    );
+  });
+
+  it("uses the Kakao nickname when provisioning a new OAuth profile", async () => {
     mocks.user.user_metadata = { nickname: "카카오 창업자" };
 
     await GET(
       new Request("https://global-gtm.vercel.app/auth/callback?code=oauth-code&next=/dashboard")
     );
 
-    expect(mocks.profileInsert).toHaveBeenCalledWith(expect.objectContaining({
-      display_name: "카카오 창업자"
-    }));
+    expect(mocks.provisionProfile).toHaveBeenCalledWith(
+      "ensure_oauth_profile",
+      expect.objectContaining({ p_display_name: "카카오 창업자" })
+    );
   });
 });

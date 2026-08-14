@@ -18,7 +18,7 @@ import { getRequestLocale } from "@/lib/i18n-server";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
-  requireUser
+  getCurrentProfile
 } from "@/lib/supabase/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -40,14 +40,11 @@ export default async function AdminPage({
     page?: string;
   }>;
 }) {
-  const [user, locale] = await Promise.all([requireUser(), getRequestLocale()]);
+  const [{ profile }, locale] = await Promise.all([getCurrentProfile(), getRequestLocale()]);
   const en = locale === "en";
   const statusText = (value: string) => en ? ({ "준비 1단계": "Readiness Stage 1", "준비 2단계": "Readiness Stage 2", "준비 3단계": "Readiness Stage 3", "진출 실행 가능": "Ready to Enter" }[value] ?? value) : value;
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
-  const { data: profile } = user && supabase
-    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
-    : { data: null };
   const isDemo = !supabase && process.env.NODE_ENV === "development";
   if (profile?.role !== "admin" && !isDemo) redirect(localizedPath("/dashboard", locale));
   if (!admin) throw new Error("Supabase admin client is not configured");

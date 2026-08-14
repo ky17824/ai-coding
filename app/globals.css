@@ -173,6 +173,33 @@ svg {
   display: none;
 }
 
+.header-account__loading {
+  width: 86px;
+  height: 42px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+}
+
+.route-loading {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: var(--background);
+}
+
+.route-loading__spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--line);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: route-loading-spin 0.7s linear infinite;
+}
+
+@keyframes route-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 .landing-shell .main-nav {
   color: var(--muted);
 }

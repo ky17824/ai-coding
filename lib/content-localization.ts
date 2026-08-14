@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
+import { after } from "next/server";
 import { z } from "zod";
 import type { Locale } from "@/lib/i18n";
 import type { StoredGtmPlan } from "@/lib/types";
@@ -9,6 +10,9 @@ import { normalizeMarketResearch } from "@/lib/market-sizing";
 
 type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdminClient>>;
 type Path = (string | number)[];
+// ponytail: process-local dedupe; add a DB job lock only if cross-instance duplicates are observed.
+const pendingTranslations = new Set<string>();
+const translationCooldowns = new Map<string, number>();
 
 const translationSchema = z.object({
   translations: z.array(z.object({
@@ -86,7 +90,8 @@ export async function localizeStoredGtmPlan(
   admin: AdminClient,
   organizationId: string,
   plan: StoredGtmPlan,
-  targetLocale: Locale
+  targetLocale: Locale,
+  options: { waitForMissing?: boolean } = {}
 ): Promise<StoredGtmPlan> {
   plan = { ...plan, marketResearch: normalizeMarketResearch(plan.marketResearch) };
   const document = {
@@ -129,48 +134,91 @@ export async function localizeStoredGtmPlan(
     return !entry || entry.source_hash !== field.hash ||
       !matchesTargetLocale(entry.translated_text, targetLocale);
   });
-  let failed = false;
+  let failed = missing.length > 0;
 
-  if (missing.length > 0) {
-    if (!process.env.OPENAI_API_KEY) {
-      failed = true;
-    } else {
+  if (missing.length > 0 && process.env.OPENAI_API_KEY) {
+    const pendingKey = `${plan.id}:${targetLocale}`;
+    const translateMissing = async () => {
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const response = await client.responses.parse({
+        model: "gpt-5.6-luna",
+        store: false,
+        instructions: targetLocale === "en"
+          ? "Translate each value into concise, natural US English for a startup GTM product. Preserve numbers, currencies, dates, URLs, product and company names, and factual certainty. Do not add, omit, or reinterpret claims. Return every key exactly as provided."
+          : "각 value를 자연스럽고 전문적인 한국어로 번역하세요. 숫자, 통화, 날짜, URL, 제품명, 회사명과 사실의 확실성은 그대로 유지하고 내용을 추가·삭제·재해석하지 마세요. 모든 key를 입력 그대로 반환하세요.",
+        input: JSON.stringify(missing.map(({ key, text }) => ({ key, text }))),
+        text: { format: zodTextFormat(translationSchema, "content_translation") }
+      });
+      const translated = new Map(response.output_parsed?.translations.map((entry) => [entry.key, entry.text]) ?? []);
+      const rows = missing.flatMap((field) => {
+        const text = translated.get(field.key);
+        return text && matchesTargetLocale(text, targetLocale) ? [{
+          organization_id: organizationId,
+          entity_type: "gtm_plan",
+          entity_id: plan.id,
+          field_name: field.key,
+          target_locale: targetLocale,
+          source_hash: field.hash,
+          translated_text: text,
+          is_official: false,
+          updated_at: new Date().toISOString()
+        }] : [];
+      });
+      if (rows.length > 0) {
+        const { error } = await admin.from("content_translations").upsert(rows, {
+          onConflict: "entity_type,entity_id,field_name,target_locale"
+        });
+        if (error) throw error;
+      }
+      if (rows.length !== missing.length) {
+        throw new Error(`partial translation: ${rows.length}/${missing.length}`);
+      }
+      return rows;
+    };
+
+    if (options.waitForMissing) {
       try {
-        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        const response = await client.responses.parse({
-          model: "gpt-5.6-luna",
-          store: false,
-          instructions: targetLocale === "en"
-            ? "Translate each value into concise, natural US English for a startup GTM product. Preserve numbers, currencies, dates, URLs, product and company names, and factual certainty. Do not add, omit, or reinterpret claims. Return every key exactly as provided."
-            : "각 value를 자연스럽고 전문적인 한국어로 번역하세요. 숫자, 통화, 날짜, URL, 제품명, 회사명과 사실의 확실성은 그대로 유지하고 내용을 추가·삭제·재해석하지 마세요. 모든 key를 입력 그대로 반환하세요.",
-          input: JSON.stringify(missing.map(({ key, text }) => ({ key, text }))),
-          text: { format: zodTextFormat(translationSchema, "content_translation") }
-        });
-        const translated = new Map(response.output_parsed?.translations.map((entry) => [entry.key, entry.text]) ?? []);
-        const rows = missing.flatMap((field) => {
-          const text = translated.get(field.key);
-          return text && matchesTargetLocale(text, targetLocale) ? [{
-            organization_id: organizationId,
-            entity_type: "gtm_plan",
-            entity_id: plan.id,
-            field_name: field.key,
-            target_locale: targetLocale,
-            source_hash: field.hash,
-            translated_text: text,
-            is_official: false,
-            updated_at: new Date().toISOString()
-          }] : [];
-        });
-        if (rows.length !== missing.length) failed = true;
-        if (rows.length > 0) {
-          const { error } = await admin.from("content_translations").upsert(rows, {
-            onConflict: "entity_type,entity_id,field_name,target_locale"
+        const rows = await translateMissing();
+        rows.forEach((row) => cache.set(row.field_name, row));
+        failed = rows.length !== missing.length;
+      } catch (error) {
+        translationCooldowns.set(pendingKey, Date.now() + 60_000);
+        if (process.env.NODE_ENV !== "test") {
+          console.error("[content-localization] report translation failed", {
+            planId: plan.id,
+            targetLocale,
+            error: error instanceof Error ? error.message : "unknown"
           });
-          if (error) failed = true;
-          rows.forEach((row) => cache.set(row.field_name, row));
         }
-      } catch {
-        failed = true;
+      }
+    } else if (!pendingTranslations.has(pendingKey) &&
+        (translationCooldowns.get(pendingKey) ?? 0) <= Date.now()) {
+      pendingTranslations.add(pendingKey);
+      try {
+        after(async () => {
+          try {
+            await translateMissing();
+            translationCooldowns.delete(pendingKey);
+          } catch (error) {
+            translationCooldowns.set(pendingKey, Date.now() + 60_000);
+            console.error("[content-localization] background translation failed", {
+              planId: plan.id,
+              targetLocale,
+              error: error instanceof Error ? error.message : "unknown"
+            });
+          } finally {
+            pendingTranslations.delete(pendingKey);
+          }
+        });
+      } catch (error) {
+        pendingTranslations.delete(pendingKey);
+        if (process.env.NODE_ENV !== "test") {
+          console.error("[content-localization] background scheduling failed", {
+            planId: plan.id,
+            targetLocale,
+            error: error instanceof Error ? error.message : "unknown"
+          });
+        }
       }
     }
   }

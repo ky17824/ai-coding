@@ -7,7 +7,7 @@ import { normalizeGateMessage, normalizeReadinessStatus } from "@/lib/readiness"
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import type { GtmMarketResearch, GtmPlanItem, StoredGtmPlan } from "@/lib/types";
-import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import { localizeStoredGtmPlan } from "@/lib/content-localization";
 import { getIntakeItems, getIntakeQuestions } from "@/lib/intake-questions";
 
@@ -44,16 +44,11 @@ export default async function AssistantPage({
 }: {
   params: Promise<{ assessmentId: string }>;
 }) {
-  const [user, locale] = await Promise.all([requireUser(), getRequestLocale()]);
+  const [{ user, profile }, locale] = await Promise.all([getCurrentProfile(), getRequestLocale()]);
   const admin = createSupabaseAdminClient();
   if (!user) redirect(localizedPath("/signin", locale));
   if (!admin) throw new Error("Supabase admin client is not configured");
   const { assessmentId } = await params;
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("organization_id")
-    .eq("id", user.id)
-    .single();
   if (!profile?.organization_id) redirect(localizedPath("/account/onboarding", locale));
   const { data: assessment } = await admin
     .from("assessments")
@@ -70,19 +65,16 @@ export default async function AssistantPage({
       .order("created_at"),
     admin
       .from("gtm_plans")
-      .select("id,status,summary,assumptions,founder_context,market_research,market_research_confirmed_at,recent_messages,turn_count,generation_count,model,content_locale,founder_context_locale,market_research_locale")
+      .select("id,status,summary,assumptions,founder_context,market_research,market_research_confirmed_at,recent_messages,turn_count,generation_count,model,content_locale,founder_context_locale,market_research_locale,gtm_plan_items(*)")
       .eq("assessment_id", assessmentId)
       .in("status", ["draft", "active"])
       .maybeSingle()
   ]);
   let initialPlan: StoredGtmPlan | null = null;
   if (plan) {
-    const { data: itemRows } = await admin
-      .from("gtm_plan_items")
-      .select("*")
-      .eq("plan_id", plan.id)
-      .order("horizon")
-      .order("sort_order");
+    const itemRows = [...(plan.gtm_plan_items ?? [])].sort((a, b) =>
+      a.horizon - b.horizon || a.sort_order - b.sort_order
+    );
     initialPlan = {
       id: plan.id,
       assessmentId,
@@ -99,7 +91,7 @@ export default async function AssistantPage({
       contentLocale: plan.content_locale ?? "ko",
       founderContextLocale: plan.founder_context_locale ?? plan.content_locale ?? "ko",
       marketResearchLocale: plan.market_research_locale ?? plan.content_locale ?? "ko",
-      items: (itemRows ?? []).map((row) => mapItem(row as Record<string, unknown>))
+      items: itemRows.map((row) => mapItem(row as Record<string, unknown>))
     };
     initialPlan = await localizeStoredGtmPlan(
       admin,
