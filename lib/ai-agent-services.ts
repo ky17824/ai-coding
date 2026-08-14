@@ -97,7 +97,7 @@ function localize(definition: (typeof AI_AGENT_SERVICES)[number], locale: Locale
   return {
     id: definition.id,
     providerName: en ? "Borderless AI Expert" : "Borderless AI 전문가",
-    providerTitle: en ? "GPT-5.6 Sol · Evidence-led analysis" : "GPT-5.6 Sol · 근거 기반 분석",
+    providerTitle: en ? "Evidence-led analysis" : "근거 기반 분석",
     type: "ai_agent",
     title: definition.title[locale],
     description: definition.description[locale],
