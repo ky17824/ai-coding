@@ -17,6 +17,36 @@ vi.mock("@supabase/ssr", () => ({
 
 import { middleware } from "@/middleware";
 
+describe("landing locale detection", () => {
+  it("redirects a first-time English browser from the root to /en", async () => {
+    const response = await middleware(new NextRequest("https://global-gtm.vercel.app/", {
+      headers: { "accept-language": "en-US,en;q=0.9" }
+    }));
+
+    expect(response.headers.get("location")).toBe("https://global-gtm.vercel.app/en");
+    expect(response.cookies.get("borderless_locale")?.value).toBe("en");
+  });
+
+  it("keeps a saved Korean choice ahead of the browser language", async () => {
+    const request = new NextRequest("https://global-gtm.vercel.app/", {
+      headers: { "accept-language": "en-US,en;q=0.9" }
+    });
+    request.cookies.set("borderless_locale", "ko");
+
+    const response = await middleware(request);
+
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("does not auto-redirect a deep link", async () => {
+    const response = await middleware(new NextRequest("https://global-gtm.vercel.app/services", {
+      headers: { "accept-language": "en-US,en;q=0.9" }
+    }));
+
+    expect(response.headers.get("location")).toBeNull();
+  });
+});
+
 describe("protected experience routes", () => {
   beforeEach(() => {
     mocks.claims = null;

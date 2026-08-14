@@ -3,9 +3,19 @@ export const LOCALES = ["ko", "en"] as const;
 export type Locale = (typeof LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = "ko";
+export const LOCALE_COOKIE = "borderless_locale";
 
 export function isLocale(value: string): value is Locale {
   return (LOCALES as readonly string[]).includes(value);
+}
+
+export function localeFromAcceptLanguage(value: string | null): Locale {
+  if (!value) return DEFAULT_LOCALE;
+  for (const entry of value.split(",")) {
+    const language = entry.trim().split(";", 1)[0].split("-", 1)[0].toLowerCase();
+    if (isLocale(language)) return language;
+  }
+  return "en";
 }
 
 /** 로케일별 홈 경로. 언어 선택기와 metadata alternates가 함께 쓴다. */

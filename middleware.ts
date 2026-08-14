@@ -1,6 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { localeFromPath, localizedPath, stripLocalePath } from "@/lib/i18n";
+import {
+  isLocale,
+  LOCALE_COOKIE,
+  localeFromAcceptLanguage,
+  localeFromPath,
+  localizedPath,
+  stripLocalePath
+} from "@/lib/i18n";
 
 const protectedPrefixes = [
   "/assessment",
@@ -13,6 +20,17 @@ const protectedPrefixes = [
 ];
 
 export async function middleware(request: NextRequest) {
+  const savedLocale = request.cookies.get(LOCALE_COOKIE)?.value;
+  const validSavedLocale = savedLocale && isLocale(savedLocale) ? savedLocale : null;
+  const preferredLocale = validSavedLocale
+    ?? localeFromAcceptLanguage(request.headers.get("accept-language"));
+
+  if (request.nextUrl.pathname === "/" && preferredLocale === "en") {
+    const redirect = NextResponse.redirect(new URL(`/en${request.nextUrl.search}`, request.url));
+    if (!validSavedLocale) redirect.cookies.set(LOCALE_COOKIE, "en", { maxAge: 31536000, path: "/", sameSite: "lax" });
+    return redirect;
+  }
+
   const locale = localeFromPath(request.nextUrl.pathname);
   const appPath = stripLocalePath(request.nextUrl.pathname);
   const requestHeaders = new Headers(request.headers);
@@ -20,9 +38,15 @@ export async function middleware(request: NextRequest) {
   const rewriteUrl = locale === "en" && request.nextUrl.pathname !== "/en"
     ? new URL(`${appPath}${request.nextUrl.search}`, request.url)
     : null;
-  const createResponse = () => rewriteUrl
-    ? NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } })
-    : NextResponse.next({ request: { headers: requestHeaders } });
+  const createResponse = () => {
+    const response = rewriteUrl
+      ? NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } })
+      : NextResponse.next({ request: { headers: requestHeaders } });
+    if (request.nextUrl.pathname === "/" && !validSavedLocale) {
+      response.cookies.set(LOCALE_COOKIE, preferredLocale, { maxAge: 31536000, path: "/", sameSite: "lax" });
+    }
+    return response;
+  };
   const isProtected = protectedPrefixes.some((prefix) =>
     appPath.startsWith(prefix)
   );

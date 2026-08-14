@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LOCALES,
+  localeFromAcceptLanguage,
   localeFromPath,
   localizedPath,
   messages,
@@ -59,6 +60,13 @@ describe("i18n dictionaries", () => {
 });
 
 describe("localized routes", () => {
+  it("selects Korean or English from the browser language preference", () => {
+    expect(localeFromAcceptLanguage("ko-KR,ko;q=0.9,en;q=0.8")).toBe("ko");
+    expect(localeFromAcceptLanguage("en-GB,en;q=0.9,ko;q=0.8")).toBe("en");
+    expect(localeFromAcceptLanguage("fr-FR,fr;q=0.9")).toBe("en");
+    expect(localeFromAcceptLanguage(null)).toBe("ko");
+  });
+
   it("adds and removes only the English route prefix", () => {
     expect(localizedPath("/dashboard", "en")).toBe("/en/dashboard");
     expect(localizedPath("/en/dashboard", "ko")).toBe("/dashboard");
