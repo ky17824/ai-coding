@@ -47,8 +47,7 @@ export function SocialLoginButton({
       const result = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
-          scopes: provider === "kakao" ? "account_email" : undefined
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`
         }
       });
       if (result.error) {
