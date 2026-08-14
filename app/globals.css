@@ -1621,6 +1621,9 @@ main[lang="en"] .hero h1 {
 }
 
 .answer-question-chart {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid var(--line);
@@ -1648,6 +1651,9 @@ main[lang="en"] .hero h1 {
 }
 
 .answer-question-chart__viewport {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   margin-top: 18px;
   overflow-x: auto;
   border-radius: 12px;
