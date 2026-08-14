@@ -25,4 +25,10 @@ describe("dashboard execution summary", () => {
     expect(source).toContain('en ? "Create plan with AI" : "AI로 계획 만들기"');
     expect(source).toContain('`/assistant/${assessment.id}`');
   });
+
+  it("keeps AI expert recommendations out of the dashboard", () => {
+    expect(source).not.toContain("ServiceCard");
+    expect(source).not.toContain("getPublishedServices");
+    expect(source).not.toContain("추천 AI 전문가");
+  });
 });

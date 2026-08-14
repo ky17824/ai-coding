@@ -2,7 +2,6 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { ServiceCard } from "@/components/service-card";
 import { AnswerQuestionChart } from "@/components/answer-question-chart";
 import { StageSummaryPanel } from "@/components/stage-summary-panel";
 import {
@@ -13,7 +12,6 @@ import {
   questionsOfStage
 } from "@/lib/readiness";
 import { getIntakeStages } from "@/lib/intake-questions";
-import { getPublishedServices } from "@/lib/services";
 import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import type { EvidenceInput, ReadinessAnswer, ReadinessLevel } from "@/lib/types";
 import { localizedPath, type Locale } from "@/lib/i18n";
@@ -66,11 +64,7 @@ export default async function DashboardPage({
     );
   }
 
-  const [{ data: actions }, services, { data: plan }, { data: answerRows }] = await Promise.all([
-    admin.from("action_items")
-      .select("service_tag")
-      .eq("assessment_id", assessment.id),
-    getPublishedServices(locale),
+  const [{ data: plan }, { data: answerRows }] = await Promise.all([
     admin.from("gtm_plans")
       .select("id,status")
       .eq("assessment_id", assessment.id)
@@ -80,10 +74,6 @@ export default async function DashboardPage({
       .select("question_id,level,evidence_kind,evidence_value")
       .eq("assessment_id", assessment.id)
   ]);
-  const serviceTags = new Set((actions ?? []).map((action) => action.service_tag));
-  const recommended = services
-    .filter((service) => service.tags.some((tag) => serviceTags.has(tag)))
-    .slice(0, 3);
   const storedDomainScores = assessment.domain_scores as Record<string, number>;
   const assessmentStatus = normalizeReadinessStatus(assessment.status_label);
   const readinessAnswers: ReadinessAnswer[] = (answerRows ?? []).flatMap((row) => {
@@ -259,12 +249,6 @@ export default async function DashboardPage({
           )}
         </section>
 
-        {recommended.length > 0 && (
-          <section className="dashboard-section">
-            <div className="dashboard-section__heading"><span><span className="page-kicker">{en ? "RECOMMENDED AI EXPERTS" : "추천 AI 전문가"}</span><h2>{en ? "AI expert work matched to your current actions" : "현재 액션에 맞는 AI 전문가 서비스"}</h2></span><Link href={path("/services")} className="button button--small">{en ? "View all" : "전체 보기"}<span aria-hidden="true">→</span></Link></div>
-            <div className="service-grid">{recommended.map((service) => <ServiceCard key={service.id} service={service} locale={locale} />)}</div>
-          </section>
-        )}
       </div>
     </main>
   );

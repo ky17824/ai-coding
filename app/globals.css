@@ -2292,6 +2292,27 @@ main[lang="en"] .hero h1 {
   transform: translateX(4px);
 }
 
+.journey-recommendations {
+  margin-top: 64px;
+  padding: 48px 0 24px;
+  display: grid;
+  gap: 32px;
+  border-top: 1px solid var(--line);
+}
+
+.journey-recommendations__heading h2 {
+  margin: 7px 0 8px;
+  font-size: 28px;
+  letter-spacing: -0.045em;
+}
+
+.journey-recommendations__heading p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 .filter-row {
   margin: 34px 0 22px;
   display: flex;

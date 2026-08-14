@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { ServiceCard } from "@/components/service-card";
 import { JOURNEY_PHASES } from "@/lib/readiness-data";
 import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { matchExpertSupport } from "@/lib/expert-matching";
 import { localizeStoredGtmPlan } from "@/lib/content-localization";
-import type { GtmPlanItem, StoredGtmPlan } from "@/lib/types";
+import { getPublishedServices } from "@/lib/services";
+import type { GtmPlanItem, ServiceOffering, StoredGtmPlan } from "@/lib/types";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "Global GTM Journey" : "Global GTM 여정" };
@@ -59,6 +61,7 @@ export default async function JourneyPage() {
   const { user, profile } = await getCurrentProfile();
   const admin = createSupabaseAdminClient();
   let activePlan: StoredGtmPlan | null = null;
+  let recommended: ServiceOffering[] = [];
   let planItems: {
     id: string;
     horizon: number;
@@ -72,11 +75,27 @@ export default async function JourneyPage() {
   }[] = [];
   if (user && admin) {
     if (profile?.organization_id) {
-      const { data: plan } = await admin.from("gtm_plans")
-        .select("id,assessment_id,summary,content_locale,gtm_plan_items(id,horizon,priority,title,owner_label,due_date,status,expert_required,service_tag,sort_order)")
-        .eq("organization_id", profile.organization_id)
-        .eq("status", "active")
-        .order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      const [{ data: plan }, { data: assessment }, services] = await Promise.all([
+        admin.from("gtm_plans")
+          .select("id,assessment_id,summary,content_locale,gtm_plan_items(id,horizon,priority,title,owner_label,due_date,status,expert_required,service_tag,sort_order)")
+          .eq("organization_id", profile.organization_id)
+          .eq("status", "active")
+          .order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+        admin.from("assessments")
+          .select("id")
+          .eq("organization_id", profile.organization_id)
+          .order("completed_at", { ascending: false }).limit(1).maybeSingle(),
+        getPublishedServices(locale)
+      ]);
+      if (assessment) {
+        const { data: actions } = await admin.from("action_items")
+          .select("service_tag")
+          .eq("assessment_id", assessment.id);
+        const serviceTags = new Set((actions ?? []).map((action) => action.service_tag));
+        recommended = services
+          .filter((service) => service.tags.some((tag) => serviceTags.has(tag)))
+          .slice(0, 3);
+      }
       if (plan) {
         planItems = [...(plan.gtm_plan_items ?? [])].sort((a, b) =>
           a.horizon - b.horizon || a.sort_order - b.sort_order
@@ -197,6 +216,23 @@ export default async function JourneyPage() {
             </section>
           ))}
         </div>
+        )}
+        {recommended.length > 0 && (
+          <section className="journey-recommendations" aria-labelledby="journey-recommendations-title">
+            <div className="dashboard-section__heading journey-recommendations__heading">
+              <span>
+                <span className="page-kicker">{en ? "RECOMMENDED AI EXPERTS" : "추천 AI 전문가"}</span>
+                <h2 id="journey-recommendations-title">{en ? "AI expert work matched to your current actions" : "현재 액션에 맞는 AI 전문가 서비스"}</h2>
+                <p>{en ? "Continue the journey with focused research, validation, and execution support." : "현재 여정의 미완료 액션을 기준으로 조사·검증·실행 업무를 이어가세요."}</p>
+              </span>
+              <Link href={path("/services")} className="button button--primary button--small">
+                {en ? "View all" : "전체 보기"}<span aria-hidden="true">→</span>
+              </Link>
+            </div>
+            <div className="service-grid">
+              {recommended.map((service) => <ServiceCard key={service.id} service={service} locale={locale} />)}
+            </div>
+          </section>
         )}
       </div>
     </main>
