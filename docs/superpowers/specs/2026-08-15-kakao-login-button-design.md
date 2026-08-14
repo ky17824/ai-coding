@@ -2,7 +2,7 @@
 
 ## 목표
 
-로그인·회원가입 화면의 녹색 Kakao 버튼을 Kakao Developers가 제공한 공식 로그인 버튼 이미지로 교체한다. 접근성, 로딩·오류 처리와 기존 callback은 유지하고 Kakao OAuth 동의 범위는 플랫폼이 사용하는 `account_email`만 요청한다.
+로그인·회원가입 화면의 녹색 Kakao 버튼을 Kakao Developers가 제공한 공식 로그인 버튼 이미지로 교체한다. 접근성, 로딩·오류 처리와 기존 callback은 유지한다.
 
 ## 선택 자산
 
@@ -15,7 +15,7 @@ wide 두 자산은 비율이 같으므로 300w/600w width `srcSet`으로 연결�
 ## 구성과 동작
 
 - 기존 `<button>`을 유지해 클릭, 키보드, 비활성화, OAuth callback을 보존한다.
-- Kakao 로그인은 설정하지 않은 `profile_image`·`profile_nickname`을 요청하지 않고 `account_email`만 요청해 `KOE205`를 방지한다.
+- Supabase Kakao Auth가 기본 요청하는 `account_email`, `profile_image`, `profile_nickname` 동의항목을 Kakao Developers에 설정해 `KOE205`를 방지한다.
 - Kakao 버튼 내부에는 공식 이미지만 표시하고 접근 가능한 이름은 locale에 맞게 유지한다.
 - 처리 중에는 버튼을 비활성화하고 이미지 위에 짧은 locale별 상태 문구를 표시한다.
 - 공통 컴포넌트를 수정하므로 `/signin`, `/signup`에 동일하게 적용한다.

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the green Kakao social-auth control with official responsive Kakao login artwork and request only the configured Kakao email scope.
+**Goal:** Replace the green Kakao social-auth control with official responsive Kakao login artwork and keep the Supabase-managed Kakao OAuth scope contract.
 
 **Architecture:** Keep `SocialLoginButton` as the semantic and behavioral boundary. Add official locale-specific 300×45 and 600×90 wide images under `public/`, render them with width descriptors and the larger file as the fallback, and limit CSS changes to the Kakao button variant.
 
@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Preserve the official 20:3 image ratio; never stretch, crop, or re-typeset the Kakao label.
-- Preserve the existing OAuth callback, keyboard focus, disabled state, and localized accessible name; Kakao requests only `account_email`.
+- Preserve the existing OAuth callback, keyboard focus, disabled state, localized accessible name, and Supabase-managed Kakao scopes.
 - Apply the shared component change to both `/signin` and `/signup`.
 - Add no dependency or new component abstraction.
 
@@ -60,7 +60,7 @@ Expected: `*-300.png` files are 300×45 and `*-600.png` files are 600×90.
 
 - [ ] **Step 1: Render official image sources**
 
-In the Kakao branch, render an empty-alt image with locale-specific `src` and `srcSet`; keep a localized `aria-label` on the parent button. During `pending`, render the existing localized status text instead of the static image. Pass `account_email` as the Kakao-only OAuth scope so unset profile scopes cannot trigger `KOE205`.
+In the Kakao branch, render an empty-alt image with locale-specific `src` and `srcSet`; keep a localized `aria-label` on the parent button. During `pending`, render the existing localized status text instead of the static image. Let Supabase request its documented Kakao defaults and configure those consent items in Kakao Developers.
 
 - [ ] **Step 2: Apply official surface geometry**
 
