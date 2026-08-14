@@ -1490,6 +1490,12 @@ main[lang="en"] .hero h1 {
   font-size: 28px;
 }
 
+.answer-insights,
+.answer-insight-chart {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .answer-insights__score small {
   margin-top: 4px;
   color: var(--muted);
