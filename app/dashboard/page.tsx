@@ -15,10 +15,9 @@ import {
 import { getIntakeStages } from "@/lib/intake-questions";
 import { getPublishedServices } from "@/lib/services";
 import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
-import type { EvidenceInput, ReadinessAnswer, ReadinessLevel, StoredGtmPlan } from "@/lib/types";
+import type { EvidenceInput, ReadinessAnswer, ReadinessLevel } from "@/lib/types";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
-import { localizeStoredGtmPlan } from "@/lib/content-localization";
 import { stageSummarySchema, type StageSummaryStatus } from "@/lib/stage-summary";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -73,7 +72,7 @@ export default async function DashboardPage({
       .eq("assessment_id", assessment.id),
     getPublishedServices(locale),
     admin.from("gtm_plans")
-      .select("id,status,summary,content_locale")
+      .select("id,status")
       .eq("assessment_id", assessment.id)
       .in("status", ["draft", "active"])
       .maybeSingle(),
@@ -81,27 +80,6 @@ export default async function DashboardPage({
       .select("question_id,level,evidence_kind,evidence_value")
       .eq("assessment_id", assessment.id)
   ]);
-  const localizedPlan = plan ? await localizeStoredGtmPlan(
-    admin,
-    profile.organization_id,
-    {
-      id: plan.id,
-      assessmentId: assessment.id,
-      status: plan.status,
-      summary: plan.summary,
-      assumptions: [],
-      founderContext: {},
-      marketResearch: null,
-      marketResearchConfirmedAt: null,
-      recentMessages: [],
-      turnCount: 0,
-      generationCount: 0,
-      generatedBy: "",
-      contentLocale: plan.content_locale ?? "ko",
-      items: []
-    } satisfies StoredGtmPlan,
-    locale
-  ) : null;
   const serviceTags = new Set((actions ?? []).map((action) => action.service_tag));
   const recommended = services
     .filter((service) => service.tags.some((tag) => serviceTags.has(tag)))
@@ -158,9 +136,6 @@ export default async function DashboardPage({
   const answerInsights = selectedStageId
     ? buildStageAnswerInsights(readinessAnswers, selectedStageId, locale)
     : null;
-  const planStatus = plan?.status === "active"
-    ? (en ? "You have an approved plan in progress." : "승인되어 실행 중인 계획이 있습니다.")
-    : plan ? (en ? "You have a plan in progress with the AI assistant." : "AI와 작성 중인 계획이 있습니다.") : (en ? "You have not created an AI GTM plan yet." : "아직 AI GTM 계획이 없습니다.");
   const planHref = plan?.status === "active" ? "/journey" : `/assistant/${assessment.id}`;
   const planCta = plan?.status === "active"
     ? (en ? "View execution plan" : "실행 계획 보기")
@@ -282,18 +257,6 @@ export default async function DashboardPage({
               </div>
             </>
           )}
-        </section>
-
-        <section className="dashboard-section">
-          <div className="dashboard-section__heading">
-            <span>
-              <span className="page-kicker">{en ? "AI GTM PLAN" : "AI GTM 계획(AI GTM Plan)"}</span>
-              <h2 className="plan-summary">{localizedPlan?.summary || (en ? "Turn your assessment into a staged 30-, 60-, and 90-day execution plan." : "진단 결과를 단계별 실행계획(30·60·90 Day Plan)으로 바꿔 보세요.")}</h2>
-              <p className="page-description">{planStatus}</p>
-              {localizedPlan?.translationFallback && <p className="notice-banner">{en ? "Some saved content is shown in its original language." : "일부 저장 내용은 원문으로 표시합니다."}</p>}
-            </span>
-            <Link href={path(planHref)} className="button button--primary">{planCta}<span aria-hidden="true">→</span></Link>
-          </div>
         </section>
 
         {recommended.length > 0 && (
