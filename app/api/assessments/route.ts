@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { applyOffering } from "@/lib/intake-questions";
 import { calculateReadiness, validateAssessmentAnswers } from "@/lib/readiness";
-import { createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
+import { ensureStageSummary } from "@/lib/stage-summary-service";
+import { createSupabaseAdminClient, createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
 
 const answerSchema = z.object({
   questionId: z.string().min(1).max(80),
@@ -139,5 +140,20 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ assessmentId: assessment.id, ...result });
+  const admin = createSupabaseAdminClient();
+  const stageSummary = admin
+    ? await ensureStageSummary({
+      admin,
+      assessmentId: assessment.id,
+      organizationId: profile.organization_id,
+      locale,
+      answers: parsed.data.answers
+    })
+    : { status: "failed" as const, summary: null };
+
+  return NextResponse.json({
+    assessmentId: assessment.id,
+    ...result,
+    stageSummaryStatus: stageSummary.status
+  });
 }
