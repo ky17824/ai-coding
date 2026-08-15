@@ -21,6 +21,26 @@ const safeHref = (value: string | null) => {
   }
 };
 
+type ReportSource = { title: string; url: string | null; publisher: string };
+const sourceKey = (source: ReportSource) => source.url || `${source.publisher}:${source.title}`;
+
+export function buildReferenceIndex(sources: ReportSource[]) {
+  const references: { number: number; source: ReportSource; href: string | null }[] = [];
+  const numberByKey = new Map<string, number>();
+  for (const source of sources) {
+    const key = sourceKey(source);
+    if (numberByKey.has(key)) continue;
+    const number = references.length + 1;
+    numberByKey.set(key, number);
+    references.push({ number, source, href: safeHref(source.url) });
+  }
+  return { references, numberByKey };
+}
+
+export function citationNumbers(index: ReturnType<typeof buildReferenceIndex>, sources: ReportSource[]) {
+  return [...new Set(sources.map(sourceKey).map((key) => index.numberByKey.get(key)).filter((number): number is number => number !== undefined))];
+}
+
 const list = (entries: unknown[]) => `<ul>${entries.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")}</ul>`;
 
 const coverageGapLabel = (gap: string, en: boolean) => en ? gap.replaceAll(":", " · ").replaceAll("-", " ") : ({
@@ -152,6 +172,13 @@ export async function GET(
   const context = localizedPlan.founderContext;
   const research = localizedPlan.marketResearch;
   if (!research) return NextResponse.json({ message: en ? "There is no market research to download." : "다운로드할 시장 조사 결과가 없습니다." }, { status: 409 });
+  const referenceIndex = buildReferenceIndex([
+    ...research.marketSizing.flatMap((entry) => entry.sources),
+    ...research.trends.flatMap((entry) => entry.sources),
+    ...research.competitors.flatMap((entry) => entry.sources),
+    ...research.contradictions.flatMap((entry) => entry.sources)
+  ]);
+  const citations = (sources: ReportSource[]) => citationNumbers(referenceIndex, sources).map((number) => `[${number}]`).join(" ");
 
   const researchDocumentSummaryHtml = localizedPlan.marketResearchDocuments?.length
     ? `<h2>${en ? "Customer documents used" : "사용자 자료 반영"}</h2><p>${en ? "Only sanitized evidence counts are shown; original files are not included in this report." : "이 보고서에는 정제된 근거의 개수만 표시하며 원본 파일 내용은 포함하지 않습니다."}</p>${list(localizedPlan.marketResearchDocuments.map((document) => {
@@ -183,11 +210,10 @@ export async function GET(
   const trendLabel = (value: string) => en ? value.replaceAll("_", " ") : ({ demand: "수요·성장", customer_behavior: "고객 행동", channel: "유통·채널", regulation: "규제", product_culture: "제품·문화" }[value] ?? value);
   const competitorLabel = (presence: string, type: string) => en ? `${presence} · ${type}` : `${{ local: "현지", regional: "지역", global: "글로벌" }[presence] ?? presence} · ${{ direct: "직접", adjacent: "인접", alternative: "대체재" }[type] ?? type}`;
   const sourceKindLabel = (value: string) => en ? value : ({ government: "정부·규제", industry: "산업자료", retail: "현지 유통", company: "기업 공식", consumer: "소비자", media: "미디어" }[value] ?? value);
-  const trendCards = research.trends.map((entry) => `<article><p><strong>${escapeHtml(entry.title)}</strong> · ${escapeHtml(trendLabel(entry.category))}</p><p>${escapeHtml(en ? `${entry.confidence} confidence · ${entry.freshness}` : `신뢰도 ${{ low: "낮음", medium: "보통", high: "높음" }[entry.confidence]} · ${{ current: "최신", aging: "오래된 자료 포함", undated: "발행일 미상" }[entry.freshness]}`)}</p><p>${escapeHtml(entry.finding)}</p><p><strong>${en ? "Business implication" : "사업 시사점"}</strong><br>${escapeHtml(entry.implication)}</p>${list(entry.sources.map((source) => `${source.title}${source.publisher ? ` · ${source.publisher}` : ""}${source.publishedAt ? ` · ${source.publishedAt}` : ""}`))}</article>`).join("");
+  const trendCards = research.trends.map((entry) => `<article><p><strong>${escapeHtml(entry.title)}</strong> · ${escapeHtml(trendLabel(entry.category))}</p><p>${escapeHtml(en ? `${entry.confidence} confidence · ${entry.freshness}` : `신뢰도 ${{ low: "낮음", medium: "보통", high: "높음" }[entry.confidence]} · ${{ current: "최신", aging: "오래된 자료 포함", undated: "발행일 미상" }[entry.freshness]}`)}</p><p>${escapeHtml(entry.finding)}</p><p><strong>${en ? "Business implication" : "사업 시사점"}</strong><br>${escapeHtml(entry.implication)}</p><p><strong>${en ? "Sources" : "출처"}</strong> ${citations(entry.sources)}</p></article>`).join("");
   const competitors = research.competitors.map((entry) => `<tr><td data-label="${en ? "Name" : "이름"}">${escapeHtml(entry.name)}</td><td data-label="${en ? "Type" : "유형"}">${escapeHtml(competitorLabel(entry.marketPresence, entry.type))}</td><td data-label="${en ? "Position" : "포지션"}">${escapeHtml(entry.relevance)}<br><strong>${en ? "Target customer" : "목표 고객"}</strong> ${escapeHtml(entry.targetCustomer)}<br><strong>${en ? "Value" : "제공 가치"}</strong> ${escapeHtml(entry.valueProposition)}${entry.strengths.length ? `<br><strong>${en ? "Strengths" : "강점"}</strong> ${escapeHtml(entry.strengths.join(" · "))}` : ""}${entry.weaknesses.length ? `<br><strong>${en ? "Weaknesses" : "약점"}</strong> ${escapeHtml(entry.weaknesses.join(" · "))}` : ""}</td><td data-label="${en ? "Price & channels" : "가격·채널"}">${escapeHtml(entry.pricePositioning)}${entry.channels.length ? `<br>${escapeHtml(entry.channels.join(" · "))}` : ""}</td><td data-label="${en ? "Differentiation gap" : "차별화 공백"}">${escapeHtml(entry.differentiationGap)}<br><strong>${en ? "Sources" : "출처"}</strong> ${escapeHtml(entry.sources.map((source) => source.title).join(" · "))}</td></tr>`).join("");
-  const allResearchSources = [...new Map([...research.trends.flatMap((entry) => entry.sources), ...research.competitors.flatMap((entry) => entry.sources), ...research.contradictions.flatMap((entry) => entry.sources)].map((source) => [source.url || `${source.publisher}:${source.title}`, source])).values()];
-  const sourceList = `<ul>${allResearchSources.map((source) => { const href = safeHref(source.url); return `<li>${href ? `<a href="${href}">${escapeHtml(source.title)}</a>` : escapeHtml(source.title)}${source.publisher ? ` · ${escapeHtml(source.publisher)}` : ""}${source.publishedAt ? ` · ${escapeHtml(source.publishedAt)}` : ""} · ${escapeHtml(sourceKindLabel(source.kind))}</li>`; }).join("")}</ul>`;
-  const contradictions = research.contradictions.length ? `<h2>${en ? "Conflicting evidence" : "상충 근거"}</h2>${research.contradictions.map((entry) => `<article><h3>${escapeHtml(entry.topic)}</h3><p>${escapeHtml(entry.summary)}</p>${list(entry.sources.map((source) => `${source.title}${source.publisher ? ` · ${source.publisher}` : ""}`))}</article>`).join("")}` : "";
+  const sourceList = `<ol>${referenceIndex.references.map(({ number, source, href }) => `<li value="${number}">${href ? `<a href="${href}">${escapeHtml(source.title)}</a>` : escapeHtml(source.title)}${source.publisher ? ` · ${escapeHtml(source.publisher)}` : ""}${source.publishedAt ? ` · ${escapeHtml(source.publishedAt)}` : ""}</li>`).join("")}</ol>`;
+  const contradictions = research.contradictions.length ? `<h2>${en ? "Conflicting evidence" : "상충 근거"}</h2>${research.contradictions.map((entry) => `<article><h3>${escapeHtml(entry.topic)}</h3><p>${escapeHtml(entry.summary)}</p><p><strong>${en ? "Sources" : "출처"}</strong> ${citations(entry.sources)}</p></article>`).join("")}` : "";
   const planItems = localizedPlan.items.map((item) => `<article><p><strong>${item.horizon} ${en ? "days" : "일"} · ${escapeHtml(item.priority)}</strong></p><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.rationale)}</p><dl><dt>${en ? "Owner" : "담당"}</dt><dd>${escapeHtml(item.ownerLabel)}</dd><dt>${en ? "Due date" : "기한"}</dt><dd>${escapeHtml(item.dueDate)}</dd><dt>${en ? "Completion evidence" : "완료 근거"}</dt><dd>${escapeHtml(item.completionEvidence)}</dd></dl></article>`).join("");
   const fontUrl = escapeHtml(new URL("/fonts/PretendardVariable.woff2", request.url).toString());
   const prefix = en ? "/en" : "";

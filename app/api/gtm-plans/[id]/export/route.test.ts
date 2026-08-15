@@ -32,7 +32,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient: () => admin
 }));
 
-import { GET } from "@/app/api/gtm-plans/[id]/export/route";
+import { buildReferenceIndex, citationNumbers, GET } from "@/app/api/gtm-plans/[id]/export/route";
 
 const get = () => GET(new Request("https://example.com/api/gtm-plans/plan-1/export"), {
   params: Promise.resolve({ id: "plan-1" })
@@ -44,5 +44,21 @@ describe("market report readiness coverage", () => {
   it.each(["assessments", "readiness_answers"])("fails closed when %s cannot be loaded", async (table) => {
     failureTable = table;
     expect((await get()).status).toBe(500);
+  });
+});
+
+describe("market report citations", () => {
+  it("deduplicates references in first-appearance order and rejects unsafe links", () => {
+    const source = { title: "A", url: "https://a.example/report", publisher: "A" };
+    const index = buildReferenceIndex([
+      source,
+      { title: "A duplicate", url: "https://a.example/report", publisher: "A" },
+      { title: "Unsafe", url: "javascript:alert(1)", publisher: "B" }
+    ]);
+
+    expect(index.references.map((entry) => entry.number)).toEqual([1, 2]);
+    expect(index.references[0].href).toBe("https://a.example/report");
+    expect(index.references[1].href).toBeNull();
+    expect(citationNumbers(index, [source, source])).toEqual([1]);
   });
 });
