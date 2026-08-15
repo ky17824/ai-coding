@@ -163,6 +163,27 @@ export interface GtmFounderContext {
   constraints: string;
 }
 
+export interface SanitizedDocumentEvidence {
+  facts: { statement: string; locator: string; confidence: "high" | "medium" | "low" }[];
+  numericFacts: { label: string; value: string; unit: string; period: string; locator: string }[];
+  assumptions: string[];
+  contradictions: string[];
+  gaps: string[];
+}
+
+export interface MarketResearchDocument {
+  id: string;
+  displayName: string;
+  mimeType: "application/pdf" | "image/png" | "image/jpeg";
+  size: number;
+  sha256: string;
+  storagePath: string | null;
+  status: "uploaded" | "processed" | "failed" | "cleanup_pending";
+  evidence: SanitizedDocumentEvidence | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
 export interface GtmMarketSizingSource {
   title: string;
   url: string | null;
@@ -366,6 +387,7 @@ export interface StoredGtmPlan {
   assumptions: string[];
   founderContext: Partial<GtmFounderContext>;
   marketResearch: GtmMarketResearch | null;
+  marketResearchDocuments?: MarketResearchDocument[];
   marketResearchConfirmedAt: string | null;
   recentMessages: GtmAssistantMessage[];
   turnCount: number;

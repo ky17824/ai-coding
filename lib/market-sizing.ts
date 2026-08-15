@@ -301,12 +301,13 @@ export function getMissingMarketSizingInputs(context: Partial<GtmFounderContext>
   return MARKET_SIZING_INPUT_KEYS.filter((key) => !String(context[key] ?? "").trim());
 }
 
-export function marketResearchContextSignature(context: Partial<GtmFounderContext>) {
-  const serialized = JSON.stringify(Object.fromEntries(
-    RESEARCH_CONTEXT_KEYS.map((key) => [key, String(context[key] ?? "").trim()
+export function marketResearchContextSignature(context: Partial<GtmFounderContext>, documentDigests: readonly string[] = []) {
+  const serialized = JSON.stringify({
+    context: Object.fromEntries(RESEARCH_CONTEXT_KEYS.map((key) => [key, String(context[key] ?? "").trim()
       .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[이메일]")
-      .replace(/(?:\+?82[-\s]?)?0?1[016789][-.\s]?\d{3,4}[-.\s]?\d{4}/g, "[전화번호]")])
-  ));
+      .replace(/(?:\+?82[-\s]?)?0?1[016789][-.\s]?\d{3,4}[-.\s]?\d{4}/g, "[전화번호]")])),
+    documentDigests: [...documentDigests].sort()
+  });
   let left = 0x811c9dc5;
   let right = 0x9e3779b9;
   for (let index = 0; index < serialized.length; index += 1) {

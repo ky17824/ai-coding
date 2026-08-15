@@ -354,6 +354,10 @@ describe("market sizing", () => {
     expect(marketResearchContextSignature(complete)).not.toBe(marketResearchContextSignature({ ...complete, validationEvidence: "10 interviews" }));
     expect(marketResearchContextSignature({ ...complete, validationEvidence: "founder@example.com" }))
       .toBe(marketResearchContextSignature({ ...complete, validationEvidence: "[이메일]" }));
+    expect(marketResearchContextSignature(complete, ["sha-a"]))
+      .not.toBe(marketResearchContextSignature(complete, ["sha-b"]));
+    expect(marketResearchContextSignature(complete, ["sha-b", "sha-a"]))
+      .toBe(marketResearchContextSignature(complete, ["sha-a", "sha-b"]));
   });
 
   it("maps legacy LAM cards to Beachhead Market without rewriting stored data", () => {
