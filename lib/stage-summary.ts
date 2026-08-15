@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { zodTextFormat } from "openai/helpers/zod";
+import { lenientZodTextFormat as zodTextFormat } from "@/lib/lenient-text-format";
 import type { Locale } from "@/lib/i18n";
 import type { SurveyVersion } from "@/lib/intake-questions";
 import { buildStageAnswerInsights } from "@/lib/readiness";

@@ -214,7 +214,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
     ? en ? "Searching current public evidence…" : "최신 공개자료를 찾고 있습니다…"
     : researchElapsedSeconds < 150
       ? en ? "Comparing sources and calculating the market range…" : "근거를 교차검증하고 시장 범위를 계산하고 있습니다…"
-      : en ? "Finalizing the report. This may take another minute…" : "보고서를 종합하고 있습니다. 최대 1분 정도 더 걸릴 수 있습니다…";
+      : en ? "Finalizing the report. This may take another two minutes…" : "보고서를 종합하고 있습니다. 최대 2분 정도 더 걸릴 수 있습니다…";
 
   async function runWorkshop(answerOverride?: string, forcePlan = false) {
     if (!researchMatchesContext || !researchConfirmed) {

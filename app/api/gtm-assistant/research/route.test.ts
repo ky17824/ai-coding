@@ -22,8 +22,12 @@ describe("market research readiness scope", () => {
   });
 
   it("finishes inside the platform deadline and uses the reduced search budget", () => {
-    expect(source).toContain("RESEARCH_DEADLINE_MS = 240_000");
-    expect(source).toContain("PUBLIC_RESEARCH_TIMEOUT_MS = 160_000");
+    expect(source).toContain("export const maxDuration = 300");
+    expect(source).toContain("RESEARCH_DEADLINE_MS = 285_000");
+    expect(source).toContain("PUBLIC_RESEARCH_TIMEOUT_MS = 205_000");
+    // A retry of a long call can never fit inside the deadline; SDK default retries pushed runs past Vercel's 300s kill.
+    expect(source.match(/maxRetries: 0/g)).toHaveLength(6);
+    expect(source).toContain('reasoning: { effort: "medium", context: "current_turn" },\n        max_tool_calls: 5');
     expect(source).toContain("SYNTHESIS_TIMEOUT_MS = 55_000");
     expect(source).toContain("max_tool_calls: 3");
     expect(source).toContain("max_tool_calls: 4");

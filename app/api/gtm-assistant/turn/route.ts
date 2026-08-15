@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { zodTextFormat } from "openai/helpers/zod";
+import { lenientZodTextFormat as zodTextFormat } from "@/lib/lenient-text-format";
 import { z } from "zod";
 import {
   ASSISTANT_MODEL,

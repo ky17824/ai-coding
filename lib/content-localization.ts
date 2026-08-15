@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import OpenAI from "openai";
-import { zodTextFormat } from "openai/helpers/zod";
+import { lenientZodTextFormat as zodTextFormat } from "@/lib/lenient-text-format";
 import { after } from "next/server";
 import { z } from "zod";
 import type { Locale } from "@/lib/i18n";
