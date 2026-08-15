@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the locale-specific 55-question catalog to DOCX."""
+"""Render a locale- and version-specific readiness catalog to DOCX."""
 
 import argparse
 import json
@@ -7,7 +7,6 @@ import subprocess
 from pathlib import Path
 
 from docx import Document
-from docx.enum.section import WD_SECTION
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
@@ -18,7 +17,7 @@ from docx.shared import Inches, Pt, RGBColor
 COPY = {
     "ko": {
         "title": "글로벌 진출 준비도 진단 설문",
-        "subtitle": "창업자 작성용 · 55문항",
+        "subtitle": "창업자 작성용 · {count}문항 · v{version}",
         "info": ["회사명", "작성자 · 직책", "작성일", "목표 국가", "주요 제품·서비스"],
         "guide": "작성 안내",
         "instructions": [
@@ -33,7 +32,7 @@ COPY = {
     },
     "en": {
         "title": "Global Market Entry Readiness Assessment",
-        "subtitle": "Founder Workbook · 55 Questions",
+        "subtitle": "Founder Workbook · {count} Questions · v{version}",
         "info": ["Company", "Founder · Role", "Date", "Target Country", "Primary Product or Service"],
         "guide": "How to Complete This Assessment",
         "instructions": [
@@ -47,6 +46,7 @@ COPY = {
         "done": "questions",
     },
 }
+FONT = "Arial Unicode MS"
 
 
 def set_cell_shading(cell, fill):
@@ -69,8 +69,13 @@ def set_cell_margins(cell, value=100):
 
 def add_text(paragraph, text, *, size=10, bold=False, italic=False, color=None):
     run = paragraph.add_run(text)
-    run.font.name = "Pretendard"
-    run._element.rPr.rFonts.set(qn("w:eastAsia"), "Pretendard")
+    run.font.name = FONT
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), FONT)
+    if any("가" <= char <= "힣" for char in text):
+        language = OxmlElement("w:lang")
+        language.set(qn("w:val"), "ko-KR")
+        language.set(qn("w:eastAsia"), "ko-KR")
+        run._element.rPr.append(language)
     run.font.size = Pt(size)
     run.bold = bold
     run.italic = italic
@@ -89,14 +94,14 @@ def add_paragraph(doc, text="", *, size=10, bold=False, italic=False, color=None
     return paragraph
 
 
-def load_catalog(root, locale, node):
-    command = [node, str(root / "scripts/build-questionnaire-docx.js"), "--json", locale]
+def load_catalog(root, locale, version, node):
+    command = [node, str(root / "scripts/build-questionnaire-docx.js"), "--json", "--locale", locale, "--version", version]
     return json.loads(subprocess.run(command, cwd=root, check=True, capture_output=True, text=True).stdout)
 
 
-def render(output, locale, node):
+def render(output, locale, version, node):
     root = Path(__file__).resolve().parents[1]
-    catalog = load_catalog(root, locale, node)
+    catalog = load_catalog(root, locale, version, node)
     copy = COPY[locale]
     doc = Document()
     section = doc.sections[0]
@@ -106,7 +111,7 @@ def render(output, locale, node):
     section.right_margin = Inches(0.65)
 
     add_paragraph(doc, copy["title"], size=22, bold=True, after=4, align=WD_ALIGN_PARAGRAPH.CENTER)
-    add_paragraph(doc, copy["subtitle"], color="666666", after=18, align=WD_ALIGN_PARAGRAPH.CENTER)
+    add_paragraph(doc, copy["subtitle"].format(count=len(catalog["questions"]), version=version), color="666666", after=18, align=WD_ALIGN_PARAGRAPH.CENTER)
 
     info = doc.add_table(rows=0, cols=2)
     info.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -135,15 +140,16 @@ def render(output, locale, node):
 
     q_no = 0
     for stage in catalog["stages"]:
-        doc.add_section(WD_SECTION.NEW_PAGE)
-        add_paragraph(doc, stage["label"], size=17, bold=True, after=4)
+        heading = add_paragraph(doc, stage["label"], size=17, bold=True, after=4)
+        heading.paragraph_format.keep_with_next = True
         add_paragraph(doc, stage["intro"], color="666666", after=12)
         for item in items_by_stage.get(stage["id"], []):
             add_paragraph(doc, item["label"], size=13, bold=True, before=8, after=5)
             for question in questions_by_item.get(item["id"], []):
                 q_no += 1
                 paragraph = add_paragraph(doc, before=7, after=4)
-                add_text(paragraph, f"Q{q_no}. ", size=10.5, bold=True)
+                critical = "★ " if question.get("critical") else ""
+                add_text(paragraph, f"Q{q_no}. {critical}", size=10.5, bold=True)
                 add_text(paragraph, question["question"], size=10.5)
                 for index, option in enumerate(question["options"]):
                     option_paragraph = add_paragraph(doc, f"☐ {'①②③④'[index]} {option}", after=2)
@@ -163,6 +169,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
     parser.add_argument("locale", choices=("ko", "en"))
+    parser.add_argument("--version", choices=("4.0", "5.0"), default="4.0")
     parser.add_argument("--node", default="node")
     args = parser.parse_args()
-    render(args.output, args.locale, args.node)
+    render(args.output, args.locale, args.version, args.node)

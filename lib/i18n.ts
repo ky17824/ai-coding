@@ -97,7 +97,7 @@ const ko = {
         number: "01",
         title: "대표님 회사의 글로벌 진출 준비도를 확인하세요",
         description:
-          "55개 문항에 답하시면 준비 1단계·준비 2단계·준비 3단계 가운데 지금 어느 단계인지 알려드립니다."
+          "46개 질문은행 가운데 현재 진출 방식에 필요한 문항에 답하면 지금의 준비 단계와 보류 조건을 알려드립니다."
       },
       {
         number: "02",
@@ -192,7 +192,7 @@ const en: typeof ko = {
         number: "01",
         title: "See where your company actually stands",
         description:
-          "Answer 55 questions and we'll tell you which stage you are in: early, preparing, or ready."
+          "Answer the questions relevant to your current path from a 46-question bank, and we'll show your readiness stage and deferred conditions."
       },
       {
         number: "02",

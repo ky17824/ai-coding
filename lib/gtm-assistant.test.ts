@@ -193,7 +193,7 @@ describe("AI GTM assistant safeguards", () => {
       .toThrow("허용되지 않은 계획 기간");
   });
 
-  it("does not allow a sellability verdict before all 55 questions are available", () => {
+  it("does not allow a sellability verdict before readiness prerequisites are complete", () => {
     expect(() => finalizeMarketResearch({
       scope: "market_preresearch",
       targetCountry: "일본",
