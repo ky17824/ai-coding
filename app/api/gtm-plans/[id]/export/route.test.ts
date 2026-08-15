@@ -111,4 +111,47 @@ describe("market report citations", () => {
     expect(calculationInputs).toContain('<a class="citation" href="#ref-1">[1]</a>');
     expect(calculationInputs).not.toContain("&lt;a");
   });
+
+  it("renders the executive report structure with deduplicated body citations", async () => {
+    const source = {
+      title: "Long source title that belongs only in the bibliography",
+      url: "https://example.com/a/very/long/path?inside=body",
+      publisher: "Example",
+      publishedAt: "2026-01-01",
+      checkedAt: "2026-01-02",
+      kind: "industry"
+    };
+    const marketSize = (key: string, label: string) => ({
+      key, label, status: "estimated", estimate: "₩1조", range: null, method: "bottom_up", formula: "고객 수 × 객단가",
+      calculationInputs: [], assumptions: [], sources: [source], confidence: "medium", evidenceGaps: [], sensitivityDrivers: [], validation: [], cohesion: null, expansionPath: []
+    });
+    planData = {
+      id: "plan-1", organization_id: "org-1", assessment_id: null, status: "active", summary: "", assumptions: ["공개 자료 기준"], market_research_documents: [], recent_messages: [], turn_count: 0, generation_count: 0, model: "gpt-5.6-sol", content_locale: "ko", founder_context_locale: "ko", market_research_locale: "ko", updated_at: "2026-01-01",
+      founder_context: { offeringName: "Offer", offeringType: "service", targetCountry: "KR", targetCustomer: "buyer", offeringSummary: "summary", customerProblem: "problem", coreValue: "value" },
+      market_research: {
+        executiveSummary: "의사결정 요약", scope: "sellability_review", sellability: { summary: "조건부 진출" }, marketDefinition: { included: "국내 시장", excluded: "해외 시장", annualRevenueUnit: "KRW" },
+        marketSizing: [marketSize("tam", "TAM"), marketSize("sam", "SAM"), marketSize("som", "SOM"), marketSize("beachhead", "Beachhead")],
+        trends: [{ title: "성장 추세", category: "demand", finding: "수요 증가", implication: "진입 검토", sourceTitle: source.title, sources: [source], confidence: "high", freshness: "current" }],
+        competitors: [{ name: "경쟁사", type: "direct", marketPresence: "local", relevance: "높음", targetCustomer: "buyer", valueProposition: "value", strengths: [], weaknesses: [], pricePositioning: "premium", channels: [], differentiationGap: "gap", sourceTitles: [source.title], sources: [source] }],
+        contradictions: [{ topic: "시장 성장률", summary: "자료별 차이", sourceTitles: [source.title], sources: [source] }],
+        researchCoverage: { lanes: ["demand"], sourceCount: 1, uniqueDomainCount: 1, competitorCount: 1, sourceTypes: { industry: 1 }, coverageGaps: [] },
+        limitations: ["표본 제한"], nextExperiments: ["고객 인터뷰"]
+      },
+      items: []
+    };
+
+    const html = await (await get()).text();
+    const bodyBeforeBibliography = html.slice(0, html.indexOf("참고문헌"));
+
+    expect(html).toContain('class="report-cover"');
+    expect(html).toContain('id="ref-1"');
+    expect(html).toContain('href="#ref-1"');
+    expect(html.indexOf("경영진 요약")).toBeLessThan(html.indexOf("시장 범위와 규모"));
+    expect(html.indexOf("참고문헌")).toBeGreaterThan(html.indexOf("가정과 한계"));
+    expect(html.match(/id="ref-1"/g)).toHaveLength(1);
+    expect(html.match(/href="#ref-1"/g)?.length).toBeGreaterThan(1);
+    expect(bodyBeforeBibliography).not.toContain("https://example.com/a/very/long/path?inside=body");
+    expect(html).toContain("@media(max-width:700px)");
+    expect(html).toContain("@media print");
+  });
 });
