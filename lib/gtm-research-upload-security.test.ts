@@ -51,4 +51,26 @@ describe("assistant research upload security contract", () => {
     expect(component).toContain("researchDocumentDigests");
     expect(component).toContain("비공개로 정제한 뒤 원본을 삭제");
   });
+
+  it("exports only a safe document summary and discloses the private extraction flow", () => {
+    const exportRoute = readFileSync("app/api/gtm-plans/[id]/export/route.ts", "utf8");
+    const privacy = readFileSync("app/legal/privacy/page.tsx", "utf8");
+    const summary = exportRoute.slice(
+      exportRoute.indexOf("const researchDocumentSummaryHtml"),
+      exportRoute.indexOf("const marketSizes")
+    );
+
+    expect(exportRoute).toContain("market_research_documents");
+    expect(summary).toContain("document.displayName");
+    expect(summary).toContain("document.evidence?.gaps.length");
+    expect(summary).toContain("document.evidence?.contradictions.length");
+    expect(summary).not.toContain("storagePath");
+    expect(summary).not.toContain("statement");
+    expect(privacy).toContain("public web search");
+    expect(privacy).toContain("공개 웹 검색");
+    expect(privacy).toContain("30 days");
+    expect(privacy).toContain("30일");
+    expect(privacy).toContain("original file");
+    expect(privacy).toContain("원본 파일");
+  });
 });

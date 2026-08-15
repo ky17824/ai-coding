@@ -38,7 +38,7 @@ export default async function PrivacyPage() {
         <section>
           <h2>AI services</h2>
           <p>
-            For the AI-GTM Assistant, we send calculated scores, response levels, selected actions, goals, resources, deadlines, constraints, and approved source material to OpenAI. For a paid AI expert service, files you explicitly attach are also sent privately to OpenAI through an expiring link for report generation. Attached files are not provided to public web search. OpenAI requests use storage disabled; Borderless retains the attachment in its private evidence storage and the generated report with the order record until account deletion or the applicable legal retention period. Do not attach information that you are not authorized to disclose. Payment and settlement details are not sent to the AI model.
+            For the AI-GTM Assistant, we send calculated scores, response levels, selected actions, goals, resources, deadlines, constraints, and approved source material to OpenAI. A file you attach for preliminary market research is sent privately to OpenAI to extract evidence and is not provided to public web search. After successful extraction, Borderless deletes the original file and keeps only a sanitized evidence ledger with the plan. OpenAI API requests use storage disabled; OpenAI may retain abuse-monitoring logs containing inputs and outputs for up to 30 days by default, unless a different retention control applies. For a paid AI expert service, files you explicitly attach are retained in private evidence storage and sent privately to OpenAI through an expiring link for report generation. Do not attach information that you are not authorized to disclose. Payment and settlement details are not sent to the AI model.
           </p>
         </section>
       </LegalPage>
@@ -83,13 +83,15 @@ export default async function PrivacyPage() {
         <h2>AI 서비스</h2>
         <p>
           AI GTM 어시스턴트에는 계산된 점수, 진단 응답 단계, 선택된 액션,
-          목표·자원·기한·제약과 승인된 근거를 OpenAI에 전달합니다. 유료 AI 전문가
-          서비스에서 사용자가 직접 첨부한 파일은 보고서 생성을 위해 만료 링크로
-          OpenAI에 비공개 전송되며 공개 웹 검색에는 제공하지 않습니다. OpenAI 요청은
-          저장 비활성화로 처리하고, 첨부 원문은 Borderless의 비공개 증빙 저장소에,
-          생성 보고서는 주문 기록에 계정 삭제 또는 관련 법정 보관기간까지 보관합니다.
-          공개 권한이 없는 자료는 첨부하지 않아야 하며 결제·정산 정보는 AI 모델에
-          전달하지 않습니다.
+          목표·자원·기한·제약과 승인된 근거를 OpenAI에 전달합니다. 시장 사전조사를
+          위해 첨부한 파일은 근거 추출 목적으로 OpenAI에 비공개 전송하며 공개 웹 검색에는
+          제공하지 않습니다. 정제에 성공하면 Borderless는 원본 파일을 삭제하고 계획에는
+          개인정보를 제거한 근거 원장만 보관합니다. OpenAI API 요청은 저장 비활성화로
+          처리하지만, 별도 보존 제어가 적용되지 않는 경우 OpenAI가 입력·출력을 포함한
+          오용 모니터링 로그를 기본 최대 30일 보관할 수 있습니다. 유료 AI 전문가 서비스의
+          첨부 파일은 비공개 증빙 저장소에 보관하고 보고서 생성을 위해 만료 링크로 OpenAI에
+          비공개 전송합니다. 공개 권한이 없는 자료는 첨부하지 않아야 하며 결제·정산 정보는
+          AI 모델에 전달하지 않습니다.
         </p>
       </section>
     </LegalPage>
