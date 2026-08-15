@@ -2,6 +2,17 @@ export type UserRole = "startup" | "provider" | "admin";
 export type JourneyPhase = "pre_entry" | "initial_entry" | "scale";
 /** 1 미인지 · 2 인지·계획 · 3 실행·사례 · 4 반복·확인 */
 export type ReadinessLevel = 1 | 2 | 3 | 4;
+export type SalesMotion = "direct" | "partner" | "hybrid" | "unknown";
+export type QuestionApplicability = "required" | "deferred_unmet" | "structural_not_applicable";
+export type DeferredReason =
+  | "target_country_missing"
+  | "sales_motion_unknown"
+  | "local_test_not_started"
+  | "paid_evidence_missing";
+export interface DeferredQuestionGroup {
+  reason: DeferredReason;
+  questionIds: string[];
+}
 export type ReadinessStatus =
   | "준비 1단계"
   | "준비 2단계"
@@ -82,6 +93,13 @@ export interface ReadinessResult {
   achievedStageId: string | null;
   /** 지금 집중할 단계. 전부 통과하면 null */
   currentStageId: string | null;
+  /** 현재 응답에서 실제로 답해야 하는 문항 기준 진행률 */
+  progress: { answered: number; required: number; percent: number };
+  /** 선행조건이 충족되면 다시 묻는 문항 */
+  deferredIds: string[];
+  /** 현재 사업 구조상 묻지 않는 문항 */
+  notApplicableIds: string[];
+  deferredGroups: DeferredQuestionGroup[];
 }
 
 export interface ServiceOffering {

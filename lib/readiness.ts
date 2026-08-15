@@ -6,15 +6,20 @@ import {
   POSITIVE_LEVEL,
   getIntakeItems,
   getIntakeQuestions,
-  getIntakeStages
+  getQuestionNumber,
+  getIntakeStages,
+  type SurveyVersion
 } from "@/lib/intake-questions";
 import type { Locale } from "@/lib/i18n";
 import type {
   ActionRecommendation,
+  DeferredReason,
   ReadinessAnswer,
   ReadinessLevel,
+  QuestionApplicability,
   ReadinessResult,
   ReadinessStatus,
+  SalesMotion,
   StageResult,
   TargetMarketContext
 } from "@/lib/types";
@@ -44,12 +49,114 @@ const EN_LEVEL_MEANING: Record<ReadinessLevel, string> = {
 };
 type AnswerInsightStatus = "blocker" | "deferred" | "needs_work" | "passed" | "strength";
 
-export const questionsOfStage = (stageId: string, locale: Locale = "ko") => {
+export const questionsOfStage = (
+  stageId: string,
+  locale: Locale = "ko",
+  version: SurveyVersion = "4.0"
+) => {
   const items = new Map(getIntakeItems(locale).map((item) => [item.id, item]));
-  return getIntakeQuestions(locale).filter(
+  return getIntakeQuestions(locale, version).filter(
     (question) => items.get(question.itemId)!.stageId === stageId
   );
 };
+
+const PARTNER_ONLY_IDS = new Set([
+  "partner-actual-work",
+  "partner-economics",
+  "partner-shortfall",
+  "contract-control",
+  "contract-exit",
+  "contract-switch-cost",
+  "contract-dependency-limit"
+]);
+
+const V5_TARGET_COUNTRY_IDS = new Set(
+  getIntakeQuestions("ko", "5.0").slice(13, 31).map((question) => question.id)
+);
+
+export interface AssessmentQuestionContext {
+  surveyVersion: SurveyVersion;
+  salesMotion: SalesMotion | null;
+  targetMarket?: TargetMarketContext | null;
+  answers: ReadinessAnswer[];
+}
+
+export interface ResolvedAssessmentQuestions {
+  requiredIds: string[];
+  deferredIds: string[];
+  notApplicableIds: string[];
+  applicabilityById: ReadonlyMap<string, QuestionApplicability>;
+  deferredGroups: Array<{ reason: DeferredReason; questionIds: string[] }>;
+}
+
+export function resolveAssessmentQuestions(context: AssessmentQuestionContext): ResolvedAssessmentQuestions {
+  const questions = getIntakeQuestions("ko", context.surveyVersion);
+  if (context.surveyVersion === "4.0") {
+    return {
+      requiredIds: questions.map((question) => question.id),
+      deferredIds: [],
+      notApplicableIds: [],
+      applicabilityById: new Map(questions.map((question) => [question.id, "required" as const])),
+      deferredGroups: []
+    };
+  }
+
+  const levels = new Map(context.answers.map((answer) => [answer.questionId, answer.level]));
+  const structural = new Set<string>();
+  if (context.salesMotion === "direct") {
+    for (const id of PARTNER_ONLY_IDS) structural.add(id);
+  }
+  if ((levels.get(PAID_PILOT_QUESTION_ID) ?? 0) < POSITIVE_LEVEL) {
+    structural.add("alloc-concentration");
+  }
+
+  const deferredByReason = new Map<DeferredReason, string[]>([
+    ["target_country_missing", []],
+    ["sales_motion_unknown", []],
+    ["local_test_not_started", []],
+    ["paid_evidence_missing", []]
+  ]);
+  const requiredIds: string[] = [];
+  const deferredIds: string[] = [];
+  const targetCountryMissing = !context.targetMarket?.targetCountry.trim();
+
+  for (const question of questions) {
+    if (structural.has(question.id)) continue;
+    const reason: DeferredReason | null = targetCountryMissing && V5_TARGET_COUNTRY_IDS.has(question.id)
+      ? "target_country_missing"
+      : context.salesMotion === "unknown" && PARTNER_ONLY_IDS.has(question.id)
+        ? "sales_motion_unknown"
+        : question.id === "test-defects" && (levels.get("test-environment") ?? 0) < POSITIVE_LEVEL
+          ? "local_test_not_started"
+          : question.id === "test-no-discount" && (levels.get(PAID_PILOT_QUESTION_ID) ?? 0) < POSITIVE_LEVEL
+            ? "paid_evidence_missing"
+            : null;
+    if (reason) {
+      deferredIds.push(question.id);
+      deferredByReason.get(reason)!.push(question.id);
+    } else {
+      requiredIds.push(question.id);
+    }
+  }
+
+  const notApplicableIds = questions.filter((question) => structural.has(question.id)).map((question) => question.id);
+  return {
+    requiredIds,
+    deferredIds,
+    notApplicableIds,
+    applicabilityById: new Map(questions.map((question) => [
+      question.id,
+      structural.has(question.id)
+        ? "structural_not_applicable" as const
+        : deferredIds.includes(question.id)
+          ? "deferred_unmet" as const
+          : "required" as const
+    ])),
+    deferredGroups: [...deferredByReason.entries()]
+      .filter(([, questionIds]) => questionIds.length)
+      .map(([reason, questionIds]) => ({ reason, questionIds }))
+  };
+}
 
 export function normalizeGateMessage(message: string) {
   return Object.entries(LEGACY_STATUS_LABELS)
@@ -77,18 +184,30 @@ export function isTargetMarketConfirmed(targetMarket?: TargetMarketContext | nul
 export function buildStageAnswerInsights(
   submitted: ReadinessAnswer[],
   stageId: string,
-  locale: Locale = "ko"
+  locale: Locale = "ko",
+  version: SurveyVersion = "4.0",
+  salesMotion: SalesMotion = "unknown",
+  targetMarket?: TargetMarketContext | null
 ) {
   const stages = getIntakeStages(locale);
-  const questions = getIntakeQuestions(locale);
+  const questions = getIntakeQuestions(locale, version);
   const itemsCatalog = getIntakeItems(locale);
   const stage = stages.find((entry) => entry.id === stageId);
   if (!stage) throw new Error(`Unknown readiness stage: ${stageId}`);
 
   const answerById = new Map(submitted.map((answer) => [answer.questionId, answer]));
-  const stageQuestions = questionsOfStage(stageId, locale);
+  const resolved = resolveAssessmentQuestions({
+    surveyVersion: version,
+    salesMotion,
+    targetMarket,
+    answers: submitted
+  });
+  const required = new Set(resolved.requiredIds);
+  const notApplicable = new Set(resolved.notApplicableIds);
+  const stageQuestions = questionsOfStage(stageId, locale, version)
+    .filter((question) => !notApplicable.has(question.id));
   const paidPilotAnswer = answerById.get(PAID_PILOT_QUESTION_ID);
-  const paidPilotDeferred = stageId === "early" && (
+  const paidPilotDeferred = version === "4.0" && stageId === "early" && (
     !paidPilotAnswer ||
     paidPilotAnswer.level < POSITIVE_LEVEL ||
     !paidPilotAnswer.evidence?.value
@@ -120,7 +239,7 @@ export function buildStageAnswerInsights(
 
     return [{
       questionId: question.id,
-      number: questions.findIndex((entry) => entry.id === question.id) + 1,
+      number: getQuestionNumber(question.id, version)!,
       question: question.question,
       level: answer.level,
       answerText: question.options[answer.level - 1],
@@ -155,7 +274,7 @@ export function buildStageAnswerInsights(
       : itemQuestions;
     const totalWeight = gateQuestions.reduce((sum, question) => sum + question.weight, 0);
     const positiveWeight = gateQuestions
-      .filter((question) => (answerById.get(question.id)?.level ?? 0) >= POSITIVE_LEVEL)
+      .filter((question) => required.has(question.id) && (answerById.get(question.id)?.level ?? 0) >= POSITIVE_LEVEL)
       .reduce((sum, question) => sum + question.weight, 0);
     return {
       id: item.id,
@@ -188,9 +307,25 @@ export function buildStageAnswerInsights(
   };
 }
 
-export function isCompleteStageAnswerSet(answers: ReadinessAnswer[]) {
+export function isCompleteStageAnswerSet(
+  answers: ReadinessAnswer[],
+  context?: AssessmentQuestionContext
+) {
   const answered = new Set(answers.map((answer) => answer.questionId));
   if (answered.size !== answers.length) return false;
+
+  if (context?.surveyVersion === "5.0") {
+    const resolved = resolveAssessmentQuestions({ ...context, answers });
+    return STAGES.some((_, stageIndex) => {
+      const stageIds = new Set(STAGES.slice(0, stageIndex + 1).map((stage) => stage.id));
+      const expected = resolved.requiredIds.filter((id) => {
+        const question = getIntakeQuestions("ko", "5.0").find((entry) => entry.id === id)!;
+        return stageIds.has(getIntakeItems("ko").find((item) => item.id === question.itemId)!.stageId);
+      });
+      return expected.length > 0 && expected.every((id) => answered.has(id)) &&
+        [...answered].filter((id) => resolved.requiredIds.includes(id)).length === expected.length;
+    });
+  }
 
   return STAGES.some((_, stageIndex) => {
     const expected = STAGES.slice(0, stageIndex + 1).flatMap((stage) =>
@@ -203,9 +338,14 @@ export function isCompleteStageAnswerSet(answers: ReadinessAnswer[]) {
   });
 }
 
-export function validateAssessmentAnswers(answers: ReadinessAnswer[], locale: Locale = "ko") {
+export function validateAssessmentAnswers(
+  answers: ReadinessAnswer[],
+  locale: Locale = "ko",
+  context?: AssessmentQuestionContext
+) {
   const errors: Record<string, string> = {};
-  const valid = new Set(INTAKE_QUESTIONS.map((question) => question.id));
+  const version = context?.surveyVersion ?? "4.0";
+  const valid = new Set(getIntakeQuestions(locale, version).map((question) => question.id));
 
   for (const answer of answers) {
     if (!valid.has(answer.questionId)) {
@@ -215,7 +355,7 @@ export function validateAssessmentAnswers(answers: ReadinessAnswer[], locale: Lo
     }
   }
 
-  if (!isCompleteStageAnswerSet(answers)) {
+  if (!isCompleteStageAnswerSet(answers, context ? { ...context, answers } : undefined)) {
     errors._form = locale === "en"
       ? "Please answer every question once through the completed stage."
       : "완료한 단계까지 모든 문항에 한 번씩 답해 주세요.";
@@ -228,15 +368,17 @@ export function hasPassedStage(
   submitted: ReadinessAnswer[],
   stageId: string,
   targetMarket?: TargetMarketContext | null,
-  locale: Locale = "ko"
+  locale: Locale = "ko",
+  version: SurveyVersion = "4.0",
+  salesMotion: SalesMotion = "unknown"
 ) {
   return (
-    calculateReadiness(submitted, targetMarket, locale).stages.find((stage) => stage.stageId === stageId)
+    calculateReadiness(submitted, targetMarket, locale, version, salesMotion).stages.find((stage) => stage.stageId === stageId)
       ?.passed ?? false
   );
 }
 
-export function calculateReadiness(
+function calculateReadinessV4(
   submitted: ReadinessAnswer[],
   targetMarket?: TargetMarketContext | null,
   locale: Locale = "ko"
@@ -375,8 +517,167 @@ export function calculateReadiness(
     actions,
     stages,
     achievedStageId: achievedIndex >= 0 ? stages[achievedIndex].stageId : null,
-    currentStageId: current?.stageId ?? null
+    currentStageId: current?.stageId ?? null,
+    progress: {
+      answered: submitted.length,
+      required: INTAKE_QUESTIONS.length,
+      percent: Math.round((submitted.length / INTAKE_QUESTIONS.length) * 100)
+    },
+    deferredIds: [],
+    notApplicableIds: [],
+    deferredGroups: []
   };
+}
+
+const DEFERRED_MESSAGE: Record<string, { ko: string; en: string }> = {
+  target_country_missing: {
+    ko: "초기 목표국가를 정하면 현지 시장·규제 문항을 이어서 확인합니다.",
+    en: "Confirm an initial target country to continue the local market and regulatory questions."
+  },
+  sales_motion_unknown: {
+    ko: "판매 방식(직접·파트너·혼합)을 정하면 파트너 관련 문항을 이어서 확인합니다.",
+    en: "Choose a sales motion to continue the partner-related questions."
+  },
+  local_test_not_started: {
+    ko: "현지 환경 시험을 시작하면 발견 문제와 해결 상태를 확인합니다.",
+    en: "Start a local-environment test to review defects and resolution status."
+  },
+  paid_evidence_missing: {
+    ko: "유료 고객 증거가 생기면 정상 가격 결제와 매출 집중도를 확인합니다.",
+    en: "Add paid-customer evidence to review full-price payment and revenue concentration."
+  }
+};
+
+function calculateReadinessV5(
+  submitted: ReadinessAnswer[],
+  targetMarket: TargetMarketContext | null | undefined,
+  locale: Locale,
+  salesMotion: SalesMotion
+): ReadinessResult {
+  const stagesCatalog = getIntakeStages(locale);
+  const itemsCatalog = getIntakeItems(locale);
+  const questions = getIntakeQuestions(locale, "5.0");
+  const itemById = new Map(itemsCatalog.map((item) => [item.id, item]));
+  const levels = new Map(submitted.map((answer) => [answer.questionId, answer.level]));
+  const evidence = new Map(submitted.map((answer) => [answer.questionId, answer.evidence?.value.trim()]));
+  const resolved = resolveAssessmentQuestions({
+    surveyVersion: "5.0",
+    salesMotion,
+    targetMarket,
+    answers: submitted
+  });
+  const required = new Set(resolved.requiredIds);
+  const applicable = new Set([...resolved.requiredIds, ...resolved.deferredIds]);
+  const positive = (id: string) => (levels.get(id) ?? 0) >= POSITIVE_LEVEL;
+
+  const stages: StageResult[] = stagesCatalog.map((stage) => {
+    const stageQuestions = questions.filter(
+      (question) => itemById.get(question.itemId)!.stageId === stage.id && applicable.has(question.id)
+    );
+    const rawTotal = stageQuestions.reduce((sum, question) => sum + question.weight, 0);
+    const rawPositive = stageQuestions
+      .filter((question) => required.has(question.id) && positive(question.id))
+      .reduce((sum, question) => sum + question.weight, 0);
+    const ratio = rawTotal ? rawPositive / rawTotal : 1;
+    const blockers = stageQuestions
+      .filter((question) => required.has(question.id) && question.critical &&
+        (!positive(question.id) || !evidence.get(question.id)))
+      .map((question) => question.question);
+    const prerequisiteBlockers = stage.id === "preparing" && !isTargetMarketConfirmed(targetMarket)
+      ? [locale === "en" ? "Confirm the initial target market." : "초기 목표시장 정보를 확인해 주세요."]
+      : [];
+    const positiveScore = Math.round(stage.weight * ratio * 10) / 10;
+    return {
+      stageId: stage.id,
+      label: stage.label,
+      gate: stage.gate,
+      unlocks: stage.unlocks,
+      positiveScore,
+      totalScore: stage.weight,
+      ratio,
+      blockers,
+      prerequisiteBlockers,
+      passed: ratio >= GATE_THRESHOLD && blockers.length === 0 && prerequisiteBlockers.length === 0,
+      scoreToPass: Math.round(Math.max(0, stage.weight * GATE_THRESHOLD - positiveScore) * 10) / 10
+    };
+  });
+
+  let achievedIndex = -1;
+  for (const [index, stage] of stages.entries()) {
+    if (!stage.passed) break;
+    achievedIndex = index;
+  }
+  const current = stages[achievedIndex + 1] ?? null;
+  const currentQuestionIds = new Set(
+    current ? questionsOfStage(current.stageId, locale, "5.0").map((question) => question.id) : []
+  );
+  const gateMessages = current
+    ? [
+        ...current.prerequisiteBlockers,
+        ...current.blockers,
+        ...resolved.deferredGroups
+          .filter((group) => group.questionIds.some((id) => currentQuestionIds.has(id)))
+          .map((group) => DEFERRED_MESSAGE[group.reason][locale]),
+        ...(current.blockers.length === 0 && current.scoreToPass > 0
+          ? [locale === "en"
+              ? `${current.scoreToPass} weighted points remain to pass ${current.label}.`
+              : `${current.label} 통과까지 ${current.scoreToPass}점이 남았습니다.`]
+          : [])
+      ]
+    : [];
+  const actions: ActionRecommendation[] = current
+    ? questionsOfStage(current.stageId, locale, "5.0")
+        .filter((question) => required.has(question.id) &&
+          (!positive(question.id) || (question.critical && !evidence.get(question.id))))
+        .sort((a, b) => Number(!!b.critical) - Number(!!a.critical) || b.weight - a.weight)
+        .slice(0, 5)
+        .map((question) => {
+          const item = itemById.get(question.itemId)!;
+          const stage = stagesCatalog.find((entry) => entry.id === item.stageId)!;
+          return {
+            questionId: question.id,
+            title: question.action,
+            owner: item.owner,
+            completionEvidence: question.followUp,
+            phase: stage.journeyPhase,
+            serviceTag: item.serviceTag,
+            urgency: question.critical ? "P0" as const : "P1" as const
+          };
+        })
+    : [];
+  const answeredRequired = submitted.filter((answer) => required.has(answer.questionId)).length;
+
+  return {
+    overallScore: Math.round(stages.reduce((sum, stage) => sum + stage.positiveScore, 0)),
+    domainScores: Object.fromEntries(stages.map((stage) => [stage.stageId, Math.round(stage.ratio * 100)])),
+    status: (current?.label ?? (locale === "en" ? "Ready to Enter" : "진출 실행 가능")) as ReadinessStatus,
+    isOnHold: gateMessages.length > 0,
+    gateMessages: gateMessages.map(normalizeGateMessage),
+    actions,
+    stages,
+    achievedStageId: achievedIndex >= 0 ? stages[achievedIndex].stageId : null,
+    currentStageId: current?.stageId ?? null,
+    progress: {
+      answered: answeredRequired,
+      required: resolved.requiredIds.length,
+      percent: resolved.requiredIds.length ? Math.round((answeredRequired / resolved.requiredIds.length) * 100) : 100
+    },
+    deferredIds: resolved.deferredIds,
+    notApplicableIds: resolved.notApplicableIds,
+    deferredGroups: resolved.deferredGroups
+  };
+}
+
+export function calculateReadiness(
+  submitted: ReadinessAnswer[],
+  targetMarket?: TargetMarketContext | null,
+  locale: Locale = "ko",
+  version: SurveyVersion = "4.0",
+  salesMotion: SalesMotion = "unknown"
+): ReadinessResult {
+  return version === "5.0"
+    ? calculateReadinessV5(submitted, targetMarket, locale, salesMotion)
+    : calculateReadinessV4(submitted, targetMarket, locale);
 }
 
 export function decidePlanHorizons(result: ReadinessResult): (30 | 60 | 90)[] {
