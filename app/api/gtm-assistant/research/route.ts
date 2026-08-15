@@ -204,19 +204,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: en ? "The saved research documents are invalid." : "저장된 조사 자료 상태가 올바르지 않습니다." }, { status: 500 });
   }
   const researchUploadsEnabled = process.env.AI_GTM_RESEARCH_UPLOADS_ENABLED === "true";
-  let researchDocuments = researchUploadsEnabled ? parsedDocuments.data : [];
-  if (researchUploadsEnabled && existingPlan?.id && researchDocuments.length > 0) {
-    if (existingPlan.created_by !== user.id) {
-      return NextResponse.json({ message: en ? "You cannot use documents from this plan." : "이 계획의 자료를 사용할 수 없습니다." }, { status: 403 });
-    }
-    try {
-      researchDocuments = await prepareResearchDocuments({
-        admin, client, documents: researchDocuments, planId: existingPlan.id,
-        assessmentId: assessment.id, userId: user.id, locale
-      });
-    } catch (error) {
-      return NextResponse.json({ message: error instanceof Error ? error.message : en ? "We couldn't prepare the uploaded documents." : "업로드한 자료를 준비하지 못했습니다." }, { status: 422 });
-    }
+  let researchDocuments = parsedDocuments.data;
+  if (researchDocuments.length > 0 && existingPlan?.created_by !== user.id) {
+    return NextResponse.json({ message: en ? "You cannot use documents from this plan." : "이 계획의 자료를 사용할 수 없습니다." }, { status: 403 });
   }
   const documentDigests = researchDocumentDigests(researchDocuments);
   const storedResearch = existingPlan?.market_research && typeof existingPlan.market_research === "object" && !Array.isArray(existingPlan.market_research)
@@ -235,6 +225,9 @@ export async function POST(request: Request) {
       cached: true,
       documents: researchDocuments
     });
+  }
+  if (!researchUploadsEnabled && researchDocuments.length > 0) {
+    return NextResponse.json({ message: en ? "Document-assisted research is temporarily unavailable." : "자료 기반 시장조사를 일시적으로 사용할 수 없습니다." }, { status: 503 });
   }
   let planId = existingPlan?.id;
   let reservationCount = existingPlan?.market_research_count ?? 0;
@@ -298,6 +291,16 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (error) return NextResponse.json({ message: en ? "We couldn't reserve the research request." : "시장 조사 요청을 예약하지 못했습니다." }, { status: 503 });
     if (!reserved) return NextResponse.json({ message: en ? "Another research request is already running. Try again after it finishes." : "다른 시장 조사 요청이 진행 중입니다. 완료된 뒤 다시 시도해 주세요." }, { status: 409 });
+  }
+  if (researchUploadsEnabled && researchDocuments.length > 0) {
+    try {
+      researchDocuments = await prepareResearchDocuments({
+        admin, client, documents: researchDocuments, planId,
+        assessmentId: assessment.id, userId: user.id, locale
+      });
+    } catch (error) {
+      return NextResponse.json({ message: error instanceof Error ? error.message : en ? "We couldn't prepare the uploaded documents." : "업로드한 자료를 준비하지 못했습니다.", documents: researchDocuments }, { status: 422 });
+    }
   }
   const missingSizingInputs = getMissingMarketSizingInputs(founderContext);
   const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";

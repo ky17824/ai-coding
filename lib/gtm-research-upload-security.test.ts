@@ -25,14 +25,16 @@ describe("assistant research upload security contract", () => {
     expect(route).toContain('rpc("append_gtm_research_document"');
   });
 
-  it("extracts and deletes private originals before reserving public research", () => {
+  it("reserves a bounded research run before extracting private originals", () => {
     const route = readFileSync("app/api/gtm-assistant/research/route.ts", "utf8");
-    const preparation = route.indexOf("prepareResearchDocuments");
-    const reservation = route.indexOf("const quotaDecision = researchQuotaDecision");
+    const reservation = route.indexOf("const { data: reserved");
+    const preparation = route.indexOf("researchDocuments = await prepareResearchDocuments");
+    const publicResearch = route.indexOf("const publicResearchContext");
     const publicRequest = route.slice(route.indexOf("const publicResearchContext"), route.indexOf("const sizingInstructions"));
 
     expect(preparation).toBeGreaterThan(0);
-    expect(reservation).toBeGreaterThan(preparation);
+    expect(preparation).toBeGreaterThan(reservation);
+    expect(publicResearch).toBeGreaterThan(preparation);
     expect(route).toContain('store: false');
     expect(route).toContain('rpc("update_gtm_research_document"');
     expect(route).toContain('storage.from("evidence").remove');
