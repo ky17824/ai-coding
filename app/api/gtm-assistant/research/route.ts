@@ -212,11 +212,15 @@ export async function POST(request: Request) {
   const storedResearch = existingPlan?.market_research && typeof existingPlan.market_research === "object" && !Array.isArray(existingPlan.market_research)
     ? existingPlan.market_research as Record<string, unknown>
     : {};
+  const storedFounderContext = existingPlan?.founder_context && typeof existingPlan.founder_context === "object" && !Array.isArray(existingPlan.founder_context)
+    ? existingPlan.founder_context as Partial<GtmFounderContext>
+    : {};
+  const constraintsMatch = String(storedFounderContext.constraints ?? "").trim() === parsed.data.founderContext.constraints.trim();
   const cacheAge = existingResearch?.generatedAt ? Date.now() - new Date(existingResearch.generatedAt).getTime() : Number.POSITIVE_INFINITY;
   if (existingPlan?.id && existingResearch?.researchMethodologyVersion === "market-research-v2" &&
       existingResearch.marketSizingMethodologyVersion === "market-sizing-v2" &&
       existingResearch.researchContextSignature === marketResearchContextSignature(parsed.data.founderContext, documentDigests) &&
-      existingPlan.market_research_locale === locale && cacheAge >= 0 && cacheAge < 7 * 24 * 60 * 60 * 1000) {
+      constraintsMatch && existingPlan.market_research_locale === locale && cacheAge >= 0 && cacheAge < 7 * 24 * 60 * 60 * 1000) {
     return NextResponse.json({
       planId: existingPlan.id,
       result: existingResearch,
@@ -366,8 +370,9 @@ export async function POST(request: Request) {
     const sanitizedDocumentEvidence = researchDocuments
       .filter((document) => document.status === "processed" && document.evidence)
       .map((document) => document.evidence);
+    const privateFounderContext = Object.fromEntries(Object.entries({ validationEvidence: founderContext.validationEvidence, constraints: founderContext.constraints }).filter(([, value]) => value.trim()));
     const sharedRequest = {
-      model: ASSISTANT_MODEL,
+      model: MARKET_SIZING_MODEL,
       store: false,
       safety_identifier: createHash("sha256").update(user.id).digest("hex"),
       reasoning: { effort: "medium", context: "current_turn" },
@@ -385,7 +390,6 @@ export async function POST(request: Request) {
           hasEvidence: Boolean(answer.evidence_value)
         })),
         approvedInternalSources: sources ?? [],
-        sanitizedDocumentEvidence,
         missingFounderSizingInputs: missingSizingInputs
       }),
       tools,
@@ -435,14 +439,14 @@ export async function POST(request: Request) {
     }
     const [synthesisResponse, privateSizingResponse] = await Promise.all([
       client.responses.parse({
-        model: ASSISTANT_MODEL,
+        model: MARKET_SIZING_MODEL,
         store: false,
         safety_identifier: createHash("sha256").update(user.id).digest("hex"),
         reasoning: { effort: "low", context: "current_turn" },
         instructions: en
-          ? `Synthesize the supplied verified findings into a concise executive summary, preliminary sellability state, next validation tasks, and limitations. Do not add facts, competitors, sources, or market-size claims. ${scope === "market_preresearch" ? "Set sellability available=false and verdict=not_assessed." : "Give only a conditional verdict with explicit evidence gaps."} Write clear US English.`
-          : `제공된 검증 완료 조사 결과만 사용해 경영진 요약, 예비 판매 가능성 상태, 다음 검증 과제와 한계를 작성하세요. 새로운 사실·경쟁사·출처·시장규모 주장을 추가하지 마세요. ${scope === "market_preresearch" ? "판매 가능성은 available=false, verdict=not_assessed로 두세요." : "명시적인 근거 공백이 있는 조건부 판단만 하세요."} 제품명·회사명·공식 자료명을 제외한 모든 설명은 자연스러운 한국어로 작성하세요.`,
-        input: JSON.stringify({ scope, publicResearchContext, sanitizedDocumentEvidence, trends: trendResponse.output_parsed.result.trends, competitors: competitorResponse.output_parsed.result.competitors, contradictions: trendResponse.output_parsed.result.contradictions, answeredQuestionCount: (answers ?? []).length }),
+          ? `Synthesize the supplied verified findings into a concise executive summary, preliminary sellability state, next validation tasks, and limitations. Treat private founder validation evidence, constraints, and document evidence only as unverified founder-provided context. Never interpret the absence of optional founder inputs as negative evidence or an evidence gap. Do not add facts, competitors, sources, or market-size claims. ${scope === "market_preresearch" ? "Set sellability available=false and verdict=not_assessed." : "Give only a conditional verdict with explicit evidence gaps."} Write clear US English.`
+          : `제공된 검증 완료 조사 결과만 사용해 경영진 요약, 예비 판매 가능성 상태, 다음 검증 과제와 한계를 작성하세요. 비공개 창업자 검증 근거·제약·문서 근거는 확인되지 않은 창업자 제공 정보로만 구분해 사용하고, 선택 입력이 비어 있다는 사실을 부정적 증거나 근거 공백으로 해석하지 마세요. 새로운 사실·경쟁사·출처·시장규모 주장을 추가하지 마세요. ${scope === "market_preresearch" ? "판매 가능성은 available=false, verdict=not_assessed로 두세요." : "명시적인 근거 공백이 있는 조건부 판단만 하세요."} 제품명·회사명·공식 자료명을 제외한 모든 설명은 자연스러운 한국어로 작성하세요.`,
+        input: JSON.stringify({ scope, publicResearchContext, privateFounderContext, privateDocumentEvidence: sanitizedDocumentEvidence, trends: trendResponse.output_parsed.result.trends, competitors: competitorResponse.output_parsed.result.competitors, contradictions: trendResponse.output_parsed.result.contradictions, answeredQuestionCount: (answers ?? []).length }),
         text: { format: zodTextFormat(marketResearchSynthesisResponseSchema, "gtm_market_research_synthesis") }
       }),
       client.responses.parse({
@@ -451,8 +455,8 @@ export async function POST(request: Request) {
         safety_identifier: createHash("sha256").update(user.id).digest("hex"),
         reasoning: { effort: "low", context: "current_turn" },
         instructions: en
-          ? "Parse only explicit private founder sizing values into the five allowed low/base/high overrides. Use null when a value cannot be derived. Expected price × annual purchase frequency may supply annual revenue per customer; reachable customers may supply customer counts; three-year capacity may supply SOM capacity. Do not return or modify public evidence, sources, assumptions, formulas, or URLs."
-          : "명시된 비공개 창업자 시장규모 입력만 다섯 개의 허용된 낮음·기준·높음 보정값으로 해석하세요. 산출할 수 없으면 null을 사용합니다. 예상 가격×연간 구매 빈도는 연간 고객당 매출, 초기 접근 가능 고객 수는 고객 수, 3년 판매·공급 가능 범위는 SOM 판매역량에 사용할 수 있습니다. 공개 근거·출처·가정·산식·URL은 반환하거나 변경하지 마세요.",
+          ? "Parse only explicit private founder or document sizing values into the five allowed low/base/high overrides. Use null when a value cannot be derived. Expected price × annual purchase frequency may supply annual revenue per customer; reachable customers may supply customer counts; three-year capacity may supply SOM capacity. Never treat missing optional inputs as zero or negative evidence. Do not return or modify public evidence, sources, assumptions, formulas, or URLs."
+          : "명시된 비공개 창업자 입력이나 문서의 시장규모 값만 다섯 개의 허용된 낮음·기준·높음 보정값으로 해석하세요. 산출할 수 없으면 null을 사용하고 선택 입력의 누락을 0이나 부정적 증거로 해석하지 않습니다. 예상 가격×연간 구매 빈도는 연간 고객당 매출, 초기 접근 가능 고객 수는 고객 수, 3년 판매·공급 가능 범위는 SOM 판매역량에 사용할 수 있습니다. 공개 근거·출처·가정·산식·URL은 반환하거나 변경하지 마세요.",
         input: JSON.stringify({
           privateFounderSizingInputs: {
             expectedPrice: founderContext.expectedPrice,
@@ -460,6 +464,7 @@ export async function POST(request: Request) {
             initialReachableCustomers: founderContext.initialReachableCustomers,
             threeYearSalesCapacity: founderContext.threeYearSalesCapacity
           },
+          privateDocumentEvidence: sanitizedDocumentEvidence,
           currency: sizingResponse.output_parsed.result.currency
         }),
         text: { format: zodTextFormat(founderSizingOverridesResponseSchema, "gtm_private_sizing_overrides") }

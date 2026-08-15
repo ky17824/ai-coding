@@ -190,12 +190,14 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
   const [researchDisplaySignature, setResearchDisplaySignature] = useState(
     initialPlan?.marketResearch ? marketResearchContextSignature(initialPlan.founderContext, researchDocumentDigests(initialPlan.marketResearchDocuments ?? [])) : ""
   );
+  const [researchDisplayConstraints, setResearchDisplayConstraints] = useState(initialPlan?.marketResearch ? initialPlan.founderContext.constraints ?? "" : "");
   const [busy, setBusy] = useState(false);
   const [fileBusy, setFileBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [workshopFailed, setWorkshopFailed] = useState(false);
   const researchMatchesContext = Boolean(
-    marketResearch && researchDisplaySignature === marketResearchContextSignature(context, researchDocumentDigests(researchDocuments))
+    marketResearch && researchDisplaySignature === marketResearchContextSignature(context, researchDocumentDigests(researchDocuments)) &&
+    researchDisplayConstraints.trim() === context.constraints.trim()
   );
 
   async function runWorkshop(answerOverride?: string, forcePlan = false) {
@@ -286,6 +288,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
       const nextDocuments = payload.documents ?? researchDocuments;
       setResearchDocuments(nextDocuments);
       setResearchDisplaySignature(marketResearchContextSignature(context, researchDocumentDigests(nextDocuments)));
+      setResearchDisplayConstraints(context.constraints);
       setNotice(payload.message ?? (en ? "The AI market and competitive research is ready. Review it before continuing." : "AI 시장·경쟁 사전조사를 만들었습니다. 내용을 확인해 주세요."));
     } catch (error) {
       setNotice(error instanceof Error ? error.message : en ? "Something went wrong." : "오류가 발생했습니다.");
@@ -431,16 +434,16 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
           <label>{en ? "Differentiation" : "차별성"}<input value={context.differentiation} onChange={(event) => setContext({ ...context, differentiation: event.target.value })} placeholder={en ? "Why would customers switch?" : "고객이 바꿀 이유"} /></label>
           <label>{en ? "Delivery model" : "제공 방식"}<input value={context.deliveryModel} onChange={(event) => setContext({ ...context, deliveryModel: event.target.value })} placeholder={en ? "e.g., SaaS, export, or local partner" : "예: SaaS, 수출, 현지 파트너"} /></label>
           <label>{en ? "Revenue model" : "수익 방식"}<input value={context.revenueModel} onChange={(event) => setContext({ ...context, revenueModel: event.target.value })} placeholder={en ? "e.g., Monthly subscription or project fee" : "예: 월 구독, 건별 계약"} /></label>
-          <label>{en ? "Expected price or annual contract value" : "예상 가격·연간 계약금액"}<input value={context.expectedPrice} onChange={(event) => setContext({ ...context, expectedPrice: event.target.value })} placeholder={en ? "e.g., US$120/year or US$20K ACV" : "예: 연 US$120 또는 연간 계약금액 US$20K"} /></label>
-          <label>{en ? "Annual purchase frequency or term" : "연간 구매 빈도·계약기간"}<input value={context.annualPurchaseFrequency} onChange={(event) => setContext({ ...context, annualPurchaseFrequency: event.target.value })} placeholder={en ? "e.g., 2 purchases/year or 12-month contract" : "예: 연 2회 또는 12개월 계약"} /></label>
-          <label>{en ? "Initially reachable customers" : "초기에 직접 접근 가능한 고객 수"}<input value={context.initialReachableCustomers} onChange={(event) => setContext({ ...context, initialReachableCustomers: event.target.value })} placeholder={en ? "e.g., 30 qualified retailers through one partner" : "예: 파트너를 통해 접촉 가능한 유통사 30곳"} /></label>
-          <label>{en ? "Three-year sales capacity" : "3년 판매·공급 가능 범위"}<input value={context.threeYearSalesCapacity} onChange={(event) => setContext({ ...context, threeYearSalesCapacity: event.target.value })} placeholder={en ? "e.g., US$500K or 5,000 units" : "예: US$500K 또는 5,000개"} /></label>
+          <label>{en ? "Expected price or annual contract value (Optional)" : "예상 가격·연간 계약금액 (선택)"}<input value={context.expectedPrice} onChange={(event) => setContext({ ...context, expectedPrice: event.target.value })} placeholder={en ? "Optional · Leave blank if unknown; AI will estimate from public evidence." : "선택 · 모르시면 비워 두세요. AI가 공개자료로 추정합니다."} /></label>
+          <label>{en ? "Annual purchase frequency or term (Optional)" : "연간 구매 빈도·계약기간 (선택)"}<input value={context.annualPurchaseFrequency} onChange={(event) => setContext({ ...context, annualPurchaseFrequency: event.target.value })} placeholder={en ? "Optional · Leave blank if unknown; AI will estimate from public evidence." : "선택 · 모르시면 비워 두세요. AI가 공개자료로 추정합니다."} /></label>
+          <label>{en ? "Initially reachable customers (Optional)" : "초기에 직접 접근 가능한 고객 수 (선택)"}<input value={context.initialReachableCustomers} onChange={(event) => setContext({ ...context, initialReachableCustomers: event.target.value })} placeholder={en ? "Optional · Leave blank if unknown; AI will estimate from public evidence." : "선택 · 모르시면 비워 두세요. AI가 공개자료로 추정합니다."} /></label>
+          <label>{en ? "Three-year sales capacity (Optional)" : "3년 판매·공급 가능 범위 (선택)"}<input value={context.threeYearSalesCapacity} onChange={(event) => setContext({ ...context, threeYearSalesCapacity: event.target.value })} placeholder={en ? "Optional · Leave blank if unknown; AI will estimate from public evidence." : "선택 · 모르시면 비워 두세요. AI가 공개자료로 추정합니다."} /></label>
           <label>{en ? "Target country" : "목표국가"}<input value={context.targetCountry} onChange={(event) => setContext({ ...context, targetCountry: event.target.value })} placeholder={en ? "e.g., Japan" : "예: 일본"} /></label>
           <label>{en ? "Target customer" : "목표 고객"}<input value={context.targetCustomer} onChange={(event) => setContext({ ...context, targetCustomer: event.target.value })} placeholder={en ? "e.g., Mid-sized manufacturers in Tokyo" : "예: 도쿄 소재 중견 제조사"} /></label>
-          <label className="assistant-context__wide">{en ? "Current validation evidence" : "현재 검증 근거"}<textarea rows={2} value={context.validationEvidence} onChange={(event) => setContext({ ...context, validationEvidence: event.target.value })} placeholder={en ? "List only confirmed evidence, such as interviews, paying customers, or market tests." : "인터뷰, 유료 고객, 시장 실증시험 등 현재 확인된 사실만 적어 주세요."} /></label>
+          <label className="assistant-context__wide">{en ? "Current validation evidence (Optional)" : "현재 검증 근거 (선택)"}<textarea rows={2} value={context.validationEvidence} onChange={(event) => setContext({ ...context, validationEvidence: event.target.value })} placeholder={en ? "Optional · Enter only known facts, or leave blank if unknown." : "선택 · 알고 있는 사실만 적고, 모르시면 비워 두세요."} /></label>
           <label>{en ? "Available resources" : "가용 자원"}<input value={context.resources} onChange={(event) => setContext({ ...context, resources: event.target.value })} placeholder={en ? "e.g., Founder, 20 hours/week, $2,000/month" : "예: 대표 1명, 월 300만 원"} /></label>
           <label>{en ? "Target date" : "목표 기한"}<input type="date" value={context.deadline} onChange={(event) => setContext({ ...context, deadline: event.target.value })} /></label>
-          <label className="assistant-context__wide">{en ? "Constraints" : "제약"}<textarea rows={2} value={context.constraints} onChange={(event) => setContext({ ...context, constraints: event.target.value })} placeholder={en ? "e.g., We need customer validation before forming a local entity." : "예: 현지 법인을 세우기 전에 고객 검증이 필요합니다"} /></label>
+          <label className="assistant-context__wide">{en ? "Constraints (Optional)" : "제약 (선택)"}<textarea rows={2} value={context.constraints} onChange={(event) => setContext({ ...context, constraints: event.target.value })} placeholder={en ? "Optional · Enter only known facts, or leave blank if unknown." : "선택 · 알고 있는 사실만 적고, 모르시면 비워 두세요."} /></label>
           {researchUploadsEnabled && (
             <section className="assistant-research-files assistant-context__wide" aria-labelledby="research-files-title">
               <div>

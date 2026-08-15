@@ -285,8 +285,10 @@ export async function POST(request: Request) {
   const expectedResearchSignature = legacyConfirmed
     ? marketResearchContextSignature(storedContext)
     : confirmedResearch?.researchContextSignature;
+  const constraintsMatch = sanitizeFounderText(storedContext.constraints ?? "") === cleanContext.constraints;
   if (!existingPlan?.market_research_confirmed_at || !confirmedResearch ||
       confirmedResearch.marketSizing.some((entry) => entry.status === "insufficient_evidence") ||
+      !constraintsMatch ||
       expectedResearchSignature !== marketResearchContextSignature(cleanContext, documentDigests)) {
     return NextResponse.json({ message: en ? "Create and confirm market research for the current inputs before drafting the plan." : "현재 입력값으로 시장 조사를 만들고 확인한 뒤 실행 계획을 작성해 주세요." }, { status: 409 });
   }
