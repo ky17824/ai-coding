@@ -23,7 +23,7 @@ import { getIntakeQuestions, type SurveyVersion } from "@/lib/intake-questions";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { preserveFounderContextLocale } from "@/lib/content-localization";
 import { getMissingMarketSizingInputs, marketResearchContextSignature, mergeFounderSizingOverrides, normalizeMarketResearch } from "@/lib/market-sizing";
-import { collectAllowedResearchUrls, collectCitedUrls, researchQuotaDecision } from "@/lib/research-sources";
+import { collectAllowedResearchUrls, collectCitedUrls, researchQuotaDecision, stripUnverifiedSources } from "@/lib/research-sources";
 import { ResearchDeadlineError, stageTimeoutMs } from "@/lib/research-execution";
 import { marketResearchDocumentSchema, researchDocumentDigests, sanitizeDocumentEvidence } from "@/lib/gtm-research-documents";
 import type { GtmFounderContext, MarketResearchDocument, ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
@@ -473,9 +473,20 @@ export async function POST(request: Request) {
       throw new Error(en ? "The model did not return structured market research." : "구조화된 시장 조사 결과가 없습니다.");
     }
     const allowedUrls = collectAllowedResearchUrls([trendResponse.output, competitorResponse.output, sizingResponse.output], sources ?? []);
-    const citedUrls = collectCitedUrls([trendResponse.output_parsed.result, competitorResponse.output_parsed.result, sizingResponse.output_parsed.result]);
-    const unverifiedUrls = [...citedUrls].filter((url) => !allowedUrls.has(url));
-    if (unverifiedUrls.length > 0) {
+    // Drop hallucinated sources instead of sinking the whole run; entries left without evidence go with them.
+    const droppedUrls: string[] = [];
+    const trendResult = stripUnverifiedSources(trendResponse.output_parsed.result, allowedUrls, droppedUrls);
+    const competitorResult = stripUnverifiedSources(competitorResponse.output_parsed.result, allowedUrls, droppedUrls);
+    stripUnverifiedSources(sizingResponse.output_parsed.result, allowedUrls, droppedUrls);
+    trendResult.trends = trendResult.trends.filter((entry) => entry.sources.length > 0);
+    trendResult.contradictions = trendResult.contradictions.filter((entry) => entry.sources.length > 0);
+    competitorResult.competitors = competitorResult.competitors.filter((entry) => entry.sources.length > 0);
+    if (droppedUrls.length > 0) console.warn("[market-research] dropped-unverified-sources", { researchRequestId, count: droppedUrls.length, sample: droppedUrls.slice(0, 5) });
+    if (trendResult.trends.length === 0 || competitorResult.competitors.length === 0) {
+      throw new Error(en ? "The research contained a source that was not returned by search." : "검색 결과에서 확인되지 않은 조사 출처가 포함되었습니다.");
+    }
+    const citedUrls = collectCitedUrls([trendResult, competitorResult, sizingResponse.output_parsed.result]);
+    if ([...citedUrls].some((url) => !allowedUrls.has(url))) {
       throw new Error(en ? "The research contained a source that was not returned by search." : "검색 결과에서 확인되지 않은 조사 출처가 포함되었습니다.");
     }
     const synthesisStartedAt = Date.now();

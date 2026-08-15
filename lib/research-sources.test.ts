@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectAllowedResearchUrls, collectCitedUrls, researchQuotaDecision } from "./research-sources";
+import { collectAllowedResearchUrls, collectCitedUrls, researchQuotaDecision, stripUnverifiedSources } from "./research-sources";
 
 describe("market research source verification", () => {
   it("reserves normal slots and consumes a legacy v2 upgrade only once", () => {
@@ -28,5 +28,30 @@ describe("market research source verification", () => {
     ] });
 
     expect([...cited].filter((url) => !allowed.has(url))).toEqual(["https://forged.example/report"]);
+  });
+
+  it("also allows opened pages and url_citation annotations, but never parsed model text", () => {
+    const output = [
+      { type: "web_search_call", action: { type: "open_page", url: "https://opened.example/page/" } },
+      { type: "message", content: [{ annotations: [{ type: "url_citation", url: "https://cited.example/a#x" }], parsed: { sources: [{ url: "https://forged.example/b" }] } }] }
+    ];
+    const allowed = collectAllowedResearchUrls([output], []);
+    expect(allowed).toEqual(new Set(["https://opened.example/page", "https://cited.example/a"]));
+  });
+
+  it("strips unverified sources in place and reports what was dropped", () => {
+    const allowed = new Set(["https://ok.example/1"]);
+    const dropped: string[] = [];
+    const result = stripUnverifiedSources({
+      trends: [
+        { title: "keep", sources: [{ url: "https://ok.example/1" }, { url: "https://bad.example/x" }] },
+        { title: "empty", sources: [{ url: "https://bad.example/y" }] }
+      ],
+      scenario: { filters: [{ name: "f", sources: [{ url: null }, { url: "https://bad.example/z" }] }] }
+    }, allowed, dropped);
+    expect(result.trends[0].sources).toEqual([{ url: "https://ok.example/1" }]);
+    expect(result.trends[1].sources).toEqual([]);
+    expect(result.scenario.filters[0].sources).toEqual([{ url: null }]);
+    expect(dropped).toEqual(["https://bad.example/x", "https://bad.example/y", "https://bad.example/z"]);
   });
 });
