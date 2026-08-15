@@ -232,7 +232,8 @@ export async function POST(request: Request) {
       result: existingResearch,
       needsEvidence: existingResearch.marketSizing.some((entry) => entry.status === "insufficient_evidence"),
       confirmed: Boolean(existingPlan.market_research_confirmed_at),
-      cached: true
+      cached: true,
+      documents: researchDocuments
     });
   }
   let planId = existingPlan?.id;
@@ -536,7 +537,8 @@ export async function POST(request: Request) {
         ? en
           ? `Some sizing evidence is still missing: ${result.marketSizing.flatMap((entry) => entry.evidenceGaps).join("; ")}.${preserveConfirmedResearch ? " The previously confirmed report was preserved." : ""}`
           : `시장규모 근거가 부족합니다: ${result.marketSizing.flatMap((entry) => entry.evidenceGaps).join("; ")}.${preserveConfirmedResearch ? " 기존 확정 보고서는 보존했습니다." : ""}`
-        : undefined
+        : undefined,
+      documents: researchDocuments
     });
   } catch (error) {
     if (sizingUpgradeAttemptedAt && planId) {
@@ -549,7 +551,7 @@ export async function POST(request: Request) {
         .eq("market_research->>marketSizingV2UpgradeAttemptedAt", sizingUpgradeAttemptedAt);
     }
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : en ? "We couldn't complete the market and competitive research." : "시장·경쟁 사전조사를 만들지 못했습니다." },
+      { message: error instanceof Error ? error.message : en ? "We couldn't complete the market and competitive research." : "시장·경쟁 사전조사를 만들지 못했습니다.", documents: researchDocuments },
       { status: 500 }
     );
   }

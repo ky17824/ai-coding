@@ -31,7 +31,9 @@ begin
   end if;
 
   update public.gtm_plans
-  set market_research_documents = market_research_documents || jsonb_build_array(p_document), updated_at = now()
+  set market_research_documents = market_research_documents || jsonb_build_array(p_document),
+      market_research_confirmed_at = null,
+      updated_at = now()
   where id = p_plan_id
   returning market_research_documents into locked_plan.market_research_documents;
   return locked_plan.market_research_documents;
@@ -60,7 +62,7 @@ begin
   update public.gtm_plans
   set market_research_documents = coalesce((
     select jsonb_agg(item) from jsonb_array_elements(market_research_documents) item where item->>'id' <> p_document_id::text
-  ), '[]'::jsonb), updated_at = now()
+  ), '[]'::jsonb), market_research_confirmed_at = null, updated_at = now()
   where id = p_plan_id;
   return removed;
 end;

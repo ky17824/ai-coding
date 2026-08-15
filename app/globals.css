@@ -3810,6 +3810,67 @@ fieldset.offering-picker {
   grid-column: 1 / -1;
 }
 
+.assistant-research-files {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface-soft);
+  padding: 18px;
+}
+
+.assistant-research-files > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.assistant-research-files p,
+.assistant-research-files small {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.assistant-research-files__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.assistant-research-files__actions .button {
+  min-height: 42px;
+}
+
+.assistant-research-files ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assistant-research-files li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.assistant-research-files li > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.assistant-research-files li strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .assistant-prompt {
   display: grid;
   gap: 16px;

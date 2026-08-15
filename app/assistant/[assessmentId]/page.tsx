@@ -65,7 +65,7 @@ export default async function AssistantPage({
       .order("created_at"),
     admin
       .from("gtm_plans")
-      .select("id,status,summary,assumptions,founder_context,market_research,market_research_confirmed_at,recent_messages,turn_count,generation_count,model,content_locale,founder_context_locale,market_research_locale,gtm_plan_items(*)")
+      .select("id,status,summary,assumptions,founder_context,market_research,market_research_documents,market_research_confirmed_at,recent_messages,turn_count,generation_count,model,content_locale,founder_context_locale,market_research_locale,gtm_plan_items(*)")
       .eq("assessment_id", assessmentId)
       .in("status", ["draft", "active"])
       .maybeSingle()
@@ -83,6 +83,7 @@ export default async function AssistantPage({
       assumptions: (plan.assumptions as string[]) ?? [],
       founderContext: (plan.founder_context as StoredGtmPlan["founderContext"]) ?? {},
       marketResearch: (plan.market_research as GtmMarketResearch | null) ?? null,
+      marketResearchDocuments: (plan.market_research_documents as StoredGtmPlan["marketResearchDocuments"]) ?? [],
       marketResearchConfirmedAt: plan.market_research_confirmed_at,
       recentMessages: (plan.recent_messages as StoredGtmPlan["recentMessages"]) ?? [],
       turnCount: plan.turn_count,
@@ -137,6 +138,7 @@ export default async function AssistantPage({
         initialPlan={initialPlan}
         initialQuestion={initialQuestion}
         locale={locale}
+        researchUploadsEnabled={process.env.AI_GTM_RESEARCH_UPLOADS_ENABLED === "true"}
       />
     </main>
   );

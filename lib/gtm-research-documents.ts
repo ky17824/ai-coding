@@ -68,5 +68,5 @@ export async function inspectResearchFile(file: File) {
 }
 
 export function researchDocumentDigests(documents: readonly MarketResearchDocument[]) {
-  return documents.filter((document) => document.status === "processed").map((document) => document.sha256).sort();
+  return documents.map((document) => document.sha256).sort();
 }

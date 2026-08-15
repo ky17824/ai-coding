@@ -30,11 +30,11 @@ describe("gtm research documents", () => {
     await expect(inspectResearchFile(renamed)).rejects.toThrow(/format/i);
   });
 
-  it("returns sorted digests only for processed documents", () => {
+  it("returns sorted digests for every attached document", () => {
     expect(researchDocumentDigests([
       { id: "1", displayName: "b.pdf", mimeType: "application/pdf", size: 1, sha256: "sha-b", storagePath: null, status: "processed", evidence: null, errorMessage: null, createdAt: "2026-08-15T00:00:00.000Z" },
       { id: "2", displayName: "a.pdf", mimeType: "application/pdf", size: 1, sha256: "sha-a", storagePath: "private/a.pdf", status: "uploaded", evidence: null, errorMessage: null, createdAt: "2026-08-15T00:00:00.000Z" },
       { id: "3", displayName: "c.pdf", mimeType: "application/pdf", size: 1, sha256: "sha-c", storagePath: null, status: "processed", evidence: null, errorMessage: null, createdAt: "2026-08-15T00:00:00.000Z" }
-    ])).toEqual(["sha-b", "sha-c"]);
+    ])).toEqual(["sha-a", "sha-b", "sha-c"]);
   });
 });

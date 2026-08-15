@@ -40,4 +40,15 @@ describe("assistant research upload security contract", () => {
     expect(publicRequest).not.toContain("storagePath");
     expect(publicRequest).not.toContain("signedUrl");
   });
+
+  it("offers a bounded, accessible upload UI only behind the server flag", () => {
+    const page = readFileSync("app/assistant/[assessmentId]/page.tsx", "utf8");
+    const component = readFileSync("components/gtm-assistant.tsx", "utf8");
+
+    expect(page).toContain('researchUploadsEnabled={process.env.AI_GTM_RESEARCH_UPLOADS_ENABLED === "true"}');
+    expect(component).toContain('accept=".pdf,.png,.jpg,.jpeg"');
+    expect(component).toContain('fetch("/api/gtm-assistant/research-files"');
+    expect(component).toContain("researchDocumentDigests");
+    expect(component).toContain("비공개로 정제한 뒤 원본을 삭제");
+  });
 });

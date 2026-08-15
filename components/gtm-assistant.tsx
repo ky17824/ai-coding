@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { marketResearchContextSignature } from "@/lib/market-sizing";
+import { researchDocumentDigests } from "@/lib/gtm-research-documents";
 import { buildCompetitorOverview, buildTrendOverview, type ResearchOverview } from "@/lib/research-overview";
 import type {
   GtmAssistantQuestion,
@@ -13,6 +14,7 @@ import type {
   GtmMarketResearch,
   GtmMarketSizingEntry,
   GtmMarketTrend,
+  MarketResearchDocument,
   GtmPlanDraft,
   GtmPlanItem,
   StoredGtmPlan
@@ -38,6 +40,7 @@ interface Props {
   }[];
   initialPlan: StoredGtmPlan | null;
   initialQuestion: GtmAssistantQuestion | null;
+  researchUploadsEnabled: boolean;
 }
 
 function safeExternalUrl(value: string | null) {
@@ -143,7 +146,7 @@ function coverageGapLabel(gap: string, en: boolean) {
   return labels[gap] ?? gap;
 }
 
-export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion, locale }: Props) {
+export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion, locale, researchUploadsEnabled }: Props) {
   const en = locale === "en";
   const [planId, setPlanId] = useState(initialPlan?.id ?? "");
   const [planStatus, setPlanStatus] = useState(initialPlan?.status ?? "draft");
@@ -175,6 +178,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
   const [marketResearch, setMarketResearch] = useState<GtmMarketResearch | null>(
     initialPlan?.marketResearch ?? null
   );
+  const [researchDocuments, setResearchDocuments] = useState<MarketResearchDocument[]>(initialPlan?.marketResearchDocuments ?? []);
   const [researchConfirmed, setResearchConfirmed] = useState(
     Boolean(initialPlan?.marketResearchConfirmedAt)
   );
@@ -184,13 +188,14 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
       : Boolean(initialPlan?.marketResearch?.marketSizing.some((entry) => entry.status === "insufficient_evidence"))
   );
   const [researchDisplaySignature, setResearchDisplaySignature] = useState(
-    initialPlan?.marketResearch ? marketResearchContextSignature(initialPlan.founderContext) : ""
+    initialPlan?.marketResearch ? marketResearchContextSignature(initialPlan.founderContext, researchDocumentDigests(initialPlan.marketResearchDocuments ?? [])) : ""
   );
   const [busy, setBusy] = useState(false);
+  const [fileBusy, setFileBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [workshopFailed, setWorkshopFailed] = useState(false);
   const researchMatchesContext = Boolean(
-    marketResearch && researchDisplaySignature === marketResearchContextSignature(context)
+    marketResearch && researchDisplaySignature === marketResearchContextSignature(context, researchDocumentDigests(researchDocuments))
   );
 
   async function runWorkshop(answerOverride?: string, forcePlan = false) {
@@ -269,6 +274,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
         result?: GtmMarketResearch;
         needsEvidence?: boolean;
         confirmed?: boolean;
+        documents?: MarketResearchDocument[];
       };
       if (!response.ok || !payload.result || !payload.planId) {
         throw new Error(payload.message ?? (en ? "We couldn't complete the market and competitive research." : "시장·경쟁 사전조사를 만들지 못했습니다."));
@@ -277,12 +283,56 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
       setMarketResearch(payload.result);
       setResearchConfirmed(Boolean(payload.confirmed));
       setResearchNeedsInputs(Boolean(payload.needsEvidence));
-      setResearchDisplaySignature(marketResearchContextSignature(context));
+      const nextDocuments = payload.documents ?? researchDocuments;
+      setResearchDocuments(nextDocuments);
+      setResearchDisplaySignature(marketResearchContextSignature(context, researchDocumentDigests(nextDocuments)));
       setNotice(payload.message ?? (en ? "The AI market and competitive research is ready. Review it before continuing." : "AI 시장·경쟁 사전조사를 만들었습니다. 내용을 확인해 주세요."));
     } catch (error) {
       setNotice(error instanceof Error ? error.message : en ? "Something went wrong." : "오류가 발생했습니다.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function uploadResearchFile(file: File) {
+    setFileBusy(true);
+    setNotice("");
+    try {
+      const form = new FormData();
+      form.append("assessmentId", assessment.id);
+      form.append("file", file);
+      const response = await fetch("/api/gtm-assistant/research-files", { method: "POST", body: form });
+      const payload = await response.json() as { message?: string; planId?: string; documents?: MarketResearchDocument[] };
+      if (!response.ok || !payload.documents) throw new Error(payload.message ?? (en ? "We couldn't upload the document." : "자료를 업로드하지 못했습니다."));
+      if (payload.planId) setPlanId(payload.planId);
+      setResearchDocuments(payload.documents);
+      setResearchConfirmed(false);
+      setNotice(en ? "Document uploaded. It will be privately sanitized before research." : "자료를 업로드했습니다. 조사 전에 비공개로 정제합니다.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : en ? "We couldn't upload the document." : "자료를 업로드하지 못했습니다.");
+    } finally {
+      setFileBusy(false);
+    }
+  }
+
+  async function deleteResearchFile(documentId: string) {
+    setFileBusy(true);
+    setNotice("");
+    try {
+      const response = await fetch("/api/gtm-assistant/research-files", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ assessmentId: assessment.id, documentId })
+      });
+      const payload = await response.json() as { message?: string; documents?: MarketResearchDocument[] };
+      if (!response.ok || !payload.documents) throw new Error(payload.message ?? (en ? "We couldn't delete the document." : "자료를 삭제하지 못했습니다."));
+      setResearchDocuments(payload.documents);
+      setResearchConfirmed(false);
+      setNotice(en ? "Document removed." : "자료를 삭제했습니다.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : en ? "We couldn't delete the document." : "자료를 삭제하지 못했습니다.");
+    } finally {
+      setFileBusy(false);
     }
   }
 
@@ -391,6 +441,36 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
           <label>{en ? "Available resources" : "가용 자원"}<input value={context.resources} onChange={(event) => setContext({ ...context, resources: event.target.value })} placeholder={en ? "e.g., Founder, 20 hours/week, $2,000/month" : "예: 대표 1명, 월 300만 원"} /></label>
           <label>{en ? "Target date" : "목표 기한"}<input type="date" value={context.deadline} onChange={(event) => setContext({ ...context, deadline: event.target.value })} /></label>
           <label className="assistant-context__wide">{en ? "Constraints" : "제약"}<textarea rows={2} value={context.constraints} onChange={(event) => setContext({ ...context, constraints: event.target.value })} placeholder={en ? "e.g., We need customer validation before forming a local entity." : "예: 현지 법인을 세우기 전에 고객 검증이 필요합니다"} /></label>
+          {researchUploadsEnabled && (
+            <section className="assistant-research-files assistant-context__wide" aria-labelledby="research-files-title">
+              <div>
+                <strong id="research-files-title">{en ? "Optional company materials" : "선택 자료 첨부"}</strong>
+                <p>{en ? "Add up to three PDF, PNG, or JPG files (4MB each). We privately sanitize them, delete the originals, and use only structured evidence in public research." : "PDF·PNG·JPG 자료를 최대 3개(각 4MB) 첨부할 수 있습니다. 비공개로 정제한 뒤 원본을 삭제하고, 공개 조사에는 구조화된 근거만 사용합니다."}</p>
+              </div>
+              <div className="assistant-research-files__actions">
+                <label className="button button--ghost" htmlFor="gtm-research-file">{fileBusy ? (en ? "Uploading…" : "업로드 중…") : (en ? "Add document" : "자료 추가")}</label>
+                <input
+                  className="sr-only"
+                  id="gtm-research-file"
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  disabled={busy || fileBusy || researchDocuments.length >= 3}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) void uploadResearchFile(file);
+                  }}
+                />
+                <small>{researchDocuments.length}/3</small>
+              </div>
+              {researchDocuments.length > 0 && <ul>{researchDocuments.map((document) => <li key={document.id}>
+                <span><strong>{document.displayName}</strong><small>{en
+                  ? ({ uploaded: "Ready to sanitize", processed: "Sanitized", failed: "Sanitization failed", cleanup_pending: "Original deletion pending" }[document.status])
+                  : ({ uploaded: "정제 대기", processed: "정제 완료", failed: "정제 실패", cleanup_pending: "원본 삭제 재시도 필요" }[document.status])}</small></span>
+                <button className="text-link" type="button" onClick={() => void deleteResearchFile(document.id)} disabled={busy || fileBusy}>{en ? "Remove" : "삭제"}</button>
+              </li>)}</ul>}
+            </section>
+          )}
           <button className="button button--primary" type="button" onClick={runResearch} disabled={busy}>
             {busy ? (en ? "Researching…" : "조사하고 있습니다…") : marketResearch ? (en ? "Run research again" : "시장·경쟁 사전조사 다시 만들기") : (en ? "Run AI market research" : "AI 시장·경쟁 사전조사")}
           </button>
