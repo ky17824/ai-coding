@@ -45,4 +45,8 @@ describe("dashboard execution summary", () => {
   it("keeps breathing room above the previous-answer button", () => {
     expect(css).toMatch(/\.next-session > small:last-of-type\s*\{[^}]*margin-bottom:\s*24px;/s);
   });
+
+  it("uses normal weight for the next milestone narrative", () => {
+    expect(css).toMatch(/\.stage-summary__body footer strong\s*\{[^}]*font-weight:\s*400;/s);
+  });
 });
