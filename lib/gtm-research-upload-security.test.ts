@@ -13,4 +13,15 @@ describe("assistant research upload security contract", () => {
     expect(migration).toContain("grant execute on function public.append_gtm_research_document");
     expect(migration).toContain("to service_role");
   });
+
+  it("checks the feature flag, ownership, file contents, and cleanup paths", () => {
+    const route = readFileSync("app/api/gtm-assistant/research-files/route.ts", "utf8");
+
+    expect(route).toContain('process.env.AI_GTM_RESEARCH_UPLOADS_ENABLED !== "true"');
+    expect(route).toContain('.eq("organization_id", profile.organization_id)');
+    expect(route).toContain('storage.from("evidence").upload');
+    expect(route).toContain('storage.from("evidence").remove');
+    expect(route).toContain("inspectResearchFile");
+    expect(route).toContain('rpc("append_gtm_research_document"');
+  });
 });
