@@ -76,4 +76,13 @@ describe("market report citations", () => {
     expect(bibliography).toContain('href="https://a.example/report"');
     expect(bibliography).not.toContain('href="javascript:alert(1)"');
   });
+
+  it("renders calculation-input sources as citations and localizes bibliography kinds", () => {
+    const source = { title: "Official", url: "https://a.example/report", publisher: "A", kind: "government" };
+    const index = buildReferenceIndex([source]);
+
+    expect(renderCitationLinks(index, [source])).toBe('<a href="#reference-1">[1]</a>');
+    expect(renderBibliography(index, (kind) => kind === "government" ? "정부·규제" : kind)).toContain("정부·규제");
+    expect(renderBibliography(index, (kind) => kind === "government" ? "정부·규제" : kind)).not.toContain(" · government");
+  });
 });

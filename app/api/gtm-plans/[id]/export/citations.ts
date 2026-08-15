@@ -42,5 +42,5 @@ export function citationNumbers(index: ReturnType<typeof buildReferenceIndex>, s
 export const renderCitationLinks = (index: ReturnType<typeof buildReferenceIndex>, sources: ReportSource[]) =>
   citationNumbers(index, sources).map((number) => `<a href="#reference-${number}">[${number}]</a>`).join(" ");
 
-export const renderBibliography = (index: ReturnType<typeof buildReferenceIndex>) =>
-  `<ol>${index.references.map(({ number, source, href }) => `<li id="reference-${number}">${href ? `<a href="${escapeHtml(href)}">${escapeHtml(source.title)}</a>` : escapeHtml(source.title)}${source.publisher ? ` · ${escapeHtml(source.publisher)}` : ""}${source.publishedAt ? ` · ${escapeHtml(source.publishedAt)}` : ""}${source.checkedAt ? ` · ${escapeHtml(source.checkedAt)}` : ""}${source.kind ? ` · ${escapeHtml(source.kind)}` : ""}</li>`).join("")}</ol>`;
+export const renderBibliography = (index: ReturnType<typeof buildReferenceIndex>, formatKind = (kind: string) => kind) =>
+  `<ol>${index.references.map(({ number, source, href }) => `<li id="reference-${number}">${href ? `<a href="${escapeHtml(href)}">${escapeHtml(source.title)}</a>` : escapeHtml(source.title)}${source.publisher ? ` · ${escapeHtml(source.publisher)}` : ""}${source.publishedAt ? ` · ${escapeHtml(source.publishedAt)}` : ""}${source.checkedAt ? ` · ${escapeHtml(source.checkedAt)}` : ""}${source.kind ? ` · ${escapeHtml(formatKind(source.kind))}` : ""}</li>`).join("")}</ol>`;
