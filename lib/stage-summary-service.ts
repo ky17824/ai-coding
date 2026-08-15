@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { Locale } from "@/lib/i18n";
+import type { SurveyVersion } from "@/lib/intake-questions";
 import {
   buildStageSummaryInput,
   generateStageSummary,
@@ -8,7 +9,7 @@ import {
   type StageSummary
 } from "@/lib/stage-summary";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
-import type { ReadinessAnswer, ReadinessLevel } from "@/lib/types";
+import type { ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
 
 type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdminClient>>;
 type GenerateSummary = (
@@ -40,7 +41,7 @@ export async function ensureStageSummary({
   generate = generateStageSummary
 }: EnsureStageSummaryOptions): Promise<StageSummaryResult> {
   const { data: assessment } = await admin.from("assessments")
-    .select("id,stage_summary,stage_summary_status")
+    .select("id,stage_summary,stage_summary_status,survey_version,sales_motion,target_country,target_customer_segment,target_market_confirmed_at")
     .eq("id", assessmentId)
     .eq("organization_id", organizationId)
     .maybeSingle();
@@ -82,7 +83,21 @@ export async function ensureStageSummary({
     const client = usesDefaultGenerator
       ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
       : null as unknown as OpenAI;
-    const summary = await generate(buildStageSummaryInput(summaryAnswers, locale), locale, client);
+    const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
+    const salesMotion: SalesMotion = ["direct", "partner", "hybrid", "unknown"].includes(assessment.sales_motion)
+      ? assessment.sales_motion as SalesMotion
+      : "unknown";
+    const summary = await generate(buildStageSummaryInput(
+      summaryAnswers,
+      locale,
+      surveyVersion,
+      salesMotion,
+      {
+        targetCountry: assessment.target_country ?? "",
+        targetCustomerSegment: assessment.target_customer_segment ?? "",
+        confirmedAt: assessment.target_market_confirmed_at
+      }
+    ), locale, client);
     const generatedAt = new Date().toISOString();
     const { error } = await admin.from("assessments").update({
       stage_summary: summary,

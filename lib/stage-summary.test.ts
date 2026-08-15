@@ -60,6 +60,22 @@ describe("stage readiness summary", () => {
     expect(input.priorityActionCandidates.length).toBeGreaterThan(0);
   });
 
+  it("builds v5 summary input from the v5 catalog and stable numbering", () => {
+    const questions = questionsOfStage("early", "ko", "5.0");
+    const answers: ReadinessAnswer[] = questions.map((question) => ({
+      questionId: question.id,
+      level: 3,
+      evidence: question.critical ? { kind: "note", value: "확인 기록" } : undefined
+    }));
+
+    const input = buildStageSummaryInput(answers, "ko", "5.0", "direct");
+
+    expect(input.answers).toHaveLength(questions.length);
+    expect(input.answers.map((answer) => answer.number)).toEqual(
+      questions.map((_, index) => index + 1)
+    );
+  });
+
   it("requires one to three priority actions", () => {
     expect(stageSummarySchema.safeParse({ ...validSummary, priorityActions: [] }).success).toBe(false);
     expect(stageSummarySchema.safeParse({ ...validSummary, priorityActions: validActions }).success).toBe(true);

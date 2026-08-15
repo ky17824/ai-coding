@@ -52,7 +52,7 @@ export default async function AdminPage({
   const [organizationsResult, profilesResult, assessmentsResult, actionsResult, ordersResult, providersResult, reviewsResult] = await Promise.all([
     admin.from("organizations").select("id,name,created_at").order("created_at", { ascending: false }),
     admin.from("profiles").select("id,organization_id,display_name,job_title,deleted_at"),
-    admin.from("assessments").select("organization_id,status_label,overall_score,gate_messages,completed_at").order("completed_at", { ascending: false }),
+    admin.from("assessments").select("organization_id,status_label,overall_score,gate_messages,completed_at,survey_version").order("completed_at", { ascending: false }),
     admin.from("action_items").select("organization_id,service_tag,completed_at"),
     admin.from("orders").select("id,organization_id,provider_id,status,created_at,service_snapshot"),
     admin.from("provider_profiles").select("id,headline,biography,expertise,verification_note,approval_status,created_at,profiles!inner(display_name,email)").order("created_at"),
@@ -77,6 +77,7 @@ export default async function AdminPage({
       jobTitle: contact?.job_title ?? null,
       firstAssessmentAt: organizationAssessments.at(-1)?.completed_at ?? null,
       latestAssessment: latest ? {
+        surveyVersion: latest.survey_version === "5.0" ? "5.0" : "4.0",
         completedAt: latest.completed_at,
         statusLabel: normalizeReadinessStatus(latest.status_label),
         overallScore: latest.overall_score,
@@ -166,7 +167,10 @@ export default async function AdminPage({
           <h2>{en ? "Operating metrics" : "운영 지표"}</h2>
           <div className="admin-metrics">
             {[
-              [en ? "Assessment completion" : "진단 완료율", `${operationalMetrics.assessmentCompletionRate}%`],
+              ...operationalMetrics.assessmentCompletionByVersion.map((metric) => [
+                en ? `v${metric.surveyVersion} assessment completion` : `v${metric.surveyVersion} 진단 완료율`,
+                `${metric.rate}% (${metric.assessed})`
+              ]),
               [en ? "Assessment-to-order conversion" : "진단→주문 전환율(Conversion Rate)", `${operationalMetrics.assessmentToOrderRate}%`],
               [en ? "Time to first order" : "첫 주문까지", operationalMetrics.averageDaysToFirstOrder === null ? "-" : `${operationalMetrics.averageDaysToFirstOrder} ${en ? "days" : "일"}`],
               [en ? "Average review rating" : "리뷰 평균", operationalMetrics.averageReviewRating === null ? "-" : `${operationalMetrics.averageReviewRating}${en ? "/5" : "점"}`]

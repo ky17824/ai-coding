@@ -31,4 +31,13 @@ describe("dashboard execution summary", () => {
     expect(source).not.toContain("getPublishedServices");
     expect(source).not.toContain("추천 AI 전문가");
   });
+
+  it("uses stored aggregate results and versioned question details", () => {
+    expect(source).toContain("survey_version,sales_motion");
+    expect(source).not.toContain("calculateReadiness(");
+    expect(source).toContain("assessment.overall_score");
+    expect(source).toContain("assessment.domain_scores");
+    expect(source).toContain("assessment.gate_messages");
+    expect(source).toContain("assessment.survey_version");
+  });
 });

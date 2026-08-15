@@ -1,5 +1,6 @@
 import type { OrderStatus } from "@/lib/types";
 import type { Locale } from "@/lib/i18n";
+import type { SurveyVersion } from "@/lib/intake-questions";
 
 export interface CompanyRow {
   organizationId: string;
@@ -9,6 +10,7 @@ export interface CompanyRow {
   jobTitle: string | null;
   firstAssessmentAt: string | null;
   latestAssessment: {
+    surveyVersion: SurveyVersion;
     completedAt: string;
     statusLabel: string;
     overallScore: number;
@@ -102,7 +104,10 @@ export function buildOperationalMetrics(rows: CompanyRow[], reviewRatings: numbe
     : null;
 
   return {
-    assessmentCompletionRate: percent(assessed.length, rows.length),
+    assessmentCompletionByVersion: (["4.0", "5.0"] as SurveyVersion[]).map((surveyVersion) => {
+      const count = assessed.filter((row) => row.latestAssessment?.surveyVersion === surveyVersion).length;
+      return { surveyVersion, assessed: count, rate: percent(count, rows.length) };
+    }),
     assessmentToOrderRate: percent(ordered.length, assessed.length),
     averageDaysToFirstOrder: average(leadTimes),
     averageReviewRating: average(reviewRatings)

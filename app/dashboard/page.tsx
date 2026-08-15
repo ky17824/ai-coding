@@ -6,14 +6,14 @@ import { AnswerQuestionChart } from "@/components/answer-question-chart";
 import { StageSummaryPanel } from "@/components/stage-summary-panel";
 import {
   buildStageAnswerInsights,
-  calculateReadiness,
   normalizeGateMessage,
   normalizeReadinessStatus,
-  questionsOfStage
+  questionsOfStage,
+  resolveAssessmentQuestions
 } from "@/lib/readiness";
-import { getIntakeStages } from "@/lib/intake-questions";
+import { getIntakeStages, type SurveyVersion } from "@/lib/intake-questions";
 import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
-import type { EvidenceInput, ReadinessAnswer, ReadinessLevel } from "@/lib/types";
+import type { EvidenceInput, ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { stageSummarySchema, type StageSummaryStatus } from "@/lib/stage-summary";
@@ -42,7 +42,7 @@ export default async function DashboardPage({
   const [{ data: organization }, { data: assessment }] = await Promise.all([
     admin.from("organizations").select("name").eq("id", profile.organization_id).single(),
     admin.from("assessments")
-      .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,completed_at,target_country,target_customer_segment,target_market_confirmed_at,stage_summary,stage_summary_status")
+      .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,completed_at,target_country,target_customer_segment,target_market_confirmed_at,stage_summary,stage_summary_status,survey_version,sales_motion")
       .eq("organization_id", profile.organization_id)
       .order("completed_at", { ascending: false }).limit(1).maybeSingle()
   ]);
@@ -76,6 +76,15 @@ export default async function DashboardPage({
   ]);
   const storedDomainScores = assessment.domain_scores as Record<string, number>;
   const assessmentStatus = normalizeReadinessStatus(assessment.status_label);
+  const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
+  const salesMotion: SalesMotion = ["direct", "partner", "hybrid", "unknown"].includes(assessment.sales_motion)
+    ? assessment.sales_motion as SalesMotion
+    : "unknown";
+  const targetMarket = {
+    targetCountry: assessment.target_country ?? "",
+    targetCustomerSegment: assessment.target_customer_segment ?? "",
+    confirmedAt: assessment.target_market_confirmed_at
+  };
   const readinessAnswers: ReadinessAnswer[] = (answerRows ?? []).flatMap((row) => {
     const level = Number(row.level);
     if (![1, 2, 3, 4].includes(level)) return [];
@@ -91,40 +100,29 @@ export default async function DashboardPage({
     }];
   });
   const answeredIds = new Set(readinessAnswers.map((answer) => answer.questionId));
+  const resolved = resolveAssessmentQuestions({ surveyVersion, salesMotion, targetMarket, answers: readinessAnswers });
+  const notApplicableIds = new Set(resolved.notApplicableIds);
   const availableStages = stages.filter((stage) =>
-    questionsOfStage(stage.id, locale).some((question) => answeredIds.has(question.id))
+    questionsOfStage(stage.id, locale, surveyVersion)
+      .some((question) => !notApplicableIds.has(question.id) && answeredIds.has(question.id))
   );
-  const readinessResult = calculateReadiness(readinessAnswers, {
-    targetCountry: assessment.target_country ?? "",
-    targetCustomerSegment: assessment.target_customer_segment ?? "",
-    confirmedAt: assessment.target_market_confirmed_at
-  }, locale);
-  const displayDomainScores = readinessAnswers.length > 0
-    ? readinessResult.domainScores
-    : storedDomainScores;
-  const displayOverallScore = readinessAnswers.length > 0
-    ? readinessResult.overallScore
-    : assessment.overall_score;
-  const gateMessages = readinessAnswers.length > 0
-    ? readinessResult.gateMessages
-    : [...new Set(((assessment.gate_messages as string[]) ?? []).map(normalizeGateMessage))];
-  const displayIsOnHold = readinessAnswers.length > 0
-    ? readinessResult.isOnHold
-    : assessment.is_on_hold;
+  const displayDomainScores = storedDomainScores;
+  const displayOverallScore = assessment.overall_score;
+  const gateMessages = [...new Set(((assessment.gate_messages as string[]) ?? []).map(normalizeGateMessage))];
+  const displayIsOnHold = assessment.is_on_hold;
   const storedStageSummary = stageSummarySchema.safeParse(assessment.stage_summary);
   const stageSummaryStatus = ["pending", "generating", "complete", "failed"].includes(assessment.stage_summary_status)
     ? assessment.stage_summary_status as StageSummaryStatus
     : storedStageSummary.success ? "complete" : "pending";
-  const defaultStageId = availableStages.some(
-    (stage) => stage.id === readinessResult.currentStageId
-  )
-    ? readinessResult.currentStageId
+  const storedStageId = stages.find((stage) => stage.label === assessmentStatus)?.id;
+  const defaultStageId = availableStages.some((stage) => stage.id === storedStageId)
+    ? storedStageId
     : availableStages.at(-1)?.id;
   const selectedStageId = availableStages.some((stage) => stage.id === query.stage)
     ? query.stage
     : defaultStageId;
   const answerInsights = selectedStageId
-    ? buildStageAnswerInsights(readinessAnswers, selectedStageId, locale)
+    ? buildStageAnswerInsights(readinessAnswers, selectedStageId, locale, surveyVersion, salesMotion, targetMarket)
     : null;
   const planHref = plan?.status === "active" ? "/journey" : `/assistant/${assessment.id}`;
   const planCta = plan?.status === "active"
@@ -149,7 +147,7 @@ export default async function DashboardPage({
           <article className="readiness-summary panel">
             <div className="summary-title">
               <span><small>{en ? "GLOBAL READINESS" : "시장진입 준비도(Global Readiness)"}</small><h2>{en ? "Readiness by stage" : "단계별 준비도"}</h2></span>
-              <span className="summary-score"><strong>{displayOverallScore}<span>/ 100</span></strong><small>{en ? stages.find((stage) => stage.id === readinessResult.currentStageId)?.label ?? assessmentStatus : assessmentStatus}</small></span>
+              <span className="summary-score"><strong>{displayOverallScore}<span>/ 100</span></strong><small>{assessmentStatus}</small></span>
             </div>
             <div className="domain-bars">
               {stages.map((stage) => (
@@ -164,6 +162,7 @@ export default async function DashboardPage({
             <span className="page-kicker">{en ? "LATEST ASSESSMENT" : "최근 진단(Latest Assessment)"}</span>
             <h2>{new Date(assessment.completed_at).toLocaleDateString(en ? "en-US" : "ko-KR")} {en ? "assessment" : "진단"}</h2>
             <p>{displayIsOnHold ? (en ? `${gateMessages.length} prerequisite${gateMessages.length === 1 ? "" : "s"} need attention` : `확인이 필요한 선결 조건 ${gateMessages.length}건`) : (en ? "You have passed every prerequisite for this stage." : "현재 단계의 선결 조건을 모두 통과했습니다.")}</p>
+            {surveyVersion === "5.0" && <small>{en ? `${readinessAnswers.length} responses · ${resolved.deferredIds.length} deferred · ${resolved.notApplicableIds.length} not applicable` : `응답 ${readinessAnswers.length}개 · 보류 ${resolved.deferredIds.length}개 · 해당 없음 ${resolved.notApplicableIds.length}개`}</small>}
             <Link href={path("/dashboard#answer-insights")} className="button button--ghost button--full">{en ? "Review previous answers" : "지난 응답 보기"}</Link>
           </article>
         </section>

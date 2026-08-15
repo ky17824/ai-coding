@@ -17,6 +17,7 @@ const company = (overrides: Partial<CompanyRow> = {}): CompanyRow => ({
   firstAssessmentAt: "2026-07-20T00:00:00.000Z",
   latestAssessment: {
     completedAt: "2026-07-20T00:00:00.000Z",
+    surveyVersion: "4.0",
     statusLabel: "준비 2단계",
     overallScore: 40,
     gateMessages: []
@@ -66,11 +67,30 @@ describe("admin metrics", () => {
     ], [5, 4]);
 
     expect(metrics).toEqual({
-      assessmentCompletionRate: 50,
+      assessmentCompletionByVersion: [
+        { surveyVersion: "4.0", assessed: 1, rate: 50 },
+        { surveyVersion: "5.0", assessed: 0, rate: 0 }
+      ],
       assessmentToOrderRate: 100,
       averageDaysToFirstOrder: 3,
       averageReviewRating: 4.5
     });
+  });
+
+  it("keeps v4 and v5 completion metrics separate", () => {
+    const metrics = buildOperationalMetrics([
+      company(),
+      company({
+        organizationId: "org-2",
+        latestAssessment: { ...company().latestAssessment!, surveyVersion: "5.0" }
+      }),
+      company({ organizationId: "org-3", latestAssessment: null })
+    ], []);
+
+    expect(metrics.assessmentCompletionByVersion).toEqual([
+      { surveyVersion: "4.0", assessed: 1, rate: 33 },
+      { surveyVersion: "5.0", assessed: 1, rate: 33 }
+    ]);
   });
 
   it("finds the latest company activity across assessments, actions, and orders", () => {

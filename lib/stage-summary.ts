@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { zodTextFormat } from "openai/helpers/zod";
 import type { Locale } from "@/lib/i18n";
+import type { SurveyVersion } from "@/lib/intake-questions";
 import { buildStageAnswerInsights } from "@/lib/readiness";
-import type { ReadinessAnswer } from "@/lib/types";
+import type { ReadinessAnswer, SalesMotion, TargetMarketContext } from "@/lib/types";
 
 export const STAGE_SUMMARY_MODEL = "gpt-5.6-sol" as const;
 
@@ -27,8 +28,21 @@ type StageSummaryClient = {
   };
 };
 
-export function buildStageSummaryInput(answers: ReadinessAnswer[], locale: Locale) {
-  const insight = buildStageAnswerInsights(answers, "early", locale);
+export function buildStageSummaryInput(
+  answers: ReadinessAnswer[],
+  locale: Locale,
+  surveyVersion: SurveyVersion = "4.0",
+  salesMotion: SalesMotion = "unknown",
+  targetMarket?: TargetMarketContext | null
+) {
+  const insight = buildStageAnswerInsights(
+    answers,
+    "early",
+    locale,
+    surveyVersion,
+    salesMotion,
+    targetMarket
+  );
   return {
     stageId: insight.stageId,
     stageLabel: insight.stageLabel,

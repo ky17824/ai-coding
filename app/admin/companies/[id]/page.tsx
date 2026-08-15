@@ -28,7 +28,7 @@ export default async function AdminCompanyPage({ params }: { params: Promise<{ i
   const [{ data: organization }, { data: profiles }, { data: assessments }, { data: actions }, { data: orders }] = await Promise.all([
     admin.from("organizations").select("id,name,created_at").eq("id", id).maybeSingle(),
     admin.from("profiles").select("id,display_name,email,job_title,created_at,deleted_at").eq("organization_id", id),
-    admin.from("assessments").select("id,overall_score,domain_scores,status_label,gate_messages,completed_at").eq("organization_id", id).order("completed_at", { ascending: false }),
+    admin.from("assessments").select("id,overall_score,domain_scores,status_label,gate_messages,completed_at,survey_version").eq("organization_id", id).order("completed_at", { ascending: false }),
     admin.from("action_items").select("id,title,owner_label,completion_evidence,service_tag,urgency,due_date,completed_at").eq("organization_id", id).order("created_at", { ascending: false }),
     admin.from("orders").select("id,status,amount_krw,service_snapshot,created_at,service_started_at,completed_at").eq("organization_id", id).order("created_at", { ascending: false })
   ]);
@@ -42,7 +42,8 @@ export default async function AdminCompanyPage({ params }: { params: Promise<{ i
   ]);
   const contact = (profiles ?? []).find((profile) => !profile.deleted_at) ?? profiles?.[0];
   const latest = assessments?.[0];
-  const questionById = new Map(getIntakeQuestions(locale).map((question) => [question.id, question]));
+  const latestSurveyVersion = latest?.survey_version === "5.0" ? "5.0" : "4.0";
+  const questionById = new Map(getIntakeQuestions(locale, latestSurveyVersion).map((question) => [question.id, question]));
   const dateLocale = en ? "en-US" : "ko-KR";
 
   return (
@@ -60,7 +61,7 @@ export default async function AdminCompanyPage({ params }: { params: Promise<{ i
 
         <section className="admin-section"><h2>{en ? "Assessment history" : "진단 이력"}</h2><div className="table-scroll panel"><table className="admin-table"><thead><tr><th>{en ? "Date" : "일자"}</th><th>{en ? "Stage" : "단계"}</th><th>{en ? "Score" : "총점"}</th><th>{en ? "Gate issues" : "단계 통과 기준(Stage Gate)"}</th></tr></thead><tbody>{(assessments ?? []).map((assessment) => <tr key={assessment.id}><td>{new Date(assessment.completed_at).toLocaleDateString(dateLocale)}</td><td>{statusText(normalizeReadinessStatus(assessment.status_label))}</td><td>{assessment.overall_score}</td><td>{(assessment.gate_messages as string[]).length}</td></tr>)}</tbody></table></div></section>
 
-        {latest && <section className="admin-section"><h2>{en ? "Latest 55-question responses" : "최근 55문항 응답"}</h2><div className="answer-audit-list">{(answers ?? []).filter((answer) => answer.assessment_id === latest.id).map((answer) => { const question = questionById.get(answer.question_id); return <details className="panel" key={answer.question_id}><summary><strong>{en ? `Level ${answer.level}` : `${answer.level}단계`}</strong> {question?.question ?? answer.question_id}</summary>{answer.evidence_value && <p>{answer.evidence_value}</p>}</details>; })}</div></section>}
+        {latest && <section className="admin-section"><h2>{en ? `Readiness assessment responses · v${latestSurveyVersion}` : `준비도 진단 응답 · v${latestSurveyVersion}`}</h2><div className="answer-audit-list">{(answers ?? []).filter((answer) => answer.assessment_id === latest.id).map((answer) => { const question = questionById.get(answer.question_id); return <details className="panel" key={answer.question_id}><summary><strong>{en ? `Level ${answer.level}` : `${answer.level}단계`}</strong> {question?.question ?? answer.question_id}</summary>{answer.evidence_value && <p>{answer.evidence_value}</p>}</details>; })}</div></section>}
 
         <section className="admin-section"><h2>{en ? "Actions" : "액션"}</h2><div className="table-scroll panel"><table className="admin-table"><thead><tr><th>{en ? "Priority" : "우선순위"}</th><th>{en ? "Action" : "액션"}</th><th>{en ? "Owner" : "담당"}</th><th>{en ? "Due" : "기한"}</th><th>{en ? "Status" : "상태"}</th></tr></thead><tbody>{(actions ?? []).map((action) => <tr key={action.id}><td>{action.urgency === "P0" ? (en ? "Priority 0" : "우선순위 0(Priority 0)") : (en ? "Priority 1" : "우선순위 1(Priority 1)")}</td><td>{action.title}</td><td>{action.owner_label}</td><td>{action.due_date ?? "-"}</td><td>{action.completed_at ? (en ? "Complete" : "완료") : (en ? "Not started" : "진행 전")}</td></tr>)}</tbody></table></div></section>
 
