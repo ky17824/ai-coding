@@ -77,6 +77,7 @@ const V5_TARGET_COUNTRY_IDS = new Set(
 export interface AssessmentQuestionContext {
   surveyVersion: SurveyVersion;
   salesMotion: SalesMotion | null;
+  completedStageId?: "early" | "preparing" | "ready";
   targetMarket?: TargetMarketContext | null;
   answers: ReadinessAnswer[];
 }
@@ -316,7 +317,11 @@ export function isCompleteStageAnswerSet(
 
   if (context?.surveyVersion === "5.0") {
     const resolved = resolveAssessmentQuestions({ ...context, answers });
+    const completedIndex = context.completedStageId
+      ? STAGES.findIndex((stage) => stage.id === context.completedStageId)
+      : null;
     return STAGES.some((_, stageIndex) => {
+      if (completedIndex !== null && stageIndex !== completedIndex) return false;
       const stageIds = new Set(STAGES.slice(0, stageIndex + 1).map((stage) => stage.id));
       const expected = resolved.requiredIds.filter((id) => {
         const question = getIntakeQuestions("ko", "5.0").find((entry) => entry.id === id)!;
@@ -346,12 +351,27 @@ export function validateAssessmentAnswers(
   const errors: Record<string, string> = {};
   const version = context?.surveyVersion ?? "4.0";
   const valid = new Set(getIntakeQuestions(locale, version).map((question) => question.id));
+  const resolved = context?.surveyVersion === "5.0"
+    ? resolveAssessmentQuestions({ ...context, answers })
+    : null;
+  const allowed = resolved && context?.completedStageId
+    ? new Set(resolved.requiredIds.filter((id) => {
+        const question = getIntakeQuestions(locale, "5.0").find((entry) => entry.id === id)!;
+        const item = getIntakeItems(locale).find((entry) => entry.id === question.itemId)!;
+        return STAGES.findIndex((stage) => stage.id === item.stageId) <=
+          STAGES.findIndex((stage) => stage.id === context.completedStageId);
+      }))
+    : null;
 
   for (const answer of answers) {
     if (!valid.has(answer.questionId)) {
       errors[answer.questionId] = locale === "en" ? "Unknown assessment question." : "알 수 없는 진단 문항입니다.";
     } else if (![1, 2, 3, 4].includes(answer.level)) {
       errors[answer.questionId] = locale === "en" ? "The selected response level is invalid." : "응답 단계가 올바르지 않습니다.";
+    } else if (allowed && !allowed.has(answer.questionId)) {
+      errors[answer.questionId] = locale === "en"
+        ? "This question is not part of the current assessment branch."
+        : "현재 진단 분기에 포함되지 않는 문항입니다.";
     }
   }
 

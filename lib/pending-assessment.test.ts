@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { INTAKE_QUESTIONS } from "@/lib/intake-questions";
-import { questionsOfStage } from "@/lib/readiness";
 import {
-  PENDING_KEY,
-  clearPending,
-  loadPending,
-  savePending
-} from "@/lib/pending-assessment";
+  INTAKE_QUESTIONS,
+  getIntakeQuestions,
+  isAnswerCompatibleAcrossVersions
+} from "@/lib/intake-questions";
+import { questionsOfStage, resolveAssessmentQuestions } from "@/lib/readiness";
+import { PENDING_KEY, clearPending, loadPending, savePending } from "@/lib/pending-assessment";
 import type { ReadinessAnswer } from "@/lib/types";
 
 class MemoryStorage implements Storage {
@@ -21,6 +20,21 @@ class MemoryStorage implements Storage {
 
 const answers = (): ReadinessAnswer[] =>
   INTAKE_QUESTIONS.map((question) => ({ questionId: question.id, level: 2 }));
+const targetMarket = { targetCountry: "일본", targetCustomerSegment: "도쿄 중견기업", confirmed: true };
+const v5Answers = () => {
+  const all = getIntakeQuestions("ko", "5.0").map((question) => ({
+    questionId: question.id,
+    level: 4 as const,
+    evidence: question.critical ? { kind: "note" as const, value: "근거" } : undefined
+  }));
+  const resolved = resolveAssessmentQuestions({
+    surveyVersion: "5.0",
+    salesMotion: "partner",
+    targetMarket,
+    answers: all
+  });
+  return all.filter((answer) => resolved.requiredIds.includes(answer.questionId));
+};
 
 describe("pending assessment", () => {
   beforeEach(() => {
@@ -30,42 +44,68 @@ describe("pending assessment", () => {
     });
   });
 
-  it("round trips and clears answers", () => {
-    savePending(answers());
-    expect(loadPending()).toEqual(answers());
+  it("round trips a versioned assessment and clears it", () => {
+    const pending = {
+      surveyVersion: "5.0" as const,
+      completedStageId: "ready" as const,
+      salesMotion: "partner" as const,
+      targetMarket,
+      answers: v5Answers()
+    };
+    savePending(pending);
+    expect(loadPending("5.0")).toEqual({ ...pending, needsReview: false });
     clearPending();
     expect(loadPending()).toBeNull();
   });
 
-  it("keeps a completed early Gate while signup finishes", () => {
+  it("treats a legacy array as v4", () => {
     const early = new Set(questionsOfStage("early").map((question) => question.id));
     const earlyAnswers = answers().filter((answer) => early.has(answer.questionId));
-    savePending(earlyAnswers);
-    expect(loadPending()).toEqual(earlyAnswers);
+    sessionStorage.setItem(PENDING_KEY, JSON.stringify(earlyAnswers));
+    expect(loadPending("4.0")).toEqual(expect.objectContaining({
+      surveyVersion: "4.0",
+      completedStageId: "early",
+      answers: earlyAnswers,
+      needsReview: false
+    }));
   });
 
-  it("rejects incomplete answers", () => {
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify(answers().slice(1)));
-    expect(loadPending()).toBeNull();
+  it("restores only unchanged v4 answers into v5", () => {
+    sessionStorage.setItem(PENDING_KEY, JSON.stringify(answers()));
+    const restored = loadPending("5.0");
+    const compatible = answers().filter((answer) =>
+      isAnswerCompatibleAcrossVersions(answer.questionId, "4.0", "5.0")
+    );
+    expect(restored).toEqual(expect.objectContaining({
+      surveyVersion: "5.0",
+      answers: compatible,
+      needsReview: true
+    }));
+    expect(restored?.answers).toHaveLength(29);
   });
 
-  it("rejects unknown and duplicate question ids", () => {
-    const unknown = answers();
-    unknown[0] = { questionId: "unknown", level: 2 };
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify(unknown));
-    expect(loadPending()).toBeNull();
-
-    const duplicate = answers();
-    duplicate[0] = duplicate[1];
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify(duplicate));
-    expect(loadPending()).toBeNull();
+  it("does not convert v5 back to v4", () => {
+    savePending({
+      surveyVersion: "5.0",
+      completedStageId: "early",
+      salesMotion: "direct",
+      targetMarket,
+      answers: getIntakeQuestions("ko", "5.0").slice(0, 13).map((question) => ({ questionId: question.id, level: 2 }))
+    });
+    expect(loadPending("4.0")).toBeNull();
   });
 
-  it("rejects invalid levels and JSON", () => {
-    const invalid = answers();
-    invalid[0] = { ...invalid[0], level: 0 as 1 };
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify(invalid));
-    expect(loadPending()).toBeNull();
+  it("rejects incomplete, unknown, duplicate, invalid, and malformed legacy data", () => {
+    const invalidValues = [
+      answers().slice(1),
+      answers().map((answer, index) => index ? answer : { questionId: "unknown", level: 2 as const }),
+      answers().map((answer, index, all) => index ? answer : all[1]),
+      answers().map((answer, index) => index ? answer : { ...answer, level: 0 as 1 })
+    ];
+    for (const value of invalidValues) {
+      sessionStorage.setItem(PENDING_KEY, JSON.stringify(value));
+      expect(loadPending()).toBeNull();
+    }
     sessionStorage.setItem(PENDING_KEY, "{");
     expect(loadPending()).toBeNull();
   });

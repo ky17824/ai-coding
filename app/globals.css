@@ -3144,7 +3144,14 @@ main[lang="en"] .hero h1 {
   gap: 8px;
 }
 
+fieldset.offering-picker {
+  padding: 0;
+  border: 0;
+}
+
+.offering-picker legend,
 .offering-picker > span {
+  padding: 0;
   font-size: 13px;
   font-weight: 800;
 }
@@ -3211,6 +3218,12 @@ main[lang="en"] .hero h1 {
 }
 
 .progress-block small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.assessment-applicability-summary {
+  margin: -16px 0 22px;
   color: var(--muted);
   font-size: 13px;
 }
@@ -3294,6 +3307,21 @@ main[lang="en"] .hero h1 {
 
 .assessment-questions {
   min-width: 0;
+}
+
+.assessment-deferred {
+  margin: 0 0 18px;
+  padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.assessment-deferred strong {
+  flex: 0 0 auto;
+  color: var(--green);
 }
 
 .question-heading {
@@ -4295,6 +4323,11 @@ h2.plan-summary {
 
   .assessment-sidebar {
     position: static;
+  }
+
+  .assessment-sidebar > p,
+  .offering-picker small {
+    display: none;
   }
 
   .domain-nav {

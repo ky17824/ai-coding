@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { applyOffering } from "@/lib/intake-questions";
-import { calculateReadiness, validateAssessmentAnswers } from "@/lib/readiness";
+import { calculateReadiness, resolveAssessmentQuestions, validateAssessmentAnswers } from "@/lib/readiness";
+import { getNewAssessmentSurveyVersion } from "@/lib/readiness-rollout";
 import { ensureStageSummary } from "@/lib/stage-summary-service";
 import { createSupabaseAdminClient, createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
 
@@ -17,6 +18,8 @@ const answerSchema = z.object({
 });
 const requestSchema = z.object({
   answers: z.array(answerSchema).min(1).max(55),
+  completedStageId: z.enum(["early", "preparing", "ready"]).optional(),
+  salesMotion: z.enum(["direct", "partner", "hybrid", "unknown"]).optional(),
   locale: z.enum(["ko", "en"]).default("ko"),
   offering: z.enum(["both", "product", "service"]).default("both"),
   targetMarket: z.object({
@@ -35,7 +38,21 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  const validation = validateAssessmentAnswers(parsed.data.answers, locale);
+  const surveyVersion = getNewAssessmentSurveyVersion();
+  if (surveyVersion === "5.0" && (!parsed.data.completedStageId || !parsed.data.salesMotion)) {
+    return NextResponse.json(
+      { message: locale === "en" ? "Select a sales motion and completed stage." : "진출 방식과 완료 단계를 확인해 주세요." },
+      { status: 400 }
+    );
+  }
+  const context = {
+    surveyVersion,
+    completedStageId: parsed.data.completedStageId,
+    salesMotion: surveyVersion === "5.0" ? parsed.data.salesMotion! : null,
+    targetMarket: parsed.data.targetMarket,
+    answers: parsed.data.answers
+  };
+  const validation = validateAssessmentAnswers(parsed.data.answers, locale, context);
   if (!validation.valid) {
     return NextResponse.json(
       { message: locale === "en" ? "Review the selected responses." : "응답 값을 확인해 주세요.", errors: validation.errors },
@@ -51,12 +68,13 @@ export async function POST(request: Request) {
   const result = calculateReadiness(parsed.data.answers, {
     ...targetMarket,
     confirmed: marketConfirmed
-  }, locale);
+  }, locale, surveyVersion, parsed.data.salesMotion ?? "unknown");
+  const applicability = resolveAssessmentQuestions(context);
   const user = await requireUser();
   const supabase = await createSupabaseServerClient();
   if (!user || !supabase) {
     if (process.env.NODE_ENV === "development") {
-      return NextResponse.json({ ...result, demo: true });
+      return NextResponse.json({ surveyVersion, applicability, ...result, demo: true });
     }
     return NextResponse.json({ message: locale === "en" ? "Please sign in." : "로그인이 필요합니다." }, { status: 401 });
   }
@@ -83,6 +101,8 @@ export async function POST(request: Request) {
       status_label: result.status,
       is_on_hold: result.isOnHold,
       gate_messages: result.gateMessages,
+      survey_version: surveyVersion,
+      sales_motion: surveyVersion === "5.0" ? parsed.data.salesMotion : null,
       target_country: targetMarket.targetCountry || null,
       target_customer_segment: targetMarket.targetCustomerSegment || null,
       target_market_confirmed_at: marketConfirmed ? new Date().toISOString() : null
@@ -134,6 +154,7 @@ export async function POST(request: Request) {
     }))
   );
   if (actionError) {
+    await supabase.from("assessments").delete().eq("id", assessment.id);
     return NextResponse.json(
       { message: locale === "en" ? "The assessment was saved, but the action items could not be created." : "진단은 저장됐지만 액션 생성에 실패했습니다." },
       { status: 500 }
@@ -153,6 +174,8 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     assessmentId: assessment.id,
+    surveyVersion,
+    applicability,
     ...result,
     stageSummaryStatus: stageSummary.status
   });

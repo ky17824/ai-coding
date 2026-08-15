@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { signUpWithPassword, type SignUpState } from "@/app/signup/actions";
 import { SocialLoginButton } from "@/components/social-login-button";
-import { loadPending } from "@/lib/pending-assessment";
+import { getPendingAnswerCount } from "@/lib/pending-assessment";
 import { localizedPath, type Locale } from "@/lib/i18n";
 
 const initialState: SignUpState = { ok: false, message: "" };
@@ -53,7 +53,7 @@ export function SignupForm({
       };
   const [state, action, pending] = useActionState(signUpWithPassword, initialState);
   const [assessmentAnswerCount, setAssessmentAnswerCount] = useState(0);
-  useEffect(() => setAssessmentAnswerCount(loadPending()?.length ?? 0), []);
+  useEffect(() => setAssessmentAnswerCount(getPendingAnswerCount()), []);
 
   return (
     <div className="signin-form">

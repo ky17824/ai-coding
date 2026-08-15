@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as React from "react";
 
 vi.stubGlobal("React", React);
@@ -44,6 +44,8 @@ describe("returning founder assessment entry", () => {
     mocks.redirect.mockClear();
   });
 
+  afterEach(() => delete process.env.READINESS_V5_ENABLED);
+
   it("sends an organization member with a previous assessment to the dashboard", async () => {
     mocks.assessment = { id: "assessment-1" };
 
@@ -65,5 +67,12 @@ describe("returning founder assessment entry", () => {
     await AssessmentPage({ searchParams: Promise.resolve({ resume: "1" }) });
 
     expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
+  it("passes the server-selected survey version to the form", async () => {
+    process.env.READINESS_V5_ENABLED = "true";
+    const page = await AssessmentPage({ searchParams: Promise.resolve({ new: "1" }) });
+    const form = page.props.children[1].props.children;
+    expect(form.props.surveyVersion).toBe("5.0");
   });
 });

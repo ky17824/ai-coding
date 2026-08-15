@@ -7,8 +7,10 @@ import {
   POSITIVE_LEVEL,
   getIntakeItems,
   getIntakeQuestions,
+  getQuestionNumber,
   getIntakeStages,
-  type OfferingType
+  type OfferingType,
+  type SurveyVersion
 } from "@/lib/intake-questions";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import {
@@ -16,6 +18,7 @@ import {
   calculateReadiness,
   hasPassedStage,
   questionsOfStage,
+  resolveAssessmentQuestions,
   validateAssessmentAnswers
 } from "@/lib/readiness";
 import { recommendServices } from "@/lib/service-data";
@@ -24,6 +27,7 @@ import type {
   ReadinessAnswer,
   ReadinessLevel,
   ReadinessResult,
+  SalesMotion,
   ServiceOffering,
   TargetMarketContext
 } from "@/lib/types";
@@ -42,6 +46,9 @@ export function AssessmentForm({
   resume = false,
   initialAnswers = [],
   initialTargetMarket,
+  initialSalesMotion,
+  initialRestoreMessage = "",
+  surveyVersion = "4.0",
   locale = "ko",
   availableServices = []
 }: {
@@ -49,13 +56,16 @@ export function AssessmentForm({
   resume?: boolean;
   initialAnswers?: ReadinessAnswer[];
   initialTargetMarket?: TargetMarketContext;
+  initialSalesMotion?: SalesMotion;
+  initialRestoreMessage?: string;
+  surveyVersion?: SurveyVersion;
   locale?: Locale;
   /** 실제 공개된 전문가 서비스. 비어 있으면 추천 영역을 감춘다. */
   availableServices?: ServiceOffering[];
 }) {
   const stages = getIntakeStages(locale);
   const items = getIntakeItems(locale);
-  const questions = getIntakeQuestions(locale);
+  const questions = getIntakeQuestions(locale, surveyVersion);
   const c = locale === "en" ? {
     stageIncomplete: "Please answer every question in this stage.",
     saveFailed: "We could not save your assessment results.",
@@ -97,6 +107,8 @@ export function AssessmentForm({
     offeringProduct: "Product",
     offeringService: "Service",
     offeringHint: "Your choice adjusts the wording of the questions.",
+    salesMotion: "How will you enter the market?",
+    salesMotionHint: "This does not affect your score. It hides questions that do not apply to your operating model.",
     complete: "complete",
     completed: "Completed",
     stage: "Stage",
@@ -115,7 +127,13 @@ export function AssessmentForm({
     savingAssessment: "Saving assessment…",
     viewResult: "View assessment results"
   } : null;
-  const initialResult = calculateReadiness(initialAnswers, initialTargetMarket, locale);
+  const initialResult = calculateReadiness(
+    initialAnswers,
+    initialTargetMarket,
+    locale,
+    surveyVersion,
+    initialSalesMotion ?? "unknown"
+  );
   const initialStageIndex = Math.max(
     0,
     stages.findIndex((entry) => entry.id === initialResult.currentStageId)
@@ -127,6 +145,7 @@ export function AssessmentForm({
   // ponytail: 이 선택은 진단 한 번에만 남는다. 회사마다 기억시키려면
   // organizations 에 칸을 하나 늘린다.
   const [offering, setOffering] = useState<OfferingType>("both");
+  const [salesMotion, setSalesMotion] = useState<SalesMotion>(initialSalesMotion ?? "unknown");
   const [evidence, setEvidence] = useState<Record<string, EvidenceInput>>(
     Object.fromEntries(
       initialAnswers.filter((answer) => answer.evidence).map((answer) => [answer.questionId, answer.evidence!])
@@ -146,14 +165,10 @@ export function AssessmentForm({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
-  const [restoreMessage, setRestoreMessage] = useState("");
+  const [restoreMessage, setRestoreMessage] = useState(initialRestoreMessage);
   const restored = useRef(false);
 
   const stage = stages[activeStage];
-  const stageItems = items.filter((item) => item.stageId === stage.id);
-  const answeredCount = Object.keys(answers).length;
-  const progress = Math.round((answeredCount / questions.length) * 100);
-
   const submittedAnswers = useMemo<ReadinessAnswer[]>(
     () =>
       questions.filter((question) => answers[question.id] !== undefined).map(
@@ -170,6 +185,27 @@ export function AssessmentForm({
     targetCustomerSegment,
     confirmed: targetMarketConfirmed
   };
+  const applicability = resolveAssessmentQuestions({
+    surveyVersion,
+    salesMotion: surveyVersion === "5.0" ? salesMotion : null,
+    targetMarket,
+    answers: submittedAnswers
+  });
+  const requiredIds = new Set(applicability.requiredIds);
+  const requiredAnswers = submittedAnswers.filter((answer) => requiredIds.has(answer.questionId));
+  const answeredCount = requiredAnswers.length;
+  const progress = applicability.requiredIds.length
+    ? Math.round((answeredCount / applicability.requiredIds.length) * 100)
+    : 100;
+  const stageQuestionIds = new Set(questionsOfStage(stage.id, locale, surveyVersion).map((question) => question.id));
+  const stageItems = items.filter((item) =>
+    item.stageId === stage.id && questions.some((question) =>
+      question.itemId === item.id && requiredIds.has(question.id)
+    )
+  );
+  const stageDeferredGroups = applicability.deferredGroups
+    .map((group) => ({ ...group, questionIds: group.questionIds.filter((id) => stageQuestionIds.has(id)) }))
+    .filter((group) => group.questionIds.length);
 
   function changeLevel(questionId: string, level: ReadinessLevel) {
     setAnswers((current) => ({ ...current, [questionId]: level }));
@@ -194,14 +230,16 @@ export function AssessmentForm({
   function answersThroughStage(stageIndex: number) {
     const questionIds = new Set(
       stages.slice(0, stageIndex + 1).flatMap((entry) =>
-        questionsOfStage(entry.id, locale).map((question) => question.id)
+        questionsOfStage(entry.id, locale, surveyVersion).map((question) => question.id)
       )
     );
-    return submittedAnswers.filter((answer) => questionIds.has(answer.questionId));
+    return requiredAnswers.filter((answer) => questionIds.has(answer.questionId));
   }
 
   async function goNext() {
-    const missing = firstUnanswered(questionsOfStage(stage.id, locale));
+    const missing = firstUnanswered(
+      questionsOfStage(stage.id, locale, surveyVersion).filter((question) => requiredIds.has(question.id))
+    );
     if (missing) {
       setErrors((current) => ({
         ...current,
@@ -213,8 +251,8 @@ export function AssessmentForm({
       return;
     }
     const completedAnswers = answersThroughStage(activeStage);
-    if (!hasPassedStage(completedAnswers, stage.id, targetMarket, locale)) {
-      await finishAssessment(completedAnswers);
+    if (!hasPassedStage(completedAnswers, stage.id, targetMarket, locale, surveyVersion, salesMotion)) {
+      await finishAssessment(completedAnswers, stage.id);
       return;
     }
     const nextStage = Math.min(activeStage + 1, stages.length - 1);
@@ -225,17 +263,27 @@ export function AssessmentForm({
 
   async function submitAnswers(
     answersToSubmit: ReadinessAnswer[],
+    completedStageId: "early" | "preparing" | "ready",
     restoredAnswers = false,
     openDashboard = false
   ) {
-    if (!openDashboard) setResult(calculateReadiness(answersToSubmit, targetMarket, locale));
+    if (!openDashboard) {
+      setResult(calculateReadiness(answersToSubmit, targetMarket, locale, surveyVersion, salesMotion));
+    }
     setSaving(true);
     setSaved(false);
     try {
       const response = await fetch("/api/assessments", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ answers: answersToSubmit, offering, targetMarket, locale })
+        body: JSON.stringify({
+          answers: answersToSubmit,
+          completedStageId,
+          salesMotion: surveyVersion === "5.0" ? salesMotion : undefined,
+          offering,
+          targetMarket,
+          locale
+        })
       });
       const payload = (await response.json()) as {
         assessmentId?: string;
@@ -258,23 +306,38 @@ export function AssessmentForm({
     }
   }
 
-  async function finishAssessment(answersToSubmit: ReadinessAnswer[]) {
-    const validation = validateAssessmentAnswers(answersToSubmit, locale);
+  async function finishAssessment(
+    answersToSubmit: ReadinessAnswer[],
+    completedStageId: "early" | "preparing" | "ready"
+  ) {
+    const validation = validateAssessmentAnswers(answersToSubmit, locale, {
+      surveyVersion,
+      completedStageId,
+      salesMotion: surveyVersion === "5.0" ? salesMotion : null,
+      targetMarket,
+      answers: answersToSubmit
+    });
     if (!validation.valid) {
       setErrors(validation.errors);
       return;
     }
     if (!isSignedIn) {
-      savePending(answersToSubmit);
+      savePending({
+        surveyVersion,
+        completedStageId,
+        salesMotion: surveyVersion === "5.0" ? salesMotion : undefined,
+        targetMarket,
+        answers: answersToSubmit
+      });
       const resumePath = localizedPath("/assessment?resume=1", locale);
       window.location.href = `${localizedPath("/signup", locale)}?next=${encodeURIComponent(resumePath)}`;
       return;
     }
-    await submitAnswers(answersToSubmit, false, true);
+    await submitAnswers(answersToSubmit, completedStageId, false, true);
   }
 
   async function submit() {
-    const missing = firstUnanswered(questions);
+    const missing = firstUnanswered(questions.filter((question) => requiredIds.has(question.id)));
     if (missing) {
       const item = items.find((entry) => entry.id === missing.itemId)!;
       setActiveStage(stages.findIndex((entry) => entry.id === item.stageId));
@@ -282,15 +345,16 @@ export function AssessmentForm({
         ...current,
         [missing.id]: c?.allRequired ?? "모든 문항에 답해야 결과를 확인할 수 있습니다."
       }));
+      requestAnimationFrame(() => document.getElementById(`question-${missing.id}`)?.focus());
       return;
     }
-    await finishAssessment(answersThroughStage(activeStage));
+    await finishAssessment(answersThroughStage(activeStage), stage.id);
   }
 
   useEffect(() => {
     if (!isSignedIn || restored.current) return;
     restored.current = true;
-    const pending = loadPending();
+    const pending = loadPending(surveyVersion);
     if (!pending) {
       if (resume) {
         setRestoreMessage(c?.pendingMissing ?? "보관된 진단 응답을 찾지 못했습니다. 처음부터 다시 진단해 주세요.");
@@ -299,17 +363,27 @@ export function AssessmentForm({
     }
     setAnswers(
       Object.fromEntries(
-        pending.map((answer) => [answer.questionId, answer.level])
+        pending.answers.map((answer) => [answer.questionId, answer.level])
       )
     );
     setEvidence(
       Object.fromEntries(
-        pending
+        pending.answers
           .filter((answer) => answer.evidence)
           .map((answer) => [answer.questionId, answer.evidence!])
       )
     );
-    void submitAnswers(pending, true, true);
+    setTargetCountry(pending.targetMarket.targetCountry);
+    setTargetCustomerSegment(pending.targetMarket.targetCustomerSegment);
+    setTargetMarketConfirmed(Boolean(pending.targetMarket.confirmed || pending.targetMarket.confirmedAt));
+    if (pending.salesMotion) setSalesMotion(pending.salesMotion);
+    if (pending.needsReview) {
+      setRestoreMessage(locale === "en"
+        ? "Compatible answers were restored. Review the changed questions before submitting."
+        : "그대로 사용할 수 있는 답변만 복원했습니다. 변경된 문항을 확인한 뒤 제출해 주세요.");
+      return;
+    }
+    void submitAnswers(pending.answers, pending.completedStageId, true, true);
   }, [isSignedIn, resume]);
 
   if (result) {
@@ -491,6 +565,30 @@ export function AssessmentForm({
         <span className="page-kicker">{c?.readiness ?? "시장진입 준비도(Global Readiness)"}</span>
         <h1>{c?.title ?? "글로벌 진출 준비도 진단"}</h1>
         <p>{c?.description ?? `${questions.length}개 문항으로 준비 1단계·준비 2단계·준비 3단계 세 단계를 진단합니다. 아직 하지 않은 항목을 고르셔도 불이익은 없습니다.`}</p>
+        {surveyVersion === "5.0" && (
+          <fieldset className="offering-picker sales-motion-picker">
+            <legend>{c?.salesMotion ?? "진출 방식"}</legend>
+            <div>
+              {([
+                ["direct", locale === "en" ? "Direct" : "직접 진출"],
+                ["partner", locale === "en" ? "Partner-led" : "파트너 활용"],
+                ["hybrid", locale === "en" ? "Hybrid" : "혼합 방식"],
+                ["unknown", locale === "en" ? "Undecided" : "아직 미정"]
+              ] as const).map(([value, label]) => (
+                <label className={salesMotion === value ? "selected" : ""} key={value}>
+                  <input
+                    type="radio"
+                    name="salesMotion"
+                    checked={salesMotion === value}
+                    onChange={() => setSalesMotion(value)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <small>{c?.salesMotionHint ?? "점수에는 포함되지 않으며 현재 운영 방식과 무관한 문항만 접습니다."}</small>
+          </fieldset>
+        )}
         <div className="offering-picker">
           <span>{c?.offering ?? "대표님이 파시는 것은"}</span>
           <div>
@@ -517,16 +615,25 @@ export function AssessmentForm({
 
         <div className="progress-block">
           <span>
-            <strong>{answeredCount}</strong> / {questions.length}
+            <strong>{answeredCount}</strong> / {applicability.requiredIds.length}
           </span>
           <div className="meter">
             <span style={{ width: `${progress}%` }} />
           </div>
-          <small>{progress}% {c?.complete ?? "완료"}</small>
+          <small>
+            {progress}% {c?.complete ?? "완료"} · {locale === "en" ? "Deferred" : "보류"} {applicability.deferredIds.length} · {locale === "en" ? "N/A" : "해당 없음"} {applicability.notApplicableIds.length}
+          </small>
         </div>
+        <p className="assessment-applicability-summary" aria-live="polite">
+          {locale === "en"
+            ? `${applicability.deferredIds.length} deferred · ${applicability.notApplicableIds.length} not applicable`
+            : `보류 ${applicability.deferredIds.length}개 · 해당 없음 ${applicability.notApplicableIds.length}개`}
+        </p>
         <ol className="domain-nav">
           {stages.map((entry, index) => {
-            const complete = questionsOfStage(entry.id, locale).every(
+            const stageRequired = questionsOfStage(entry.id, locale, surveyVersion)
+              .filter((question) => requiredIds.has(question.id));
+            const complete = stageRequired.length === 0 || stageRequired.every(
               (question) => answers[question.id] !== undefined
             );
             return (
@@ -599,21 +706,39 @@ export function AssessmentForm({
             </label>
           </fieldset>
         )}
+        {stageDeferredGroups.map((group) => {
+          const numbers = group.questionIds.map((id) => getQuestionNumber(id, surveyVersion)!).sort((a, b) => a - b);
+          const range = numbers.length > 1 ? `Q${numbers[0]}~Q${numbers.at(-1)}` : `Q${numbers[0]}`;
+          const copy = group.reason === "target_country_missing"
+            ? locale === "en" ? "Enter an initial target country to continue these questions." : "초기 목표국가를 입력한 뒤 이 문항들을 진행합니다."
+            : group.reason === "sales_motion_unknown"
+              ? locale === "en" ? "Choose a sales motion to continue the partner questions." : "진출 방식을 정하면 파트너 문항을 진행합니다."
+              : group.reason === "local_test_not_started"
+                ? locale === "en" ? "Complete a local test before reviewing the issues found." : "현지 시험을 수행한 뒤 발견 문제를 확인합니다."
+                : locale === "en" ? "Add paid-customer evidence before reviewing pricing sustainability." : "유료 고객 증거를 확보한 뒤 가격 지속 가능성을 확인합니다.";
+          return (
+            <aside className="assessment-deferred panel" key={group.reason} aria-live="polite">
+              <strong>{range}</strong>
+              <span>{copy}</span>
+            </aside>
+          );
+        })}
         {stageItems.map((item) => (
           <div key={item.id}>
             <h3 className="question-group">{item.label}</h3>
             {questions.filter(
-              (question) => question.itemId === item.id
+              (question) => question.itemId === item.id && requiredIds.has(question.id)
             ).map((question) => {
-              const index = questions.indexOf(question);
+              const number = getQuestionNumber(question.id, surveyVersion)!;
               return (
                 <article
                   className="question-card panel"
                   id={`question-${question.id}`}
                   key={question.id}
+                  tabIndex={-1}
                 >
                   <span className="question-number">
-                    Q{String(index + 1).padStart(2, "0")}
+                    Q{String(number).padStart(2, "0")}
                   </span>
                   <h3>{applyOffering(question.question, offering, locale)}</h3>
                   <fieldset>
