@@ -9,6 +9,7 @@ import {
   buildStageAnswerInsights,
   calculateReadiness,
   decidePlanHorizons,
+  formatReadinessStatus,
   hasPassedStage,
   isCompleteStageAnswerSet,
   normalizeGateMessage,
@@ -43,6 +44,10 @@ describe("intake question set", () => {
     expect(normalizeReadinessStatus("Readiness Stage 3")).toBe("준비 3단계");
     expect(normalizeReadinessStatus("Ready to Enter")).toBe("진출 실행 가능");
     expect(normalizeReadinessStatus("진출 실행 가능")).toBe("진출 실행 가능");
+    expect(formatReadinessStatus("Readiness Stage 2", "ko")).toBe("준비 2단계");
+    expect(formatReadinessStatus("준비 2단계", "en")).toBe("Readiness Stage 2");
+    expect(formatReadinessStatus("Ready to Enter", "ko")).toBe("진출 실행 가능");
+    expect(formatReadinessStatus("진출 실행 가능", "en")).toBe("Ready to Enter");
   });
 
   it("keeps 55 questions with unique ids, four options, and an action", () => {

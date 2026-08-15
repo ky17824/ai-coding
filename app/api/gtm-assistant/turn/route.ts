@@ -17,7 +17,7 @@ import {
   withGeneratedBy,
   type SavedAction
 } from "@/lib/gtm-assistant";
-import { calculateReadiness, decidePlanHorizons, normalizeReadinessStatus } from "@/lib/readiness";
+import { calculateReadiness, decidePlanHorizons, formatReadinessStatus } from "@/lib/readiness";
 import { PAID_PILOT_QUESTION_ID, type SurveyVersion } from "@/lib/intake-questions";
 import type {
   EvidenceInput,
@@ -459,7 +459,7 @@ export async function POST(request: Request) {
       input: JSON.stringify({
         assessment: {
           ...assessment,
-          status_label: normalizeReadinessStatus(assessment.status_label)
+          status_label: formatReadinessStatus(assessment.status_label, locale)
         },
         actions,
         founderContext: cleanContext,

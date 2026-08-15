@@ -7,7 +7,7 @@ import { StageSummaryPanel } from "@/components/stage-summary-panel";
 import {
   buildStageAnswerInsights,
   normalizeGateMessage,
-  normalizeReadinessStatus,
+  formatReadinessStatus,
   questionsOfStage,
   resolveAssessmentQuestions
 } from "@/lib/readiness";
@@ -75,7 +75,7 @@ export default async function DashboardPage({
       .eq("assessment_id", assessment.id)
   ]);
   const storedDomainScores = assessment.domain_scores as Record<string, number>;
-  const assessmentStatus = normalizeReadinessStatus(assessment.status_label);
+  const assessmentStatus = formatReadinessStatus(assessment.status_label, locale);
   const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
   const salesMotion: SalesMotion = ["direct", "partner", "hybrid", "unknown"].includes(assessment.sales_motion)
     ? assessment.sales_motion as SalesMotion

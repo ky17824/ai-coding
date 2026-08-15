@@ -16,7 +16,7 @@ import {
   getMarketResearchScope,
   sanitizeFounderText
 } from "@/lib/gtm-assistant";
-import { normalizeReadinessStatus, resolveAssessmentQuestions } from "@/lib/readiness";
+import { formatReadinessStatus, normalizeReadinessStatus, resolveAssessmentQuestions } from "@/lib/readiness";
 import { getIntakeQuestions, type SurveyVersion } from "@/lib/intake-questions";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { preserveFounderContextLocale } from "@/lib/content-localization";
@@ -262,7 +262,7 @@ export async function POST(request: Request) {
         founderContext: publicResearchContext,
         assessment: {
           ...assessment,
-          status_label: normalizeReadinessStatus(assessment.status_label)
+          status_label: formatReadinessStatus(assessment.status_label, locale)
         },
         answeredQuestionCount: (answers ?? []).length,
         answerEvidenceSummary: (answers ?? []).map((answer) => ({

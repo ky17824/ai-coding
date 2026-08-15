@@ -178,6 +178,17 @@ export function normalizeReadinessStatus(status: string): ReadinessStatus {
   return LEGACY_STATUS_LABELS[status] ?? status as ReadinessStatus;
 }
 
+export function formatReadinessStatus(status: string, locale: Locale): ReadinessStatus {
+  const canonical = normalizeReadinessStatus(status);
+  if (locale !== "en") return canonical;
+  return ({
+    "준비 1단계": "Readiness Stage 1",
+    "준비 2단계": "Readiness Stage 2",
+    "준비 3단계": "Readiness Stage 3",
+    "진출 실행 가능": "Ready to Enter"
+  } as Record<string, ReadinessStatus>)[canonical] ?? canonical;
+}
+
 export function isTargetMarketConfirmed(targetMarket?: TargetMarketContext | null) {
   return Boolean(
     targetMarket?.targetCountry.trim() &&
