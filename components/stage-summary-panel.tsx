@@ -24,9 +24,16 @@ export function StageSummaryPanel({
   const [status, setStatus] = useState(initialStatus);
   const [message, setMessage] = useState("");
   const passed = score >= 80;
-  const nextMilestone = summary && /\bGate A\b/i.test(summary.nextMilestone)
-    ? (en ? "Apply the improvements, then retake the assessment." : "보완 내용을 반영한 뒤 재진단을 시작해 보세요.")
-    : summary?.nextMilestone;
+  const hasInternalGateLabel = Boolean(summary && /\bGate A\b/i.test(summary.nextMilestone));
+  const nextMilestone = summary
+    ? `${summary.nextMilestone
+      .replace(/\bGate A를/gi, en ? "Stage 1 readiness criteria" : "준비 1단계 통과 기준을")
+      .replace(/\bGate A\b/gi, en ? "Stage 1 readiness criteria" : "준비 1단계 통과 기준")}${hasInternalGateLabel
+      ? (en
+        ? " Review each response below. Improve the gaps and retake the assessment, or create an action plan with AI."
+        : " 아래 ‘내 응답 진단’에서 문항별 응답 수준을 확인하세요. 부족한 내용을 보완해 재진단하거나, AI와 함께 실행계획을 만들어 보세요.")
+      : ""}`
+    : undefined;
 
   async function generate() {
     setStatus("generating");
