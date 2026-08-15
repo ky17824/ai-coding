@@ -145,7 +145,10 @@ export async function GET(
   const research = localizedPlan.marketResearch;
   if (!research) return NextResponse.json({ message: en ? "There is no market research to download." : "다운로드할 시장 조사 결과가 없습니다." }, { status: 409 });
   const referenceIndex = buildReferenceIndex([
-    ...research.marketSizing.flatMap((entry) => entry.sources),
+    ...research.marketSizing.flatMap((entry) => [
+      ...entry.calculationInputs.flatMap((input) => input.sources),
+      ...entry.sources
+    ]),
     ...research.trends.flatMap((entry) => entry.sources),
     ...research.competitors.flatMap((entry) => entry.sources),
     ...research.contradictions.flatMap((entry) => entry.sources)
@@ -170,13 +173,15 @@ export async function GET(
     const title = entry.key === "beachhead" ? (en ? "Beachhead Market" : "교두보 시장(Beachhead Market)") : entry.label;
     const method = entry.method === "triangulated" ? (en ? "triangulated" : "상향식·하향식 교차검증") : (en ? "bottom up" : "상향식");
     const confidence = en ? entry.confidence : ({ high: "높음", medium: "보통", low: "낮음" }[entry.confidence]);
+    const status = entry.status === "estimated" ? (en ? "Estimated" : "추정치") : (en ? "Insufficient evidence" : "근거 부족");
     const sources = entry.sources.length > 0
       ? `<p><strong>${en ? "Sources" : "근거 자료"}</strong> ${citations(entry.sources)}</p>`
       : "";
     const calculationInputs = entry.calculationInputs.length > 0 ? `<h4>${en ? "Calculation inputs" : "계산 입력값"}</h4><ul>${entry.calculationInputs.map((input) => `<li>${escapeHtml(`${input.name}: ${input.low}–${input.high} (${en ? "base" : "기준"} ${input.base}) ${input.unit}`)} · ${citations(input.sources)}</li>`).join("")}</ul>` : "";
+    const keyLimitation = entry.evidenceGaps.length ? `<p class="key-limitation"><strong>${en ? "Key limitation" : "핵심 한계"}</strong><br>${escapeHtml(entry.evidenceGaps.join(" · "))}</p>` : "";
     const validation = entry.validation.length ? `<h4>${en ? "Validation" : "검증"}</h4>${list(entry.validation)}` : "";
     const cohesion = entry.cohesion ? `<p><strong>${en ? "Beachhead checks" : "교두보 시장 점검"}</strong><br>${escapeHtml(`${entry.cohesion.buysSimilarProducts ? "✓" : "✕"} ${en ? "similar products" : "유사 제품"} · ${entry.cohesion.similarSalesCycle ? "✓" : "✕"} ${en ? "similar sales cycle" : "유사 판매주기"} · ${entry.cohesion.wordOfMouthPotential ? "✓" : "✕"} ${en ? "word of mouth" : "입소문 가능성"} · ${entry.cohesion.notes}`)}</p>` : "";
-    return `<article class="market-card"><h3>${escapeHtml(title)}</h3><strong>${escapeHtml(entry.estimate)}</strong><p>${entry.range ? `${entry.range.referenceYear} · ${escapeHtml(entry.range.currency)} · ` : ""}${escapeHtml(method)}</p><p><strong>${en ? "Formula" : "산식"}</strong><br>${escapeHtml(entry.formula)}</p>${calculationInputs}<p><strong>${en ? "Confidence" : "신뢰도"}</strong><br>${escapeHtml(confidence)}</p>${validation}${cohesion}${entry.assumptions.length ? `<h4>${en ? "Assumptions" : "가정"}</h4>${list(entry.assumptions)}` : ""}${entry.evidenceGaps.length ? `<h4>${en ? "Evidence gaps" : "근거 공백"}</h4>${list(entry.evidenceGaps)}` : ""}${entry.expansionPath.length ? `<p><strong>${en ? "Expansion path" : "인접시장 확장 경로"}</strong><br>${escapeHtml(entry.expansionPath.join(" → "))}</p>` : ""}${sources}</article>`;
+    return `<article class="market-card"><h3>${escapeHtml(title)}</h3><strong>${escapeHtml(entry.estimate)}</strong><p class="market-status"><strong>${en ? "Status" : "상태"}</strong><br>${status}</p><p><strong>${en ? "Formula" : "산식"}</strong><br>${escapeHtml(entry.formula)}</p>${keyLimitation}<p>${entry.range ? `${entry.range.referenceYear} · ${escapeHtml(entry.range.currency)} · ` : ""}${escapeHtml(method)}</p>${calculationInputs}<p><strong>${en ? "Confidence" : "신뢰도"}</strong><br>${escapeHtml(confidence)}</p>${validation}${cohesion}${entry.assumptions.length ? `<h4>${en ? "Assumptions" : "가정"}</h4>${list(entry.assumptions)}` : ""}${entry.expansionPath.length ? `<p><strong>${en ? "Expansion path" : "인접시장 확장 경로"}</strong><br>${escapeHtml(entry.expansionPath.join(" → "))}</p>` : ""}${sources}</article>`;
   }).join("");
   const trendLabel = (value: string) => en ? value.replaceAll("_", " ") : ({ demand: "수요·성장", customer_behavior: "고객 행동", channel: "유통·채널", regulation: "규제", product_culture: "제품·문화" }[value] ?? value);
   const competitorLabel = (presence: string, type: string) => en ? `${presence} · ${type}` : `${{ local: "현지", regional: "지역", global: "글로벌" }[presence] ?? presence} · ${{ direct: "직접", adjacent: "인접", alternative: "대체재" }[type] ?? type}`;

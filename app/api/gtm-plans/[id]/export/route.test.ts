@@ -43,6 +43,19 @@ const get = () => GET(new Request("https://example.com/api/gtm-plans/plan-1/expo
   params: Promise.resolve({ id: "plan-1" })
 });
 
+const setReportPlan = (research: Record<string, unknown>) => {
+  planData = {
+    id: "plan-1", organization_id: "org-1", assessment_id: null, status: "active", summary: "", assumptions: [], market_research_documents: [], recent_messages: [], turn_count: 0, generation_count: 0, model: "gpt-5.6-sol", content_locale: "ko", founder_context_locale: "ko", market_research_locale: "ko", updated_at: "2026-01-01",
+    founder_context: { offeringName: "Offer", offeringType: "service", targetCountry: "KR", targetCustomer: "buyer", offeringSummary: "summary", customerProblem: "problem", coreValue: "value" },
+    market_research: {
+      executiveSummary: "summary", scope: "sellability_review", sellability: { summary: "ok" }, marketDefinition: { included: "all", excluded: "", annualRevenueUnit: "KRW" },
+      marketSizing: [], trends: [], competitors: [], contradictions: [], researchCoverage: { lanes: [], sourceCount: 0, uniqueDomainCount: 0, competitorCount: 0, sourceTypes: {}, coverageGaps: [] }, limitations: [], nextExperiments: [],
+      ...research
+    },
+    items: []
+  };
+};
+
 describe("market report readiness coverage", () => {
   beforeEach(() => {
     failureTable = "";
@@ -93,23 +106,70 @@ describe("market report citations", () => {
     expect(renderBibliography(index, (kind) => kind === "government" ? "정부·규제" : kind)).not.toContain(" · government");
   });
 
-  it("renders real citation anchors in calculation-input lists", async () => {
-    const source = { title: "Input source", url: "https://a.example/report", publisher: "A", publishedAt: null, checkedAt: "2026-01-01", kind: "fact" };
+  it("numbers market-size citations in their body render order", async () => {
+    const inputSource = { title: "Input source", url: "https://input.example/report", publisher: "Input", publishedAt: null, checkedAt: "2026-01-01", kind: "fact" };
+    const cardSource = { title: "Card source", url: "https://card.example/report", publisher: "Card", publishedAt: null, checkedAt: "2026-01-01", kind: "fact" };
     planData = {
       id: "plan-1", organization_id: "org-1", assessment_id: null, status: "active", summary: "", assumptions: [], market_research_documents: [], recent_messages: [], turn_count: 0, generation_count: 0, model: "gpt-5.6-sol", content_locale: "ko", founder_context_locale: "ko", market_research_locale: "ko", updated_at: "2026-01-01",
       founder_context: { offeringName: "Offer", offeringType: "service", targetCountry: "KR", targetCustomer: "buyer", offeringSummary: "summary", customerProblem: "problem", coreValue: "value" },
       market_research: {
         executiveSummary: "summary", scope: "sellability_review", sellability: { summary: "ok" }, marketDefinition: { included: "all", excluded: "", annualRevenueUnit: "KRW" },
-        marketSizing: [{ key: "tam", label: "TAM", status: "estimated", estimate: "1", range: null, method: "bottom_up", formula: "x", calculationInputs: [{ name: "Customers", low: 1, base: 2, high: 3, unit: "count", sourceTitles: ["Input source"], sources: [source] }], assumptions: [], sources: [source], confidence: "high", evidenceGaps: [], sensitivityDrivers: [], validation: [], cohesion: null, expansionPath: [] }],
-        trends: [], competitors: [], contradictions: [], researchCoverage: { lanes: [], sourceCount: 1, uniqueDomainCount: 1, competitorCount: 0, sourceTypes: {}, coverageGaps: [] }, limitations: [], nextExperiments: []
+        marketSizing: [{ key: "tam", label: "TAM", status: "estimated", estimate: "1", range: null, method: "bottom_up", formula: "x", calculationInputs: [{ name: "Customers", low: 1, base: 2, high: 3, unit: "count", sourceTitles: ["Input source"], sources: [inputSource] }], assumptions: [], sources: [cardSource], confidence: "high", evidenceGaps: [], sensitivityDrivers: [], validation: [], cohesion: null, expansionPath: [] }],
+        trends: [], competitors: [], contradictions: [], researchCoverage: { lanes: [], sourceCount: 2, uniqueDomainCount: 2, competitorCount: 0, sourceTypes: {}, coverageGaps: [] }, limitations: [], nextExperiments: []
       },
       items: []
     };
 
     const html = await (await get()).text();
-    const calculationInputs = html.slice(html.indexOf("계산 입력값"), html.indexOf("신뢰도"));
+    const marketCard = html.slice(html.indexOf('<article class="market-card">'), html.indexOf("</article>", html.indexOf('<article class="market-card">')));
+    const calculationInputs = marketCard.slice(marketCard.indexOf("계산 입력값"), marketCard.indexOf("신뢰도"));
     expect(calculationInputs).toContain('<a class="citation" href="#ref-1">[1]</a>');
     expect(calculationInputs).not.toContain("&lt;a");
+    expect(marketCard.match(/href="#ref-\d+"/g)).toEqual(['href="#ref-1"', 'href="#ref-2"']);
+    expect(html.indexOf("Input source")).toBeLessThan(html.indexOf("Card source"));
+  });
+
+  it("renders localized market-size status and one key limitation in card hierarchy", async () => {
+    const marketSize = (label: string, status: "estimated" | "insufficient_evidence", estimate: string, gap: string) => ({
+      key: label.toLowerCase(), label, status, estimate, range: null, method: "bottom_up", formula: `${label} formula`, calculationInputs: [], assumptions: [], sources: [], confidence: "low", evidenceGaps: [gap], sensitivityDrivers: [], validation: [], cohesion: null, expansionPath: []
+    });
+    setReportPlan({ marketSizing: [marketSize("TAM", "estimated", "₩1조", "추정 한계"), marketSize("SAM", "insufficient_evidence", "산정 불가", "근거 한계")] });
+
+    const html = await (await get()).text();
+    const cards = html.match(/<article class="market-card">.*?<\/article>/g) ?? [];
+    const [estimatedCard = "", insufficientCard = ""] = cards;
+
+    expect(estimatedCard).toContain('<strong>₩1조</strong><p class="market-status"><strong>상태</strong><br>추정치</p><p><strong>산식</strong><br>TAM formula</p><p class="key-limitation"><strong>핵심 한계</strong><br>추정 한계</p>');
+    expect(insufficientCard).toContain('<strong>산정 불가</strong><p class="market-status"><strong>상태</strong><br>근거 부족</p><p><strong>산식</strong><br>SAM formula</p><p class="key-limitation"><strong>핵심 한계</strong><br>근거 한계</p>');
+    expect(estimatedCard.match(/추정 한계/g)).toHaveLength(1);
+    expect(insufficientCard.match(/근거 한계/g)).toHaveLength(1);
+  });
+
+  it("renders 40 unique references without leaking or duplicating source URLs", async () => {
+    const sources = Array.from({ length: 40 }, (_, index) => ({
+      title: `Source ${index + 1}`,
+      url: `https://sources.example/report/${index + 1}?long=body`,
+      publisher: "Source publisher",
+      publishedAt: "2026-01-01",
+      checkedAt: "2026-01-02",
+      kind: "industry"
+    }));
+    setReportPlan({
+      trends: [{ title: "All sources", category: "demand", finding: "finding", implication: "implication", sourceTitle: sources[0].title, sources: [...sources, sources[0]], confidence: "high", freshness: "current" }],
+      researchCoverage: { lanes: ["demand"], sourceCount: 40, uniqueDomainCount: 1, competitorCount: 0, sourceTypes: { industry: 40 }, coverageGaps: [] }
+    });
+
+    const html = await (await get()).text();
+    const bibliographyStart = html.indexOf("참고문헌");
+    const bodyBeforeBibliography = html.slice(html.indexOf("<body>"), bibliographyStart);
+    const referenceNumbers = [...html.matchAll(/id="ref-(\d+)"/g)].map((match) => Number(match[1]));
+    const citationNumbersInBody = [...bodyBeforeBibliography.matchAll(/href="#ref-(\d+)"/g)].map((match) => Number(match[1]));
+
+    expect(referenceNumbers).toEqual(Array.from({ length: 40 }, (_, index) => index + 1));
+    expect(citationNumbersInBody).toEqual(referenceNumbers);
+    expect(html.match(/id="ref-1"/g)).toHaveLength(1);
+    expect(bodyBeforeBibliography.match(/href="#ref-1"/g)).toHaveLength(1);
+    for (const source of sources) expect(bodyBeforeBibliography).not.toContain(source.url);
   });
 
   it("renders the executive report structure with deduplicated body citations", async () => {
