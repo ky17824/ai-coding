@@ -54,4 +54,19 @@ describe("stage summary panel", () => {
     expect(html).toContain("총평 다시 생성");
     expect(html).toContain("aria-live=\"polite\"");
   });
+
+  it("replaces internal Gate A wording in a stored summary", () => {
+    const html = renderToStaticMarkup(
+      <StageSummaryPanel
+        assessmentId="assessment-1"
+        locale="ko"
+        initialSummary={{ ...summary, nextMilestone: "Gate A를 다시 점검하세요." }}
+        initialStatus="complete"
+        score={67}
+      />
+    );
+
+    expect(html).toContain("보완 내용을 반영한 뒤 재진단을 시작해 보세요.");
+    expect(html).not.toContain("Gate A");
+  });
 });

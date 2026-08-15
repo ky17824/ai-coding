@@ -1493,6 +1493,10 @@ main[lang="en"] .hero h1 {
   font-size: 13px;
 }
 
+.next-session > small:last-of-type {
+  margin-bottom: 24px;
+}
+
 .next-session .button {
   margin-top: auto;
 }

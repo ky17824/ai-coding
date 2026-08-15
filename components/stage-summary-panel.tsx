@@ -24,6 +24,9 @@ export function StageSummaryPanel({
   const [status, setStatus] = useState(initialStatus);
   const [message, setMessage] = useState("");
   const passed = score >= 80;
+  const nextMilestone = summary && /\bGate A\b/i.test(summary.nextMilestone)
+    ? (en ? "Apply the improvements, then retake the assessment." : "보완 내용을 반영한 뒤 재진단을 시작해 보세요.")
+    : summary?.nextMilestone;
 
   async function generate() {
     setStatus("generating");
@@ -90,7 +93,7 @@ export function StageSummaryPanel({
           </section>
           <footer>
             <span>{en ? "NEXT MILESTONE" : "다음 이정표"}</span>
-            <strong>{summary.nextMilestone}</strong>
+            <strong>{nextMilestone}</strong>
           </footer>
         </div>
       )}

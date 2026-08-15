@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const source = readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
+const css = readFileSync(new URL("../globals.css", import.meta.url), "utf8");
 
 describe("dashboard execution summary", () => {
   it("uses the readiness-to-plan dashboard heading", () => {
@@ -39,5 +40,9 @@ describe("dashboard execution summary", () => {
     expect(source).toContain("assessment.domain_scores");
     expect(source).toContain("assessment.gate_messages");
     expect(source).toContain("assessment.survey_version");
+  });
+
+  it("keeps breathing room above the previous-answer button", () => {
+    expect(css).toMatch(/\.next-session > small:last-of-type\s*\{[^}]*margin-bottom:\s*24px;/s);
   });
 });
