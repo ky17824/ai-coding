@@ -10,14 +10,21 @@ export interface CompanyRow {
   jobTitle: string | null;
   firstAssessmentAt: string | null;
   latestAssessment: {
+    id: string;
     surveyVersion: SurveyVersion;
     completedAt: string;
     statusLabel: string;
     overallScore: number;
     gateMessages: string[];
   } | null;
+  assessmentHistory?: {
+    id: string;
+    surveyVersion: SurveyVersion;
+    completedAt: string;
+    statusLabel: string;
+  }[];
   actions: { serviceTag: string; completedAt: string | null }[];
-  orders: { status: OrderStatus; providerName: string; createdAt: string }[];
+  orders: { status: OrderStatus; providerName: string; createdAt: string; assessmentId?: string | null }[];
 }
 
 export interface WorklistItem {
@@ -49,16 +56,44 @@ export function buildWorklist(rows: CompanyRow[], now: Date, locale: Locale = "k
   return items;
 }
 
-export function buildFunnel(rows: CompanyRow[], locale: Locale = "ko") {
+function assessmentForVersion(row: CompanyRow, surveyVersion: SurveyVersion) {
+  return row.assessmentHistory?.find((assessment) => assessment.surveyVersion === surveyVersion) ??
+    (row.latestAssessment?.surveyVersion === surveyVersion ? row.latestAssessment : null);
+}
+
+function orderSurveyVersion(row: CompanyRow, order: CompanyRow["orders"][number]): SurveyVersion | null {
+  const assessments = row.assessmentHistory ?? (row.latestAssessment ? [row.latestAssessment] : []);
+  const explicit = order.assessmentId ? assessments.find((assessment) => assessment.id === order.assessmentId) : null;
+  if (explicit) return explicit.surveyVersion;
+  return assessments
+    .filter((assessment) => new Date(assessment.completedAt).getTime() <= new Date(order.createdAt).getTime())
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))[0]?.surveyVersion ?? null;
+}
+
+function stageRank(status: string) {
+  return ({
+    "준비 1단계": 0,
+    "Readiness Stage 1": 0,
+    "준비 2단계": 1,
+    "Readiness Stage 2": 1,
+    "준비 3단계": 2,
+    "Readiness Stage 3": 2,
+    "진출 실행 가능": 3,
+    "Ready to Enter": 3
+  } as Record<string, number>)[status] ?? 0;
+}
+
+export function buildFunnel(rows: CompanyRow[], locale: Locale = "ko", surveyVersion: SurveyVersion = "4.0") {
   const en = locale === "en";
-  const assessed = rows.filter((row) => row.latestAssessment);
-  const status = (row: CompanyRow) => row.latestAssessment?.statusLabel;
+  const assessed = rows.flatMap((row) => {
+    const assessment = assessmentForVersion(row, surveyVersion);
+    return assessment ? [assessment] : [];
+  });
   return [
-    { label: en ? "Signed up" : "가입", count: rows.length },
-    { label: en ? "Assessment complete" : "진단 완료", count: assessed.length },
-    { label: en ? "Stage 1 passed" : "준비 1단계 통과", count: assessed.filter((row) => status(row) !== "준비 1단계").length },
-    { label: en ? "Stage 2 passed" : "준비 2단계 통과", count: assessed.filter((row) => ["준비 3단계", "진출 실행 가능"].includes(status(row) ?? "")).length },
-    { label: en ? "Stage 3 passed" : "준비 3단계 통과", count: assessed.filter((row) => status(row) === "진출 실행 가능").length }
+    { label: en ? `v${surveyVersion} assessments` : `v${surveyVersion} 진단`, count: assessed.length },
+    { label: en ? "Stage 1 passed" : "준비 1단계 통과", count: assessed.filter((assessment) => stageRank(assessment.statusLabel) >= 1).length },
+    { label: en ? "Stage 2 passed" : "준비 2단계 통과", count: assessed.filter((assessment) => stageRank(assessment.statusLabel) >= 2).length },
+    { label: en ? "Stage 3 passed" : "준비 3단계 통과", count: assessed.filter((assessment) => stageRank(assessment.statusLabel) >= 3).length }
   ];
 }
 
@@ -104,11 +139,17 @@ export function buildOperationalMetrics(rows: CompanyRow[], reviewRatings: numbe
     : null;
 
   return {
-    assessmentCompletionByVersion: (["4.0", "5.0"] as SurveyVersion[]).map((surveyVersion) => {
-      const count = assessed.filter((row) => row.latestAssessment?.surveyVersion === surveyVersion).length;
-      return { surveyVersion, assessed: count, rate: percent(count, rows.length) };
+    assessmentByVersion: (["4.0", "5.0"] as SurveyVersion[]).map((surveyVersion) => {
+      const cohort = rows.filter((row) => assessmentForVersion(row, surveyVersion));
+      return {
+        surveyVersion,
+        assessed: cohort.length,
+        assessmentToOrderRate: percent(
+          cohort.filter((row) => row.orders.some((order) => orderSurveyVersion(row, order) === surveyVersion)).length,
+          cohort.length
+        )
+      };
     }),
-    assessmentToOrderRate: percent(ordered.length, assessed.length),
     averageDaysToFirstOrder: average(leadTimes),
     averageReviewRating: average(reviewRatings)
   };

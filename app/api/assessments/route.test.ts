@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getIntakeQuestions } from "@/lib/intake-questions";
 import { resolveAssessmentQuestions } from "@/lib/readiness";
+import { issueSurveyVersionToken } from "@/lib/readiness-rollout";
 
 vi.mock("@/lib/supabase/server", () => ({
   requireUser: async () => null,
@@ -29,7 +30,10 @@ const post = (body: unknown) => POST(new Request("https://example.com/api/assess
 }));
 
 describe("assessment submission contract", () => {
-  afterEach(() => delete process.env.READINESS_V5_ENABLED);
+  afterEach(() => {
+    delete process.env.READINESS_V5_ENABLED;
+    delete process.env.READINESS_SURVEY_TOKEN_SECRET;
+  });
 
   it("accepts a branch-complete v5 stage before authentication", async () => {
     process.env.READINESS_V5_ENABLED = "true";
@@ -37,6 +41,7 @@ describe("assessment submission contract", () => {
       answers: v5EarlyAnswers(),
       completedStageId: "early",
       salesMotion: "direct",
+      surveyVersion: "5.0",
       targetMarket,
       locale: "ko"
     });
@@ -55,9 +60,18 @@ describe("assessment submission contract", () => {
     })).status).toBe(400);
   });
 
-  it("keeps v4 as the server-selected default", async () => {
+  it("binds an in-flight form to its rendered survey version", async () => {
+    process.env.READINESS_SURVEY_TOKEN_SECRET = "test-secret";
+    process.env.READINESS_V5_ENABLED = "true";
     const answers = getIntakeQuestions("ko", "4.0").map((question) => ({ questionId: question.id, level: 2 }));
-    const response = await post({ answers, surveyVersion: "5.0", targetMarket, locale: "ko" });
+    const response = await post({ answers, surveyVersionToken: issueSurveyVersionToken("4.0"), targetMarket, locale: "ko" });
     expect(response.status).toBe(401);
+  });
+
+  it("rejects a forged survey version binding", async () => {
+    process.env.READINESS_SURVEY_TOKEN_SECRET = "test-secret";
+    const answers = getIntakeQuestions("ko", "4.0").map((question) => ({ questionId: question.id, level: 2 }));
+    const response = await post({ answers, surveyVersionToken: `${issueSurveyVersionToken("4.0")}x`, targetMarket, locale: "ko" });
+    expect(response.status).toBe(400);
   });
 });

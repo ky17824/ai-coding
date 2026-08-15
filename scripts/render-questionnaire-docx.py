@@ -3,7 +3,11 @@
 
 import argparse
 import json
+import os
 import subprocess
+import tempfile
+import uuid
+import zipfile
 from pathlib import Path
 
 from docx import Document
@@ -12,6 +16,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
+from lxml import etree as ET
 
 
 COPY = {
@@ -25,7 +30,7 @@ COPY = {
             "①은 ‘그 부분까지 생각해보지 못했다’, ②는 ‘필요한 줄은 알지만 아직 못 했다’, ③은 ‘실제로 해봤다’, ④는 ‘반복됐거나 외부에서 확인받았다’는 뜻입니다.",
             "③이나 ④를 고르신 문항만 아래 칸에 간단히 적어주세요. ①·②를 고르신 문항은 비워두셔도 됩니다.",
             "계약서, 고객명부, 재무자료 원본은 제출하지 않으셔도 됩니다. 고객사 이름은 ‘고객 A’처럼 익명으로 적으셔도 됩니다.",
-            "각 단계의 문항에서 배점 기준 80% 이상이 ③ 또는 ④이면 그 단계를 통과한 것으로 봅니다.",
+            "각 단계의 정규화된 배점 기준 80% 이상이 ③ 또는 ④이고 미해결 Critical 선결 조건이 없으면 그 단계를 통과합니다.",
         ],
         "follow_up": "③·④를 고르셨다면",
         "done": "문항",
@@ -46,7 +51,99 @@ COPY = {
         "done": "questions",
     },
 }
-FONT = "Arial Unicode MS"
+FONT = "Noto Serif KR"
+WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
+CONTENT_TYPE_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
+
+
+def find_korean_font():
+    configured = os.environ.get("READINESS_DOCX_FONT")
+    if configured:
+        font = Path(configured).expanduser()
+        if font.is_file():
+            return font
+        raise FileNotFoundError(f"READINESS_DOCX_FONT does not exist: {font}")
+
+    resource_root = Path.home() / "Documents" / "Developer Resource"
+    font = next(resource_root.rglob("NotoSerifKR-Regular.ttf"), None) if resource_root.exists() else None
+    if font:
+        return font
+    raise FileNotFoundError("Set READINESS_DOCX_FONT to an embeddable Korean TTF font.")
+
+
+def embed_korean_font(docx_path):
+    font_path = find_korean_font()
+    font_key = uuid.uuid4()
+    font_bytes = bytearray(font_path.read_bytes())
+    # ECMA-376 uses the GUID bytes in reverse order for the 32-byte XOR prefix.
+    key = font_key.bytes[::-1]
+    for index in range(min(32, len(font_bytes))):
+        font_bytes[index] ^= key[index % len(key)]
+
+    with zipfile.ZipFile(docx_path) as source:
+        entries = {item.filename: (item, source.read(item.filename)) for item in source.infolist()}
+
+    font_table = ET.fromstring(entries["word/fontTable.xml"][1])
+    font_node = font_table.find(f".//{{{WORD_NS}}}font[@{{{WORD_NS}}}name='{FONT}']")
+    if font_node is None:
+        font_node = ET.SubElement(font_table, f"{{{WORD_NS}}}font", {f"{{{WORD_NS}}}name": FONT})
+    for child in list(font_node):
+        if child.tag == f"{{{WORD_NS}}}embedRegular":
+            font_node.remove(child)
+    ET.SubElement(
+        font_node,
+        f"{{{WORD_NS}}}embedRegular",
+        {f"{{{REL_NS}}}id": "rIdEmbeddedKoreanFont", f"{{{WORD_NS}}}fontKey": f"{{{str(font_key).upper()}}}"},
+    )
+    entries["word/fontTable.xml"] = (
+        entries["word/fontTable.xml"][0],
+        ET.tostring(font_table, encoding="utf-8", xml_declaration=True),
+    )
+
+    rels_path = "word/_rels/fontTable.xml.rels"
+    rels = ET.fromstring(entries[rels_path][1]) if rels_path in entries else ET.Element(f"{{{PACKAGE_REL_NS}}}Relationships")
+    for child in list(rels):
+        if child.attrib.get("Id") == "rIdEmbeddedKoreanFont":
+            rels.remove(child)
+    ET.SubElement(
+        rels,
+        f"{{{PACKAGE_REL_NS}}}Relationship",
+        {
+            "Id": "rIdEmbeddedKoreanFont",
+            "Type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/font",
+            "Target": "fonts/NotoSerifKR-Regular.odttf",
+        },
+    )
+    rels_bytes = ET.tostring(rels, encoding="utf-8", xml_declaration=True)
+
+    content_types = ET.fromstring(entries["[Content_Types].xml"][1])
+    if not any(child.attrib.get("Extension") == "odttf" for child in content_types):
+        ET.SubElement(
+            content_types,
+            f"{{{CONTENT_TYPE_NS}}}Default",
+            {
+                "Extension": "odttf",
+                "ContentType": "application/vnd.openxmlformats-officedocument.obfuscatedFont",
+            },
+        )
+    entries["[Content_Types].xml"] = (
+        entries["[Content_Types].xml"][0],
+        ET.tostring(content_types, encoding="utf-8", xml_declaration=True),
+    )
+
+    with tempfile.NamedTemporaryFile(dir=docx_path.parent, suffix=".docx", delete=False) as temp_file:
+        temp_path = Path(temp_file.name)
+    try:
+        with zipfile.ZipFile(temp_path, "w", zipfile.ZIP_DEFLATED) as target:
+            for name, (item, data) in entries.items():
+                target.writestr(item, data)
+            target.writestr(rels_path, rels_bytes)
+            target.writestr("word/fonts/NotoSerifKR-Regular.odttf", font_bytes)
+        os.replace(temp_path, docx_path)
+    finally:
+        temp_path.unlink(missing_ok=True)
 
 
 def set_cell_shading(cell, fill):
@@ -151,6 +248,8 @@ def render(output, locale, version, node):
                 critical = "★ " if question.get("critical") else ""
                 add_text(paragraph, f"Q{q_no}. {critical}", size=10.5, bold=True)
                 add_text(paragraph, question["question"], size=10.5)
+                if question.get("help"):
+                    add_paragraph(doc, question["help"], size=9, italic=True, color="666666", after=3)
                 for index, option in enumerate(question["options"]):
                     option_paragraph = add_paragraph(doc, f"☐ {'①②③④'[index]} {option}", after=2)
                     option_paragraph.paragraph_format.left_indent = Inches(0.2)
@@ -162,6 +261,8 @@ def render(output, locale, version, node):
 
     output.parent.mkdir(parents=True, exist_ok=True)
     doc.save(output)
+    if locale == "ko":
+        embed_korean_font(output)
     print(f"{output} — {q_no} {copy['done']}")
 
 

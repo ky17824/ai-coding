@@ -217,7 +217,7 @@ export function buildStageAnswerInsights(
     const answer = answerById.get(question.id);
     if (!answer) return [];
     const missingCriticalEvidence = question.critical && !answer.evidence?.value;
-    const answerIsDeferred = question.id === PAID_PILOT_QUESTION_ID &&
+    const answerIsDeferred = version === "4.0" && question.id === PAID_PILOT_QUESTION_ID &&
       (answer.level < POSITIVE_LEVEL || missingCriticalEvidence);
     const status: AnswerInsightStatus = answer.level < POSITIVE_LEVEL || missingCriticalEvidence
       ? answerIsDeferred ? "deferred" : question.critical ? "blocker" : "needs_work"
@@ -291,8 +291,12 @@ export function buildStageAnswerInsights(
       })
     };
   });
-  const positiveScore = items.reduce((sum, item) => sum + item.positiveWeight, 0);
-  const totalScore = items.reduce((sum, item) => sum + item.totalWeight, 0);
+  const rawPositiveScore = items.reduce((sum, item) => sum + item.positiveWeight, 0);
+  const rawTotalScore = items.reduce((sum, item) => sum + item.totalWeight, 0);
+  const totalScore = version === "5.0" ? stage.weight : rawTotalScore;
+  const positiveScore = version === "5.0" && rawTotalScore
+    ? Math.round(stage.weight * rawPositiveScore / rawTotalScore * 10) / 10
+    : rawPositiveScore;
 
   return {
     stageId,

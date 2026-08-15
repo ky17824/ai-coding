@@ -52,6 +52,7 @@ const requestSchema = z.discriminatedUnion("action", [
 ]);
 const paidServiceSchema = z.object({
   contractVersion: z.literal(1),
+  questionCatalogVersion: z.enum(["4.0", "5.0"]).optional(),
   productId: z.string().trim().min(1),
   productKind: z.enum(["specialist", "package"]),
   includedAgentIds: z.array(z.string().trim().min(1)).min(1),
@@ -252,7 +253,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   if (!reserved?.generation_attempt_id) return NextResponse.json({ message: en ? "A report is already being generated or the correction limit was reached." : "이미 보고서를 생성 중이거나 사실 정정 재생성 한도를 사용했습니다." }, { status: 409 });
 
   const reportDate = new Date().toISOString().slice(0, 10);
-  const questions = getIntakeQuestions(parsed.data.locale, readiness.surveyVersion ?? "4.0");
+  const questions = getIntakeQuestions(
+    parsed.data.locale,
+    service.questionCatalogVersion ?? readiness.surveyVersion ?? "4.0"
+  );
   const resolvedQuestionIds = new Set(readiness.resolvedQuestionIds);
   const contractQuestionIds = readiness.assessmentId
     ? service.questionIds.filter((id) => resolvedQuestionIds.has(id))
@@ -275,6 +279,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     clarificationAnswers: reserved.clarification_answers,
     requiredAnalogAssumptions: reserved.assumptions,
     readiness: boundAssessment,
+    readinessApplicability: readiness.notApplicable,
     relevantQuestions,
     reportDate
   };

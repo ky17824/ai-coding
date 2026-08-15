@@ -21,7 +21,6 @@ begin
   update public.ai_agent_runs
   set scope_snapshot = scope_snapshot || jsonb_build_object('readiness', p_readiness_snapshot), updated_at = now()
   where order_id = p_order_id
-    and generation_count = 0
     and not (scope_snapshot ? 'readiness')
   returning * into bound_run;
 
@@ -46,7 +45,9 @@ declare
 begin
   select * into locked_order from public.orders where id = p_order_id and order_kind = 'ai_agent' for update;
   select * into locked_run from public.ai_agent_runs where order_id = p_order_id for update;
-  if locked_order.id is null or locked_run.order_id is null or not (locked_run.scope_snapshot ? 'readiness') then return null; end if;
+  -- Keep the reservation callable by old application instances during the
+  -- DB-first rollout. New instances bind and validate readiness before calling.
+  if locked_order.id is null or locked_run.order_id is null then return null; end if;
 
   is_stale_retry := locked_run.status = 'generating' and locked_run.lease_expires_at < now();
   if not is_stale_retry and (locked_run.status not in ('ready', 'failed', 'completed') or locked_run.generation_count >= 2) then return null; end if;

@@ -47,4 +47,9 @@ describe("English intake catalog", () => {
     expect({ score: english.overallScore, domains: english.domainScores, stages: english.stages.map(({ passed }) => passed) })
       .toEqual({ score: korean.overallScore, domains: korean.domainScores, stages: korean.stages.map(({ passed }) => passed) });
   });
+
+  it("shows the required Q08 choice help in both locales", () => {
+    expect(getIntakeQuestions("ko", "5.0")[7].help).toBe("가장 가까운 것 하나를 골라주세요.");
+    expect(getIntakeQuestions("en", "5.0")[7].help).toBe("Choose the closest one.");
+  });
 });

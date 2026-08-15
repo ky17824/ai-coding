@@ -27,7 +27,8 @@ describe("AI expert execution rules", () => {
     })).toEqual({
       assessmentId: "00000000-0000-4000-8000-000000000001",
       surveyVersion: "5.0",
-      resolvedQuestionIds: ["mvc-why-global"]
+      resolvedQuestionIds: ["mvc-why-global"],
+      notApplicable: []
     });
     expect(aiReadinessSnapshotSchema.safeParse({ assessmentId: null, surveyVersion: null, resolvedQuestionIds: [] }).success).toBe(true);
   });
@@ -41,6 +42,8 @@ describe("AI expert execution rules", () => {
     expect(snapshot.surveyVersion).toBe("5.0");
     expect(snapshot.resolvedQuestionIds).not.toContain("partner-actual-work");
     expect(snapshot.resolvedQuestionIds).toContain("mvc-purpose-alignment");
+    expect(snapshot.notApplicable.find((group) => group.reason === "direct_entry")?.questionIds)
+      .toContain("partner-actual-work");
   });
   it("records the whole AI order amount as platform revenue", () => {
     expect(getAiOrderAmounts(199000)).toEqual({

@@ -350,4 +350,29 @@ describe("dashboard answer insights", () => {
     expect(result.actions.some((action) => action.questionId === "pmf-paid-conversion")).toBe(true);
     expect(decidePlanHorizons(result)).toEqual([30, 60, 90]);
   });
+
+  it("treats the v5 paid-customer question as a critical blocker and normalizes stage points", () => {
+    const questions = questionsOfStage("early", "ko", "5.0");
+    const answers = questions.map((question) => ({
+      questionId: question.id,
+      level: (question.id === "pmf-paid-conversion" ? 2 : 4) as ReadinessLevel,
+      evidence: question.critical && question.id !== "pmf-paid-conversion"
+        ? { kind: "note" as const, value: "확인 근거" }
+        : undefined
+    }));
+    const insight = buildStageAnswerInsights(
+      answers,
+      "early",
+      "ko",
+      "5.0",
+      "direct",
+      confirmedMarket
+    );
+
+    expect(insight.answers.find((answer) => answer.questionId === "pmf-paid-conversion"))
+      .toMatchObject({ status: "blocker", statusLabel: "필수 선결 조건" });
+    expect(insight.counts.deferred).toBe(0);
+    expect(insight.totalScore).toBe(30);
+    expect(insight.thresholdScore).toBe(24);
+  });
 });

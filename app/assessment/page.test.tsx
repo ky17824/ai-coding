@@ -74,5 +74,6 @@ describe("returning founder assessment entry", () => {
     const page = await AssessmentPage({ searchParams: Promise.resolve({ new: "1" }) });
     const form = page.props.children[1].props.children;
     expect(form.props.surveyVersion).toBe("5.0");
+    expect(form.props.surveyVersionToken).toEqual(expect.any(String));
   });
 });

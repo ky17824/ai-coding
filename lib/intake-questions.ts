@@ -149,6 +149,8 @@ export interface IntakeQuestion {
   weight: number;
   /** 창업자에게 그대로 보여주는 문항 */
   question: string;
+  /** 선택 방법을 짧게 설명하는 선택 도움말 */
+  help?: string;
   /** 1~4단계 선택지. 순서가 곧 단계다. */
   options: [string, string, string, string];
   /** 3~4단계를 고른 창업자에게만 이어서 묻는 서술형 */
@@ -1058,6 +1060,7 @@ const V5_KO_DETAIL_OVERRIDES: Partial<Record<string, Partial<IntakeQuestion>>> =
     followUp: "적용한 기준과 가장 최근의 배정 결정을 적어주세요."
   },
   "pmf-paid-conversion": {
+    help: "가장 가까운 것 하나를 골라주세요.",
     options: ["아직 유료 고객 증거가 없습니다", "관심·문의·무료 사용은 있지만 유료 전환은 없습니다", "국내 유료 판매 또는 초기 목표국가의 유료 실증시험(PoC)·파일럿을 완료했습니다", "국내외 여러 고객에게서 재구매·갱신·사용량 증가가 반복되고 있습니다"],
     followUp: "가장 강한 증거 사례를 시간순으로 적어주세요. 고객명은 '고객 A'처럼 익명으로 적으셔도 됩니다."
   },

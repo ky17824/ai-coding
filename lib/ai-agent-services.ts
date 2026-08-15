@@ -1,5 +1,5 @@
 import type { Locale } from "@/lib/i18n";
-import { getIntakeQuestions } from "@/lib/intake-questions";
+import { getIntakeQuestions, type SurveyVersion } from "@/lib/intake-questions";
 import type { ServiceOffering } from "@/lib/types";
 
 type Copy = { ko: string; en: string };
@@ -56,30 +56,34 @@ const packages: AiAgentDefinition[] = [
   requiredInputs: specialists[0].requiredInputs
 }));
 
-const specialistRules: Record<string, { questionIds: string[]; instructions: Copy }> = Object.fromEntries(
-  specialists.map((specialist) => [specialist.id, { questionIds: [], instructions: { ko: "", en: "" } }])
-);
+const instructions: Record<string, Copy> = {
+  "ai-market-intelligence": { ko: "TAM·SAM·SOM은 low/base/high와 산식·연도·통화를 제시하고 TAM ≥ SAM ≥ SOM을 지키세요. 교두보 시장과 직접·인접·대체 경쟁구도를 포함하세요.", en: "Provide TAM, SAM, and SOM low/base/high with formula, year, currency, and TAM ≥ SAM ≥ SOM. Include a beachhead market and direct, adjacent, and substitute competition." },
+  "ai-customer-validation": { ko: "실제 수행하지 않은 인터뷰 결과를 만들지 말고 가설·표본·기간·행동 KPI·성공·중단 기준을 제시하세요.", en: "Do not invent interview outcomes. Define the hypothesis, sample, duration, behavioral KPIs, success criteria, and stop criteria." },
+  "ai-local-bmc": { ko: "현지 BMC 9블록과 유지·필수변경·시험 항목을 현지 근거 또는 검증과제에 연결하세요.", en: "Cover all nine local BMC blocks and link each keep, required-change, or test decision to evidence or a validation task." },
+  "ai-market-entry-requirements": { ko: "규제 요건은 공식출처를 우선하고 제품분류·법률·세무·인허가·계약 효력은 사람 검증 필요로 남기세요.", en: "Prioritize official regulatory sources and leave classification, legal, tax, approval, and contract-effect conclusions for human verification." },
+  "ai-local-ecosystem": { ko: "후보별 역할·선정근거·최근 활동·검증 질문·대체경로를 제시하고 공개정보와 실제 관계·의향을 구분하세요.", en: "For each candidate give role, rationale, recent activity, validation questions, and alternatives; distinguish public evidence from actual relationships or intent." },
+  "ai-tce-finance": { ko: "비용 범위·기간·통화·세금 포함 여부와 내부 입력·외부 추정을 분리하고 예산 Gate와 손실한도를 수치화하세요.", en: "Separate internal inputs from external estimates and state cost range, period, currency, tax treatment, budget gates, and loss limits." },
+  "ai-gtm-operations": { ko: "각 액션에 한 명의 결과책임자·기한·완료증빙·성공·중단 기준을 두고 Critical 문항을 먼저 처리하세요.", en: "Give every action one accountable owner, timing, completion evidence, success and stop criteria, and handle Critical questions first." }
+};
 
-for (const question of getIntakeQuestions("ko", "5.0")) {
-  const owner = question.itemId === "target-market" ? "ai-market-intelligence"
-    : ["home-pmf", "market-testing"].includes(question.itemId) ? "ai-customer-validation"
-    : ["bmlc-local-practice", "bmlc-hq-gap", "lpa-pricing-payment", "lpa-journey-blocker"].includes(question.id) ? "ai-local-bmc"
-    : ["bmlc-classification", "bmlc-preconditions", "bmlc-na-basis"].includes(question.id) ? "ai-market-entry-requirements"
-    : ["lpa-infra-partner", "lpa-bridge-person"].includes(question.id) || ["partner-acquisition", "partner-contract"].includes(question.itemId) ? "ai-local-ecosystem"
-    : ["resources", "resource-allocation"].includes(question.itemId) || question.id === "lpa-net-price" ? "ai-tce-finance"
-    : "ai-gtm-operations";
-  specialistRules[owner].questionIds.push(question.id);
+function buildSpecialistRules(version: SurveyVersion) {
+  const rules: Record<string, { questionIds: string[]; instructions: Copy }> = Object.fromEntries(
+    specialists.map((specialist) => [specialist.id, { questionIds: [], instructions: instructions[specialist.id] }])
+  );
+  for (const question of getIntakeQuestions("ko", version)) {
+    const owner = question.itemId === "target-market" ? "ai-market-intelligence"
+      : ["home-pmf", "market-testing"].includes(question.itemId) ? "ai-customer-validation"
+      : ["bmlc-local-practice", "bmlc-hq-gap", "lpa-pricing-payment", "lpa-journey-blocker"].includes(question.id) ? "ai-local-bmc"
+      : ["bmlc-classification", "bmlc-preconditions", "bmlc-na-basis"].includes(question.id) ? "ai-market-entry-requirements"
+      : ["lpa-infra-partner", "lpa-bridge-person"].includes(question.id) || ["partner-acquisition", "partner-contract"].includes(question.itemId) ? "ai-local-ecosystem"
+      : ["resources", "resource-allocation"].includes(question.itemId) || question.id === "lpa-net-price" ? "ai-tce-finance"
+      : "ai-gtm-operations";
+    rules[owner].questionIds.push(question.id);
+  }
+  return rules;
 }
 
-Object.assign(specialistRules, {
-  "ai-market-intelligence": { ...specialistRules["ai-market-intelligence"], instructions: { ko: "TAM·SAM·SOM은 low/base/high와 산식·연도·통화를 제시하고 TAM ≥ SAM ≥ SOM을 지키세요. 교두보 시장과 직접·인접·대체 경쟁구도를 포함하세요.", en: "Provide TAM, SAM, and SOM low/base/high with formula, year, currency, and TAM ≥ SAM ≥ SOM. Include a beachhead market and direct, adjacent, and substitute competition." } },
-  "ai-customer-validation": { ...specialistRules["ai-customer-validation"], instructions: { ko: "실제 수행하지 않은 인터뷰 결과를 만들지 말고 가설·표본·기간·행동 KPI·성공·중단 기준을 제시하세요.", en: "Do not invent interview outcomes. Define the hypothesis, sample, duration, behavioral KPIs, success criteria, and stop criteria." } },
-  "ai-local-bmc": { ...specialistRules["ai-local-bmc"], instructions: { ko: "현지 BMC 9블록과 유지·필수변경·시험 항목을 현지 근거 또는 검증과제에 연결하세요.", en: "Cover all nine local BMC blocks and link each keep, required-change, or test decision to evidence or a validation task." } },
-  "ai-market-entry-requirements": { ...specialistRules["ai-market-entry-requirements"], instructions: { ko: "규제 요건은 공식출처를 우선하고 제품분류·법률·세무·인허가·계약 효력은 사람 검증 필요로 남기세요.", en: "Prioritize official regulatory sources and leave classification, legal, tax, approval, and contract-effect conclusions for human verification." } },
-  "ai-local-ecosystem": { ...specialistRules["ai-local-ecosystem"], instructions: { ko: "후보별 역할·선정근거·최근 활동·검증 질문·대체경로를 제시하고 공개정보와 실제 관계·의향을 구분하세요.", en: "For each candidate give role, rationale, recent activity, validation questions, and alternatives; distinguish public evidence from actual relationships or intent." } },
-  "ai-tce-finance": { ...specialistRules["ai-tce-finance"], instructions: { ko: "비용 범위·기간·통화·세금 포함 여부와 내부 입력·외부 추정을 분리하고 예산 Gate와 손실한도를 수치화하세요.", en: "Separate internal inputs from external estimates and state cost range, period, currency, tax treatment, budget gates, and loss limits." } },
-  "ai-gtm-operations": { ...specialistRules["ai-gtm-operations"], instructions: { ko: "각 액션에 한 명의 결과책임자·기한·완료증빙·성공·중단 기준을 두고 Critical 문항을 먼저 처리하세요.", en: "Give every action one accountable owner, timing, completion evidence, success and stop criteria, and handle Critical questions first." } }
-});
+const specialistRules = buildSpecialistRules("5.0");
 
 export const AI_AGENT_SERVICES = [...specialists, ...packages].map((definition) => {
   const rules = definition.includedAgentIds.map((id) => specialistRules[id]);
@@ -92,8 +96,13 @@ export const AI_AGENT_SERVICES = [...specialists, ...packages].map((definition) 
   };
 });
 
-function localize(definition: (typeof AI_AGENT_SERVICES)[number], locale: Locale): ServiceOffering {
+function localize(
+  definition: (typeof AI_AGENT_SERVICES)[number],
+  locale: Locale,
+  rules: ReturnType<typeof buildSpecialistRules>
+): ServiceOffering {
   const en = locale === "en";
+  const productRules = definition.includedAgentIds.map((id) => rules[id]);
   return {
     id: definition.id,
     providerName: en ? "Borderless AI Expert" : "Borderless AI 전문가",
@@ -111,26 +120,34 @@ function localize(definition: (typeof AI_AGENT_SERVICES)[number], locale: Locale
     productKind: definition.productKind,
     includedAgentIds: definition.includedAgentIds,
     requiredInputs: definition.requiredInputs[locale],
-    questionIds: definition.questionIds,
-    officialSourceQuestionIds: definition.officialSourceQuestionIds,
-    completionInstructions: definition.completionInstructions.map((instruction) => instruction[locale]),
+    questionIds: [...new Set(productRules.flatMap((rule) => rule.questionIds))],
+    officialSourceQuestionIds: definition.includedAgentIds.includes("ai-market-entry-requirements") ? rules["ai-market-entry-requirements"].questionIds : [],
+    completionInstructions: productRules.map((rule) => rule.instructions[locale]),
     humanVerification: en
       ? ["Legal, tax, regulatory and contract effectiveness", "Actual interviews, partner intent and local relationships"]
       : ["법률·세무·규제·계약 효력", "실제 인터뷰·파트너 의향·현지 관계"]
   };
 }
 
-export function getAiAgentServices(locale: Locale = "ko") {
-  return AI_AGENT_SERVICES.map((definition) => localize(definition, locale));
+export function getAiAgentServices(locale: Locale = "ko", version: SurveyVersion = "5.0") {
+  const rules = buildSpecialistRules(version);
+  return AI_AGENT_SERVICES.map((definition) => localize(definition, locale, rules));
+}
+
+export function resolveAiQuestionCatalogVersion(
+  assessmentVersion: unknown,
+  rolloutVersion: SurveyVersion
+): SurveyVersion {
+  return assessmentVersion === "4.0" || assessmentVersion === "5.0" ? assessmentVersion : rolloutVersion;
 }
 
 export function aiExpertServicesEnabled() {
   return process.env.NODE_ENV !== "production" || process.env.AI_EXPERT_SERVICES_ENABLED === "true";
 }
 
-export function getAiAgentService(id: string, locale: Locale = "ko") {
+export function getAiAgentService(id: string, locale: Locale = "ko", version: SurveyVersion = "5.0") {
   const definition = AI_AGENT_SERVICES.find((service) => service.id === id);
-  return definition ? localize(definition, locale) : null;
+  return definition ? localize(definition, locale, buildSpecialistRules(version)) : null;
 }
 
 export function matchAiAgentServices(tag: string, locale: Locale = "ko") {

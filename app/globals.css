@@ -3183,6 +3183,11 @@ fieldset.offering-picker {
   border-color: var(--green);
 }
 
+.offering-picker label:focus-within {
+  outline: 3px solid rgba(29, 123, 76, 0.25);
+  outline-offset: 2px;
+}
+
 .offering-picker label.selected {
   border-color: var(--green);
   background: var(--green);

@@ -4,6 +4,9 @@ import type { GtmFounderContext, GtmMarketResearch } from "@/lib/types";
 import type { GtmPlanItem, StoredGtmPlan } from "@/lib/types";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { localizeStoredGtmPlan } from "@/lib/content-localization";
+import { resolveAssessmentQuestions } from "@/lib/readiness";
+import type { SurveyVersion } from "@/lib/intake-questions";
+import type { ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
 
 const escapeHtml = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -52,6 +55,57 @@ export async function GET(
   }
   const { data: items } = await admin.from("gtm_plan_items").select("*").eq("plan_id", id)
     .order("horizon").order("sort_order");
+  let readinessApplicabilityHtml = "";
+  if (plan.assessment_id) {
+    const [{ data: assessment }, { data: answerRows }] = await Promise.all([
+      admin.from("assessments").select("survey_version,sales_motion,target_country,target_customer_segment,target_market_confirmed_at")
+        .eq("id", plan.assessment_id).maybeSingle(),
+      admin.from("readiness_answers").select("question_id,level").eq("assessment_id", plan.assessment_id).limit(55)
+    ]);
+    if (assessment) {
+      const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
+      const salesMotion: SalesMotion = ["direct", "partner", "hybrid", "unknown"].includes(assessment.sales_motion ?? "")
+        ? assessment.sales_motion as SalesMotion
+        : "unknown";
+      const readinessAnswers: ReadinessAnswer[] = (answerRows ?? []).flatMap((row) => [1, 2, 3, 4].includes(Number(row.level))
+        ? [{ questionId: row.question_id, level: Number(row.level) as ReadinessLevel }]
+        : []);
+      const resolved = resolveAssessmentQuestions({
+        surveyVersion,
+        salesMotion,
+        targetMarket: {
+          targetCountry: assessment.target_country ?? "",
+          targetCustomerSegment: assessment.target_customer_segment ?? "",
+          confirmed: Boolean(assessment.target_market_confirmed_at)
+        },
+        answers: readinessAnswers
+      });
+      const answered = new Set(readinessAnswers.map((answer) => answer.questionId));
+      const reasonLabels: Record<string, string> = en ? {
+        direct_entry: "Direct entry selected; partner-only questions do not apply",
+        paid_evidence_missing: "No paid-customer evidence; revenue-concentration question does not apply",
+        target_country_missing: "Target-country questions deferred until a country is selected",
+        sales_motion_unknown: "Partner questions deferred until a sales motion is selected",
+        local_test_not_started: "Issue-resolution question deferred until a local test starts"
+      } : {
+        direct_entry: "직접 진출을 선택해 파트너 전용 문항은 해당 없음",
+        paid_evidence_missing: "유료 고객 증거가 없어 매출 집중도 문항은 해당 없음",
+        target_country_missing: "목표국가가 정해질 때까지 현지 문항 보류",
+        sales_motion_unknown: "판매 방식이 정해질 때까지 파트너 문항 보류",
+        local_test_not_started: "현지 시험을 시작할 때까지 문제 해결 문항 보류"
+      };
+      const reasons = [
+        ...resolved.deferredGroups.map((group) => ({ reason: group.reason, count: group.questionIds.length })),
+        ...(salesMotion === "direct" && resolved.notApplicableIds.some((questionId) => questionId !== "alloc-concentration")
+          ? [{ reason: "direct_entry", count: resolved.notApplicableIds.filter((questionId) => questionId !== "alloc-concentration").length }]
+          : []),
+        ...(resolved.notApplicableIds.includes("alloc-concentration")
+          ? [{ reason: "paid_evidence_missing", count: 1 }]
+          : [])
+      ];
+      readinessApplicabilityHtml = `<h2>${en ? "Readiness question coverage" : "준비도 문항 적용 범위"}</h2><p>${en ? "Answered required questions" : "필수 응답"} ${resolved.requiredIds.filter((questionId) => answered.has(questionId)).length}/${resolved.requiredIds.length} · ${en ? "Deferred" : "보류"} ${resolved.deferredIds.length} · ${en ? "Not applicable" : "해당 없음"} ${resolved.notApplicableIds.length}</p>${reasons.length ? list(reasons.map((entry) => `${reasonLabels[entry.reason] ?? entry.reason} (${entry.count})`)) : ""}`;
+    }
+  }
   const localizedPlan = await localizeStoredGtmPlan(admin, plan.organization_id, {
     id: plan.id,
     assessmentId: plan.assessment_id,
@@ -121,7 +175,9 @@ export async function GET(
   const html = `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${en ? "Comprehensive Market Report" : "종합 시장보고서"}</title><style>@font-face{font-family:"Pretendard Variable";font-style:normal;font-weight:45 920;font-display:swap;src:url("${fontUrl}") format("woff2-variations")}*{box-sizing:border-box}body{font:16px/1.6 "Pretendard Variable",Pretendard,"Noto Sans KR",system-ui,sans-serif;color:#10221b;max-width:1080px;margin:40px auto;padding:0 24px;background:#f2f0eb}a{color:#1d7b4c;overflow-wrap:anywhere}.toolbar{position:sticky;top:12px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border:1px solid #d9dfdb;border-radius:12px;background:#fff;box-shadow:0 1px 3px #10221b1f,0 8px 22px #10221b14}.toolbar span{display:flex;gap:10px}.toolbar a,.toolbar button,.report-action{min-height:42px;border:1px solid #0e3b2b;border-radius:999px;padding:9px 14px;background:#fff;color:#0e3b2b;font:inherit;font-weight:750;text-decoration:none;cursor:pointer}.toolbar span a{background:#0e3b2b;color:#fff}.toolbar a:hover,.toolbar button:hover,.report-action:hover{border-color:#1d7b4c;background:#f8f7f4}.toolbar span a:hover{background:#2b5148;color:#fff}.toolbar a:active,.toolbar button:active,.report-action:active{transform:scale(.97);box-shadow:0 1px 2px #10221b24}.toolbar a:focus-visible,.toolbar button:focus-visible,.report-action:focus-visible{outline:3px solid #1d7b4c40;outline-offset:2px}h1{font-size:42px;line-height:1.15;letter-spacing:-.04em}h2{margin-top:48px;color:#0e3b2b}h3{font-size:24px}.meta,.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.grid article,section>article{border:1px solid #d9dfdb;border-radius:12px;padding:20px;margin:12px 0;background:#fff;box-shadow:0 0 .5px #10221b24,0 2px 6px #10221b14}table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 0 .5px #10221b24,0 2px 6px #10221b14}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #d9dfdb;padding:10px}dt{font-weight:700}dd{margin:0 0 8px}.notice{padding:12px;background:#fff6eb;border:1px solid #f1c7a0;border-radius:12px}@media(max-width:700px){body{margin:16px auto;padding:0 16px}h1{font-size:32px}.meta,.grid{grid-template-columns:1fr}.toolbar{position:static;align-items:stretch;flex-direction:column}.toolbar span{display:grid}.toolbar a,.toolbar button{text-align:center}table,thead,tbody,tr,th,td{display:block}thead{position:absolute;left:-9999px}tr{border:1px solid #d9dfdb;border-radius:12px;margin:12px 0;padding:10px}td{border:0}}@media(prefers-reduced-motion:reduce){.toolbar a,.toolbar button,.report-action{transition:none}.toolbar a:active,.toolbar button:active,.report-action:active{transform:none!important}}@media print{body{margin:0;background:#fff}.grid article,section>article,table{box-shadow:none}.no-print{display:none}}</style></head><body>${toolbar}${localizedPlan.translationFallback ? `<p class="notice">${en ? "Some saved content could not be translated and is shown in its original language." : "일부 저장 내용을 번역하지 못해 원문으로 표시합니다."}</p>` : ""}<p>Borderless · ${en ? "COMPREHENSIVE MARKET REPORT" : "종합 시장보고서"}</p><h1>${escapeHtml(context.offeringName || (en ? "Comprehensive Market Report" : "종합 시장보고서"))}</h1><p>${escapeHtml(research.executiveSummary)}</p><section class="meta"><p><strong>${en ? "Offering type" : "론칭 유형"}</strong><br>${escapeHtml(context.offeringType)}</p><p><strong>${en ? "Target country" : "목표국가"}</strong><br>${escapeHtml(context.targetCountry)}</p><p><strong>${en ? "Target customer" : "목표 고객"}</strong><br>${escapeHtml(context.targetCustomer)}</p><p><strong>${en ? "Updated" : "작성일"}</strong><br>${escapeHtml(String(plan.updated_at).slice(0,10))}</p></section><h2>${en ? "Offering Definition" : "론칭 대상 정의"}</h2><p>${escapeHtml(context.offeringSummary)}</p><p><strong>${en ? "Customer problem" : "고객 문제"}</strong><br>${escapeHtml(context.customerProblem)}</p><p><strong>${en ? "Core value" : "핵심 가치"}</strong><br>${escapeHtml(context.coreValue)}</p><h2>${en ? `AI ${research.scope === "market_preresearch" ? "Market & Competitive Research" : "Preliminary Sellability Review"}` : `AI 시장·경쟁 ${research.scope === "market_preresearch" ? "사전조사" : "판매 가능성 예비검증"}`}</h2><p>${escapeHtml(research.executiveSummary)}</p>${research.scope === "market_preresearch" ? (en ? "<p><strong>Note:</strong> Sellability was not assessed because the current readiness prerequisites are incomplete.</p>" : "<p><strong>주의:</strong> 현재 준비도 선결 조건이 완료되지 않아 실제 판매 가능성은 판정하지 않았습니다.</p>") : `<p><strong>${en ? "Sellability assessment" : "판매 가능성 판단"}:</strong> ${escapeHtml(research.sellability.summary)}</p>`}<h2>${en ? "Market boundary and size" : "시장 범위와 규모"}</h2><p>${escapeHtml(research.marketDefinition.included)}${research.marketDefinition.excluded ? ` · ${en ? "Excluded" : "제외"}: ${escapeHtml(research.marketDefinition.excluded)}` : ""}</p><div class="grid">${marketSizes}</div><h2>${en ? "Market trends" : "시장동향"}</h2>${list(research.trends.map((entry) => `${entry.title}: ${entry.finding} (${entry.sourceTitle})`))}<h2>${en ? "Competitive landscape" : "경쟁 구도"}</h2><table><caption>${en ? "Verified competitor candidates" : "확인된 경쟁 후보"}</caption><thead><tr><th>${en ? "Name" : "이름"}</th><th>${en ? "Type" : "유형"}</th><th>${en ? "Relevance" : "관련성"}</th><th>${en ? "Differentiation gap" : "차별화 공백"}</th></tr></thead><tbody>${competitors}</tbody></table><h2>${en ? "Next validation tasks" : "다음 검증 과제"}</h2>${list(research.nextExperiments)}${planItems ? `<h2>${en ? "Appendix · 30 · 60 · 90 Day Plan" : "부록 · 단계별 실행계획(30·60·90 Day Plan)"}</h2>${planItems}` : ""}<h2>${en ? "Assumptions & Limitations" : "가정과 한계"}</h2>${list([...localizedPlan.assumptions, ...research.limitations])}</body></html>`;
   const legacyTrends = `<h2>${en ? "Market trends" : "시장동향"}</h2>${list(research.trends.map((entry) => `${entry.title}: ${entry.finding} (${entry.sourceTitle})`))}`;
   const legacyCompetitors = `<h2>${en ? "Competitive landscape" : "경쟁 구도"}</h2><table><caption>${en ? "Verified competitor candidates" : "확인된 경쟁 후보"}</caption><thead><tr><th>${en ? "Name" : "이름"}</th><th>${en ? "Type" : "유형"}</th><th>${en ? "Relevance" : "관련성"}</th><th>${en ? "Differentiation gap" : "차별화 공백"}</th></tr></thead><tbody>${competitors}</tbody></table>`;
+  const offeringDefinitionHeading = `<h2>${en ? "Offering Definition" : "론칭 대상 정의"}</h2>`;
   const comprehensiveHtml = html
+    .replace(offeringDefinitionHeading, `${readinessApplicabilityHtml}${offeringDefinitionHeading}`)
     .replace("</head>", `<style>@media(max-width:700px){td:before{content:attr(data-label);display:block;color:#1d7b4c;font-size:13px;font-weight:800}}</style></head>`)
     .replace(legacyTrends, `<h2>${en ? "Research coverage" : "조사 커버리지"}</h2><p>${research.researchCoverage.lanes.length} ${en ? "research areas" : "개 조사영역"} · ${research.researchCoverage.sourceCount} ${en ? "unique sources" : "개 고유 출처"} · ${research.researchCoverage.uniqueDomainCount} ${en ? "domains" : "개 도메인"} · ${research.researchCoverage.competitorCount} ${en ? "competitors" : "개 경쟁 후보"}</p><p><strong>${en ? "Source mix" : "출처 구성"}</strong><br>${Object.entries(research.researchCoverage.sourceTypes).map(([kind, count]) => `${sourceKindLabel(kind)} ${count}`).join(" · ")}</p>${research.researchCoverage.coverageGaps.length ? `<p class="notice"><strong>${en ? "Coverage gaps" : "보완할 조사 범위"}</strong><br>${escapeHtml(research.researchCoverage.coverageGaps.map((gap) => coverageGapLabel(gap, en)).join(" · "))}</p>` : ""}<h2>${en ? "Market trends" : "시장동향"}</h2><div class="grid">${trendCards}</div>`)
     .replace(legacyCompetitors, `<h2>${en ? "Competitive landscape" : "경쟁 구도"}</h2><table><caption>${en ? "Verified competitor candidates" : "확인된 경쟁 후보"}</caption><thead><tr><th>${en ? "Name" : "이름"}</th><th>${en ? "Type" : "유형"}</th><th>${en ? "Relevance" : "관련성"}</th><th>${en ? "Price & channels" : "가격·채널"}</th><th>${en ? "Differentiation gap" : "차별화 공백"}</th></tr></thead><tbody>${competitors}</tbody></table>${contradictions}<h2>${en ? "Research sources" : "전체 조사 출처"}</h2>${sourceList}`);

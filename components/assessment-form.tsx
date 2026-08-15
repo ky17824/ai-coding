@@ -49,6 +49,7 @@ export function AssessmentForm({
   initialSalesMotion,
   initialRestoreMessage = "",
   surveyVersion = "4.0",
+  surveyVersionToken,
   locale = "ko",
   availableServices = []
 }: {
@@ -59,6 +60,7 @@ export function AssessmentForm({
   initialSalesMotion?: SalesMotion;
   initialRestoreMessage?: string;
   surveyVersion?: SurveyVersion;
+  surveyVersionToken: string;
   locale?: Locale;
   /** 실제 공개된 전문가 서비스. 비어 있으면 추천 영역을 감춘다. */
   availableServices?: ServiceOffering[];
@@ -265,10 +267,13 @@ export function AssessmentForm({
     answersToSubmit: ReadinessAnswer[],
     completedStageId: "early" | "preparing" | "ready",
     restoredAnswers = false,
-    openDashboard = false
+    openDashboard = false,
+    restoredContext?: { targetMarket: TargetMarketContext; salesMotion: SalesMotion }
   ) {
+    const submittedMarket = restoredContext?.targetMarket ?? targetMarket;
+    const submittedMotion = restoredContext?.salesMotion ?? salesMotion;
     if (!openDashboard) {
-      setResult(calculateReadiness(answersToSubmit, targetMarket, locale, surveyVersion, salesMotion));
+      setResult(calculateReadiness(answersToSubmit, submittedMarket, locale, surveyVersion, submittedMotion));
     }
     setSaving(true);
     setSaved(false);
@@ -278,10 +283,11 @@ export function AssessmentForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           answers: answersToSubmit,
+          surveyVersionToken,
           completedStageId,
-          salesMotion: surveyVersion === "5.0" ? salesMotion : undefined,
+          salesMotion: surveyVersion === "5.0" ? submittedMotion : undefined,
           offering,
-          targetMarket,
+          targetMarket: submittedMarket,
           locale
         })
       });
@@ -383,7 +389,10 @@ export function AssessmentForm({
         : "그대로 사용할 수 있는 답변만 복원했습니다. 변경된 문항을 확인한 뒤 제출해 주세요.");
       return;
     }
-    void submitAnswers(pending.answers, pending.completedStageId, true, true);
+    void submitAnswers(pending.answers, pending.completedStageId, true, true, {
+      targetMarket: pending.targetMarket,
+      salesMotion: pending.salesMotion ?? "unknown"
+    });
   }, [isSignedIn, resume]);
 
   if (result) {
@@ -741,6 +750,7 @@ export function AssessmentForm({
                     Q{String(number).padStart(2, "0")}
                   </span>
                   <h3>{applyOffering(question.question, offering, locale)}</h3>
+                  {question.help && <p className="question-help">{question.help}</p>}
                   <fieldset>
                     <legend className="sr-only">
                       {applyOffering(question.question, offering, locale)}

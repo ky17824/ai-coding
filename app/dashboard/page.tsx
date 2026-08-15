@@ -101,6 +101,14 @@ export default async function DashboardPage({
   });
   const answeredIds = new Set(readinessAnswers.map((answer) => answer.questionId));
   const resolved = resolveAssessmentQuestions({ surveyVersion, salesMotion, targetMarket, answers: readinessAnswers });
+  const notApplicableReasons = surveyVersion === "5.0" ? [
+    ...(salesMotion === "direct" && resolved.notApplicableIds.some((id) => id !== "alloc-concentration")
+      ? [en ? "Partner-only questions were excluded because you selected direct entry." : "직접 진출을 선택해 파트너 전용 문항을 제외했습니다."]
+      : []),
+    ...(resolved.notApplicableIds.includes("alloc-concentration")
+      ? [en ? "Revenue-concentration analysis was excluded because paid-customer evidence is not yet available." : "유료 고객 증거가 아직 없어 매출 집중도 분석 문항을 제외했습니다."]
+      : [])
+  ] : [];
   const notApplicableIds = new Set(resolved.notApplicableIds);
   const availableStages = stages.filter((stage) =>
     questionsOfStage(stage.id, locale, surveyVersion)
@@ -163,6 +171,7 @@ export default async function DashboardPage({
             <h2>{new Date(assessment.completed_at).toLocaleDateString(en ? "en-US" : "ko-KR")} {en ? "assessment" : "진단"}</h2>
             <p>{displayIsOnHold ? (en ? `${gateMessages.length} prerequisite${gateMessages.length === 1 ? "" : "s"} need attention` : `확인이 필요한 선결 조건 ${gateMessages.length}건`) : (en ? "You have passed every prerequisite for this stage." : "현재 단계의 선결 조건을 모두 통과했습니다.")}</p>
             {surveyVersion === "5.0" && <small>{en ? `${readinessAnswers.length} responses · ${resolved.deferredIds.length} deferred · ${resolved.notApplicableIds.length} not applicable` : `응답 ${readinessAnswers.length}개 · 보류 ${resolved.deferredIds.length}개 · 해당 없음 ${resolved.notApplicableIds.length}개`}</small>}
+            {notApplicableReasons.map((reason) => <small key={reason}>{reason}</small>)}
             <Link href={path("/dashboard#answer-insights")} className="button button--ghost button--full">{en ? "Review previous answers" : "지난 응답 보기"}</Link>
           </article>
         </section>
@@ -236,7 +245,7 @@ export default async function DashboardPage({
                   locale={locale}
                   stageLabel={answerInsights.stageLabel}
                 />
-                <p>{en ? "Formula: gate score = sum of question weights answered at Levels 3 or 4. Passing requires at least 80% of the stage maximum and every required prerequisite. Each bar shows the selected Level 1–4 response." : "산식: 단계 통과 점수 = 3·4단계로 답한 문항의 배점 합계입니다. 단계 최대점수의 80% 이상과 필수 선결 조건 충족이 모두 필요하며, 각 막대 높이는 선택한 1~4단계 응답을 나타냅니다."}</p>
+                <p>{en ? "Formula: the weights of applicable questions are normalized to the stage maximum, and Levels 3 or 4 earn those points. Passing requires at least 80% and every required prerequisite. Each bar shows the selected Level 1–4 response." : "산식: 적용되는 문항의 배점을 단계 최대점수에 맞게 정규화하고, 3·4단계 응답의 배점을 합산합니다. 80% 이상과 필수 선결 조건 충족이 모두 필요하며, 각 막대 높이는 선택한 1~4단계 응답을 나타냅니다."}</p>
                 {answerInsights.counts.deferred > 0 && <p>{en ? "The 3-point paid-pilot item is excluded from the Stage 1 numerator and denominator while deferred, then becomes required evidence at Gate C." : "90일 검증 과제로 이월된 유료 실증시험 3점은 준비 1단계의 분자와 분모에서 제외하고, 단계 통과 기준 C에서 필수 증거로 확인합니다."}</p>}
               </article>
 

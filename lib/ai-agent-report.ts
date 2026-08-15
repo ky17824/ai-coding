@@ -27,7 +27,11 @@ const sizingRange = z.object({ low: z.number().nonnegative(), base: z.number().n
 export const aiReadinessSnapshotSchema = z.object({
   assessmentId: z.string().uuid().nullable(),
   surveyVersion: z.enum(["4.0", "5.0"]).nullable(),
-  resolvedQuestionIds: z.array(z.string().trim().min(1).max(100)).max(55)
+  resolvedQuestionIds: z.array(z.string().trim().min(1).max(100)).max(55),
+  notApplicable: z.array(z.object({
+    reason: z.enum(["direct_entry", "paid_evidence_missing"]),
+    questionIds: z.array(z.string().trim().min(1).max(100)).min(1).max(55)
+  })).max(2).default([])
 }).refine(
   (value) => value.assessmentId === null ? value.surveyVersion === null && value.resolvedQuestionIds.length === 0 : value.surveyVersion !== null,
   "진단 ID가 없으면 준비도 스냅샷도 비어 있어야 합니다."
@@ -44,7 +48,7 @@ export function buildAiReadinessSnapshot(
   } | null,
   rows: Array<{ question_id: string; level: number | string }> = []
 ) {
-  if (!assessment) return aiReadinessSnapshotSchema.parse({ assessmentId: null, surveyVersion: null, resolvedQuestionIds: [] });
+  if (!assessment) return aiReadinessSnapshotSchema.parse({ assessmentId: null, surveyVersion: null, resolvedQuestionIds: [], notApplicable: [] });
   const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
   const salesMotion: SalesMotion = ["direct", "partner", "hybrid", "unknown"].includes(assessment.sales_motion ?? "")
     ? assessment.sales_motion as SalesMotion
@@ -66,7 +70,15 @@ export function buildAiReadinessSnapshot(
   return aiReadinessSnapshotSchema.parse({
     assessmentId: assessment.id,
     surveyVersion,
-    resolvedQuestionIds: getIntakeQuestions("ko", surveyVersion).filter((question) => included.has(question.id)).map((question) => question.id)
+    resolvedQuestionIds: getIntakeQuestions("ko", surveyVersion).filter((question) => included.has(question.id)).map((question) => question.id),
+    notApplicable: [
+      ...(salesMotion === "direct" && resolved.notApplicableIds.length
+        ? [{ reason: "direct_entry" as const, questionIds: resolved.notApplicableIds.filter((id) => id !== "alloc-concentration") }]
+        : []),
+      ...(resolved.notApplicableIds.includes("alloc-concentration")
+        ? [{ reason: "paid_evidence_missing" as const, questionIds: ["alloc-concentration"] }]
+        : [])
+    ].filter((group) => group.questionIds.length)
   });
 }
 

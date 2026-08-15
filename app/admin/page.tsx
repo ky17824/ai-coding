@@ -52,7 +52,7 @@ export default async function AdminPage({
   const [organizationsResult, profilesResult, assessmentsResult, actionsResult, ordersResult, providersResult, reviewsResult] = await Promise.all([
     admin.from("organizations").select("id,name,created_at").order("created_at", { ascending: false }),
     admin.from("profiles").select("id,organization_id,display_name,job_title,deleted_at"),
-    admin.from("assessments").select("organization_id,status_label,overall_score,gate_messages,completed_at,survey_version").order("completed_at", { ascending: false }),
+    admin.from("assessments").select("id,organization_id,status_label,overall_score,gate_messages,completed_at,survey_version").order("completed_at", { ascending: false }),
     admin.from("action_items").select("organization_id,service_tag,completed_at"),
     admin.from("orders").select("id,organization_id,provider_id,status,created_at,service_snapshot"),
     admin.from("provider_profiles").select("id,headline,biography,expertise,verification_note,approval_status,created_at,profiles!inner(display_name,email)").order("created_at"),
@@ -77,12 +77,19 @@ export default async function AdminPage({
       jobTitle: contact?.job_title ?? null,
       firstAssessmentAt: organizationAssessments.at(-1)?.completed_at ?? null,
       latestAssessment: latest ? {
+        id: latest.id,
         surveyVersion: latest.survey_version === "5.0" ? "5.0" : "4.0",
         completedAt: latest.completed_at,
         statusLabel: normalizeReadinessStatus(latest.status_label),
         overallScore: latest.overall_score,
         gateMessages: latest.gate_messages as string[]
       } : null,
+      assessmentHistory: organizationAssessments.map((entry) => ({
+        id: entry.id,
+        surveyVersion: entry.survey_version === "5.0" ? "5.0" : "4.0",
+        completedAt: entry.completed_at,
+        statusLabel: normalizeReadinessStatus(entry.status_label)
+      })),
       actions: actions.filter((entry) => entry.organization_id === organization.id).map((entry) => ({ serviceTag: entry.service_tag, completedAt: entry.completed_at })),
       orders: orders.filter((entry) => entry.organization_id === organization.id).map((entry) => {
         const provider = providers.find((candidate) => candidate.id === entry.provider_id);
@@ -90,7 +97,10 @@ export default async function AdminPage({
         return {
           status: entry.status as OrderStatus,
           providerName: account?.display_name ?? (en ? "Expert unassigned" : "전문가 미지정"),
-          createdAt: entry.created_at
+          createdAt: entry.created_at,
+          assessmentId: typeof (entry.service_snapshot as { readiness?: { assessmentId?: unknown } } | null)?.readiness?.assessmentId === "string"
+            ? (entry.service_snapshot as { readiness: { assessmentId: string } }).readiness.assessmentId
+            : null
         };
       })
     };
@@ -102,7 +112,10 @@ export default async function AdminPage({
     for (const tag of provider.expertise) approvedByTag[tag] = (approvedByTag[tag] ?? 0) + 1;
   }
   const worklist = buildWorklist(rows, new Date(), locale);
-  const funnel = buildFunnel(rows, locale);
+  const funnels = (["4.0", "5.0"] as const).map((surveyVersion) => ({
+    surveyVersion,
+    steps: buildFunnel(rows, locale, surveyVersion)
+  }));
   const expertDemand = buildExpertDemand(rows, approvedByTag);
   const operationalMetrics = buildOperationalMetrics(rows, (reviewsResult.data ?? []).map((review) => review.rating));
   const disputeCount = orders.filter((order) => ["disputed", "refunded"].includes(order.status)).length;
@@ -160,18 +173,20 @@ export default async function AdminPage({
 
         <section className="admin-section">
           <h2>{en ? "Assessment funnel" : "진단 고객 전환 단계(Funnel)"}</h2>
-          <div className="funnel-row">{funnel.map((step) => <div className="panel" key={step.label}><span>{step.label}</span><strong>{step.count}</strong></div>)}</div>
+          {funnels.map((funnel) => <div className="funnel-row" key={funnel.surveyVersion}>{funnel.steps.map((step) => <div className="panel" key={step.label}><span>{step.label}</span><strong>{step.count}</strong></div>)}</div>)}
         </section>
 
         <section className="admin-section">
           <h2>{en ? "Operating metrics" : "운영 지표"}</h2>
           <div className="admin-metrics">
             {[
-              ...operationalMetrics.assessmentCompletionByVersion.map((metric) => [
-                en ? `v${metric.surveyVersion} assessment completion` : `v${metric.surveyVersion} 진단 완료율`,
-                `${metric.rate}% (${metric.assessed})`
-              ]),
-              [en ? "Assessment-to-order conversion" : "진단→주문 전환율(Conversion Rate)", `${operationalMetrics.assessmentToOrderRate}%`],
+              ...operationalMetrics.assessmentByVersion.flatMap((metric) => [[
+                en ? `v${metric.surveyVersion} assessments` : `v${metric.surveyVersion} 진단 수`,
+                String(metric.assessed)
+              ], [
+                en ? `v${metric.surveyVersion} assessment-to-order` : `v${metric.surveyVersion} 진단→주문 전환율`,
+                `${metric.assessmentToOrderRate}%`
+              ]]),
               [en ? "Time to first order" : "첫 주문까지", operationalMetrics.averageDaysToFirstOrder === null ? "-" : `${operationalMetrics.averageDaysToFirstOrder} ${en ? "days" : "일"}`],
               [en ? "Average review rating" : "리뷰 평균", operationalMetrics.averageReviewRating === null ? "-" : `${operationalMetrics.averageReviewRating}${en ? "/5" : "점"}`]
             ].map(([label, value]) => <div className="panel" key={label}><span>{label}</span><strong>{value}</strong></div>)}

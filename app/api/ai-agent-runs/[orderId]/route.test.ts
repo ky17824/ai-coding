@@ -13,9 +13,10 @@ describe("paid AI readiness snapshot", () => {
     expect(source).not.toContain("latestAssessment");
   });
 
-  it("uses a database compare-and-set that cannot replace an existing binding", () => {
+  it("binds legacy correction runs once without breaking old application instances", () => {
     expect(migration).toContain("for update");
-    expect(migration).toContain("generation_count = 0");
     expect(migration).toContain("not (scope_snapshot ? 'readiness')");
+    expect(migration).not.toContain("and generation_count = 0");
+    expect(migration).not.toContain("not (locked_run.scope_snapshot ? 'readiness')");
   });
 });

@@ -8,8 +8,9 @@ import {
   requireUser
 } from "@/lib/supabase/server";
 import { calculateSettlement } from "@/lib/orders";
-import { aiExpertServicesEnabled, getAiAgentService } from "@/lib/ai-agent-services";
+import { aiExpertServicesEnabled, getAiAgentService, resolveAiQuestionCatalogVersion } from "@/lib/ai-agent-services";
 import { buildAiReadinessSnapshot, getAiOrderAmounts } from "@/lib/ai-agent-report";
+import { getNewAssessmentSurveyVersion } from "@/lib/readiness-rollout";
 
 const schema = z.object({
   serviceId: z.string().min(1).max(80),
@@ -32,13 +33,13 @@ export async function POST(request: Request) {
   const user = await requireUser();
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
-  const aiService = aiExpertServicesEnabled() ? getAiAgentService(parsed.data.serviceId, parsed.data.locale) : null;
+  const aiCatalogService = aiExpertServicesEnabled() ? getAiAgentService(parsed.data.serviceId, parsed.data.locale) : null;
 
   if (!user || !supabase || !admin) {
     if (process.env.NODE_ENV !== "development") {
       return NextResponse.json({ message: en ? "Please sign in." : "로그인이 필요합니다." }, { status: 401 });
     }
-    const sample = aiService ?? SAMPLE_SERVICES.find(
+    const sample = aiCatalogService ?? SAMPLE_SERVICES.find(
       (service) => service.id === parsed.data.serviceId
     );
     if (!sample) {
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       orderId,
       paymentId: `payment-${orderId}`,
-      amount: aiService ? getAiOrderAmounts(aiService.price).grossAmountKrw : sample.price,
+      amount: aiCatalogService ? getAiOrderAmounts(aiCatalogService.price).grossAmountKrw : sample.price,
       demo: true
     });
   }
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (aiService) {
+  if (aiCatalogService) {
     const { data: assessment, error: assessmentError } = await admin.from("assessments")
       .select("id,survey_version,sales_motion,target_country,target_customer_segment,target_market_confirmed_at")
       .eq("organization_id", profile.organization_id)
@@ -86,6 +87,11 @@ export async function POST(request: Request) {
       ? await admin.from("readiness_answers").select("question_id,level").eq("assessment_id", assessment.id).limit(55)
       : { data: [], error: null };
     if (readinessError) return NextResponse.json({ message: en ? "We couldn't load the readiness answers." : "준비도 답변을 불러오지 못했습니다." }, { status: 500 });
+    const surveyVersion = resolveAiQuestionCatalogVersion(
+      assessment?.survey_version,
+      getNewAssessmentSurveyVersion()
+    );
+    const aiService = getAiAgentService(parsed.data.serviceId, parsed.data.locale, surveyVersion)!;
     const readiness = buildAiReadinessSnapshot(assessment, readinessRows ?? []);
     const orderId = randomUUID();
     const paymentId = `gtm-${orderId}`;
@@ -107,6 +113,7 @@ export async function POST(request: Request) {
       provider_amount_krw: amounts.providerAmountKrw,
       service_snapshot: {
         contractVersion: 1,
+        questionCatalogVersion: surveyVersion,
         productId: aiService.id,
         locale: parsed.data.locale,
         productKind: aiService.productKind,

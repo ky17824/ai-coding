@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { isAnswerCompatibleAcrossVersions, type SurveyVersion } from "@/lib/intake-questions";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
-import { getNewAssessmentSurveyVersion } from "@/lib/readiness-rollout";
+import { getNewAssessmentSurveyVersion, issueSurveyVersionToken } from "@/lib/readiness-rollout";
 import { getPublishedServices } from "@/lib/services";
 import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import type { EvidenceInput, ReadinessAnswer, ReadinessLevel, SalesMotion, TargetMarketContext } from "@/lib/types";
@@ -22,6 +22,7 @@ export default async function AssessmentPage({
   const [{ user, profile }, query, locale] = await Promise.all([getCurrentProfile(), searchParams, getRequestLocale()]);
   const availableServices = await getPublishedServices(locale);
   const surveyVersion = getNewAssessmentSurveyVersion();
+  const surveyVersionToken = issueSurveyVersionToken(surveyVersion);
   let initialAnswers: ReadinessAnswer[] = [];
   let initialTargetMarket: TargetMarketContext | undefined;
   let initialSalesMotion: SalesMotion | undefined;
@@ -96,6 +97,7 @@ export default async function AssessmentPage({
           initialSalesMotion={initialSalesMotion}
           initialRestoreMessage={initialRestoreMessage}
           surveyVersion={surveyVersion}
+          surveyVersionToken={surveyVersionToken}
           locale={locale}
           availableServices={availableServices}
         />

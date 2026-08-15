@@ -1,5 +1,6 @@
 export type QuestionCopy = {
   question: string;
+  help?: string;
   options: [string, string, string, string];
   followUp: string;
   action: string;
@@ -403,12 +404,12 @@ export const V5_EN_QUESTION_TEXT: Record<string, string> = {
   "lpa-infra-partner": "Have you selected candidate logistics, payment, and cloud providers for the initial target country?",
   "lpa-bridge-person": "Do you have a person who understands both local conditions and the offering and can connect headquarters with the local market?",
   "lpa-journey-blocker": "Have you directly observed where local customers stall or drop off across discovery, comparison, purchase, payment, use, and support?",
-  "test-environment": "Have you tested whether the offering works under actual conditions in the initial target country?",
+  "test-environment": "Have you tested whether the offering works as intended in the real environment of the initial target country?",
   "test-defects": "Do you record product, service, and customer-journey issues found in local testing and track their resolution?",
-  "test-message-worked": "Have you identified which local promotion message or product demonstration actually generated inquiries?",
+  "test-message-worked": "Have you confirmed which local marketing messages or product demonstrations led to real inquiries?",
   "test-no-discount": "Has a customer paid, without discounts or free offers, at a price that preserves your target margin?",
   "test-counter-evidence": "Have you identified evidence that contradicts the market hypothesis—such as rejection, churn, non-conversion, or usage failure—and reflected it in the plan?",
-  "partner-actual-work": "Is the local partner actually performing its assigned role?",
+  "partner-actual-work": "Is the local partner performing the role it agreed to take on?",
   "partner-economics": "Have you compared the profitability of partner-led and direct sales using numbers?",
   "partner-ecosystem-interviews": "Have you directly confirmed the input or requirements of different local stakeholders, including users, buyers, distributors, procurement, and regulators?",
   "partner-shortfall": "Do you regularly review whether the partner meets committed volumes and schedules, and have you set actions for shortfalls?",
@@ -436,6 +437,7 @@ export const V5_EN_DETAIL_OVERRIDES: Partial<Record<string, Partial<QuestionCopy
     followUp: "Describe the rule and your most recent allocation decision."
   },
   "pmf-paid-conversion": {
+    help: "Choose the closest one.",
     options: ["We have no paid-customer evidence yet", "We have interest, inquiries, or free usage, but no paid conversion", "We completed a domestic paid sale or a paid PoC or pilot in the initial target country", "Repeat purchases, renewals, or usage growth recur across customers at home or abroad"],
     followUp: "List your strongest evidence in order. Anonymize customers as \"Customer A.\""
   },

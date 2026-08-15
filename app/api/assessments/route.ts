@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { applyOffering } from "@/lib/intake-questions";
 import { calculateReadiness, resolveAssessmentQuestions, validateAssessmentAnswers } from "@/lib/readiness";
-import { getNewAssessmentSurveyVersion } from "@/lib/readiness-rollout";
+import { getNewAssessmentSurveyVersion, verifySurveyVersionToken } from "@/lib/readiness-rollout";
 import { ensureStageSummary } from "@/lib/stage-summary-service";
 import { createSupabaseAdminClient, createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
 
@@ -18,6 +18,7 @@ const answerSchema = z.object({
 });
 const requestSchema = z.object({
   answers: z.array(answerSchema).min(1).max(55),
+  surveyVersionToken: z.string().min(1).max(1000).optional(),
   completedStageId: z.enum(["early", "preparing", "ready"]).optional(),
   salesMotion: z.enum(["direct", "partner", "hybrid", "unknown"]).optional(),
   locale: z.enum(["ko", "en"]).default("ko"),
@@ -38,7 +39,16 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  const surveyVersion = getNewAssessmentSurveyVersion();
+  const pinnedVersion = parsed.data.surveyVersionToken
+    ? verifySurveyVersionToken(parsed.data.surveyVersionToken)
+    : null;
+  if (parsed.data.surveyVersionToken && !pinnedVersion) {
+    return NextResponse.json(
+      { message: locale === "en" ? "This assessment session is invalid or expired." : "진단 세션이 유효하지 않거나 만료되었습니다." },
+      { status: 400 }
+    );
+  }
+  const surveyVersion = pinnedVersion ?? getNewAssessmentSurveyVersion();
   if (surveyVersion === "5.0" && (!parsed.data.completedStageId || !parsed.data.salesMotion)) {
     return NextResponse.json(
       { message: locale === "en" ? "Select a sales motion and completed stage." : "진출 방식과 완료 단계를 확인해 주세요." },
