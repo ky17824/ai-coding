@@ -5,11 +5,13 @@ import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import {
   ASSISTANT_MODEL,
+  buildDocumentExtractionInstructions,
   buildMarketSizingInstructions,
   finalizeMarketResearch,
   founderSizingOverridesResponseSchema,
   marketCompetitorResearchResponseSchema,
   marketResearchSynthesisResponseSchema,
+  marketResearchDocumentExtractionResponseSchema,
   MARKET_SIZING_MODEL,
   marketSizingEvidenceResponseSchema,
   marketTrendResearchResponseSchema,
@@ -22,7 +24,8 @@ import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { preserveFounderContextLocale } from "@/lib/content-localization";
 import { getMissingMarketSizingInputs, marketResearchContextSignature, mergeFounderSizingOverrides, normalizeMarketResearch } from "@/lib/market-sizing";
 import { collectAllowedResearchUrls, collectCitedUrls, researchQuotaDecision } from "@/lib/research-sources";
-import type { GtmFounderContext, ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
+import { marketResearchDocumentSchema, researchDocumentDigests, sanitizeDocumentEvidence } from "@/lib/gtm-research-documents";
+import type { GtmFounderContext, MarketResearchDocument, ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
 
 const founderContextSchema = z.object({
   offeringType: z.enum(["product", "service", "solution", "hybrid", ""]),
@@ -51,6 +54,90 @@ const requestSchema = z.object({
   locale: z.enum(["ko", "en"]).default("ko"),
   founderContext: founderContextSchema
 });
+
+type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdminClient>>;
+
+async function prepareResearchDocuments(input: {
+  admin: AdminClient;
+  client: OpenAI;
+  documents: MarketResearchDocument[];
+  planId: string;
+  assessmentId: string;
+  userId: string;
+  locale: "ko" | "en";
+}) {
+  let documents = input.documents;
+  for (const initial of documents) {
+    if (initial.status === "processed") continue;
+    const current = documents.find((document) => document.id === initial.id) ?? initial;
+    if (!current.storagePath || !current.storagePath.startsWith(`${input.userId}/gtm-research/${input.assessmentId}/`)) {
+      throw new Error(input.locale === "en" ? "An uploaded research file has an invalid path." : "업로드한 조사 자료의 저장 경로가 올바르지 않습니다.");
+    }
+    if (current.status === "cleanup_pending") {
+      const { error: cleanupError } = await input.admin.storage.from("evidence").remove([current.storagePath]);
+      if (cleanupError) throw new Error(input.locale === "en" ? "The private original could not be deleted." : "비공개 원본 자료를 삭제하지 못했습니다.");
+      const { data, error } = await input.admin.rpc("update_gtm_research_document", {
+        p_plan_id: input.planId, p_user_id: input.userId, p_document_id: current.id,
+        p_status: "processed", p_evidence: current.evidence, p_error_message: null
+      });
+      const parsed = z.array(marketResearchDocumentSchema).safeParse(data);
+      if (error || !parsed.success) throw new Error(input.locale === "en" ? "The document cleanup state could not be saved." : "자료 정리 상태를 저장하지 못했습니다.");
+      documents = parsed.data;
+      continue;
+    }
+
+    try {
+      const prefix = `${input.userId}/gtm-research/${input.assessmentId}`;
+      const name = current.storagePath.slice(prefix.length + 1);
+      const { data: stored } = await input.admin.storage.from("evidence").list(prefix, { search: name, limit: 1 });
+      if (!stored?.some((item) => item.name === name)) throw new Error("research_file_missing");
+      const { data: signed, error: signError } = await input.admin.storage.from("evidence").createSignedUrl(current.storagePath, 15 * 60);
+      if (signError || !signed?.signedUrl) throw new Error("research_file_unavailable");
+      const fileInput = current.mimeType === "application/pdf"
+        ? { type: "input_file" as const, file_url: signed.signedUrl, filename: current.displayName }
+        : { type: "input_image" as const, image_url: signed.signedUrl, detail: "low" as const };
+      const response = await input.client.responses.parse({
+        model: ASSISTANT_MODEL,
+        store: false,
+        safety_identifier: createHash("sha256").update(input.userId).digest("hex"),
+        reasoning: { effort: "medium", context: "current_turn" },
+        instructions: buildDocumentExtractionInstructions(input.locale),
+        input: [{ role: "user", content: [
+          { type: "input_text", text: "Extract the attached private document into the required evidence schema." },
+          fileInput
+        ] }],
+        text: { format: zodTextFormat(marketResearchDocumentExtractionResponseSchema, "gtm_private_document_evidence") }
+      });
+      if (!response.output_parsed?.result) throw new Error("research_document_unstructured");
+      const evidence = sanitizeDocumentEvidence(response.output_parsed.result);
+      const { data: pending, error: pendingError } = await input.admin.rpc("update_gtm_research_document", {
+        p_plan_id: input.planId, p_user_id: input.userId, p_document_id: current.id,
+        p_status: "cleanup_pending", p_evidence: evidence, p_error_message: null
+      });
+      const parsedPending = z.array(marketResearchDocumentSchema).safeParse(pending);
+      if (pendingError || !parsedPending.success) throw new Error("research_document_state_failed");
+      documents = parsedPending.data;
+      const { error: cleanupError } = await input.admin.storage.from("evidence").remove([current.storagePath]);
+      if (cleanupError) throw new Error("research_document_cleanup_failed");
+      const { data: complete, error: completeError } = await input.admin.rpc("update_gtm_research_document", {
+        p_plan_id: input.planId, p_user_id: input.userId, p_document_id: current.id,
+        p_status: "processed", p_evidence: evidence, p_error_message: null
+      });
+      const parsedComplete = z.array(marketResearchDocumentSchema).safeParse(complete);
+      if (completeError || !parsedComplete.success) throw new Error("research_document_completion_failed");
+      documents = parsedComplete.data;
+    } catch (error) {
+      if (current.status === "uploaded") {
+        await input.admin.rpc("update_gtm_research_document", {
+          p_plan_id: input.planId, p_user_id: input.userId, p_document_id: current.id,
+          p_status: "failed", p_evidence: null, p_error_message: "문서 정제에 실패했습니다."
+        });
+      }
+      throw new Error(input.locale === "en" ? "We couldn't prepare an uploaded document. Check the file and try again." : "업로드한 자료를 정제하지 못했습니다. 파일을 확인하고 다시 시도해 주세요.", { cause: error });
+    }
+  }
+  return documents;
+}
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -99,7 +186,7 @@ export async function POST(request: Request) {
       .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString().slice(0, 10)}`)
       .limit(12),
     admin.from("gtm_plans")
-      .select("id,market_research_count,founder_context,market_research,market_research_confirmed_at,content_locale,founder_context_locale,market_research_locale")
+      .select("id,created_by,market_research_count,market_research_documents,founder_context,market_research,market_research_confirmed_at,content_locale,founder_context_locale,market_research_locale")
       .eq("assessment_id", assessment.id)
       .in("status", ["draft", "active"])
       .maybeSingle()
@@ -111,13 +198,34 @@ export async function POST(request: Request) {
     ])
   );
   const existingResearch = normalizeMarketResearch(existingPlan?.market_research);
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const parsedDocuments = z.array(marketResearchDocumentSchema).safeParse(existingPlan?.market_research_documents ?? []);
+  if (!parsedDocuments.success) {
+    return NextResponse.json({ message: en ? "The saved research documents are invalid." : "저장된 조사 자료 상태가 올바르지 않습니다." }, { status: 500 });
+  }
+  const researchUploadsEnabled = process.env.AI_GTM_RESEARCH_UPLOADS_ENABLED === "true";
+  let researchDocuments = researchUploadsEnabled ? parsedDocuments.data : [];
+  if (researchUploadsEnabled && existingPlan?.id && researchDocuments.length > 0) {
+    if (existingPlan.created_by !== user.id) {
+      return NextResponse.json({ message: en ? "You cannot use documents from this plan." : "이 계획의 자료를 사용할 수 없습니다." }, { status: 403 });
+    }
+    try {
+      researchDocuments = await prepareResearchDocuments({
+        admin, client, documents: researchDocuments, planId: existingPlan.id,
+        assessmentId: assessment.id, userId: user.id, locale
+      });
+    } catch (error) {
+      return NextResponse.json({ message: error instanceof Error ? error.message : en ? "We couldn't prepare the uploaded documents." : "업로드한 자료를 준비하지 못했습니다." }, { status: 422 });
+    }
+  }
+  const documentDigests = researchDocumentDigests(researchDocuments);
   const storedResearch = existingPlan?.market_research && typeof existingPlan.market_research === "object" && !Array.isArray(existingPlan.market_research)
     ? existingPlan.market_research as Record<string, unknown>
     : {};
   const cacheAge = existingResearch?.generatedAt ? Date.now() - new Date(existingResearch.generatedAt).getTime() : Number.POSITIVE_INFINITY;
   if (existingPlan?.id && existingResearch?.researchMethodologyVersion === "market-research-v2" &&
       existingResearch.marketSizingMethodologyVersion === "market-sizing-v2" &&
-      existingResearch.researchContextSignature === marketResearchContextSignature(parsed.data.founderContext) &&
+      existingResearch.researchContextSignature === marketResearchContextSignature(parsed.data.founderContext, documentDigests) &&
       existingPlan.market_research_locale === locale && cacheAge >= 0 && cacheAge < 7 * 24 * 60 * 60 * 1000) {
     return NextResponse.json({
       planId: existingPlan.id,
@@ -242,7 +350,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const publicResearchContext = {
       offeringType: founderContext.offeringType,
       offeringName: founderContext.offeringName,
@@ -252,6 +359,9 @@ export async function POST(request: Request) {
       targetCountry: founderContext.targetCountry,
       targetCustomer: founderContext.targetCustomer
     };
+    const sanitizedDocumentEvidence = researchDocuments
+      .filter((document) => document.status === "processed" && document.evidence)
+      .map((document) => document.evidence);
     const sharedRequest = {
       model: ASSISTANT_MODEL,
       store: false,
@@ -271,6 +381,7 @@ export async function POST(request: Request) {
           hasEvidence: Boolean(answer.evidence_value)
         })),
         approvedInternalSources: sources ?? [],
+        sanitizedDocumentEvidence,
         missingFounderSizingInputs: missingSizingInputs
       }),
       tools,
@@ -327,7 +438,7 @@ export async function POST(request: Request) {
         instructions: en
           ? `Synthesize the supplied verified findings into a concise executive summary, preliminary sellability state, next validation tasks, and limitations. Do not add facts, competitors, sources, or market-size claims. ${scope === "market_preresearch" ? "Set sellability available=false and verdict=not_assessed." : "Give only a conditional verdict with explicit evidence gaps."} Write clear US English.`
           : `제공된 검증 완료 조사 결과만 사용해 경영진 요약, 예비 판매 가능성 상태, 다음 검증 과제와 한계를 작성하세요. 새로운 사실·경쟁사·출처·시장규모 주장을 추가하지 마세요. ${scope === "market_preresearch" ? "판매 가능성은 available=false, verdict=not_assessed로 두세요." : "명시적인 근거 공백이 있는 조건부 판단만 하세요."} 제품명·회사명·공식 자료명을 제외한 모든 설명은 자연스러운 한국어로 작성하세요.`,
-        input: JSON.stringify({ scope, publicResearchContext, trends: trendResponse.output_parsed.result.trends, competitors: competitorResponse.output_parsed.result.competitors, contradictions: trendResponse.output_parsed.result.contradictions, answeredQuestionCount: (answers ?? []).length }),
+        input: JSON.stringify({ scope, publicResearchContext, sanitizedDocumentEvidence, trends: trendResponse.output_parsed.result.trends, competitors: competitorResponse.output_parsed.result.competitors, contradictions: trendResponse.output_parsed.result.contradictions, answeredQuestionCount: (answers ?? []).length }),
         text: { format: zodTextFormat(marketResearchSynthesisResponseSchema, "gtm_market_research_synthesis") }
       }),
       client.responses.parse({
@@ -363,7 +474,7 @@ export async function POST(request: Request) {
       ...synthesisResponse.output_parsed.result,
       competitors: competitorResponse.output_parsed.result.competitors,
       marketSizingEvidence
-    }, researchNow, locale, parsed.data.founderContext, MARKET_SIZING_MODEL);
+    }, researchNow, locale, parsed.data.founderContext, MARKET_SIZING_MODEL, documentDigests);
 
     const needsEvidence = result.marketSizing.some((entry) => entry.status === "insufficient_evidence");
     const preserveConfirmedResearch = needsEvidence && Boolean(existingPlan?.market_research_confirmed_at);

@@ -24,4 +24,20 @@ describe("assistant research upload security contract", () => {
     expect(route).toContain("inspectResearchFile");
     expect(route).toContain('rpc("append_gtm_research_document"');
   });
+
+  it("extracts and deletes private originals before reserving public research", () => {
+    const route = readFileSync("app/api/gtm-assistant/research/route.ts", "utf8");
+    const preparation = route.indexOf("prepareResearchDocuments");
+    const reservation = route.indexOf("const quotaDecision = researchQuotaDecision");
+    const publicRequest = route.slice(route.indexOf("const publicResearchContext"), route.indexOf("const sizingInstructions"));
+
+    expect(preparation).toBeGreaterThan(0);
+    expect(reservation).toBeGreaterThan(preparation);
+    expect(route).toContain('store: false');
+    expect(route).toContain('rpc("update_gtm_research_document"');
+    expect(route).toContain('storage.from("evidence").remove');
+    expect(publicRequest).toContain("sanitizedDocumentEvidence");
+    expect(publicRequest).not.toContain("storagePath");
+    expect(publicRequest).not.toContain("signedUrl");
+  });
 });

@@ -33,6 +33,7 @@ import type {
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { preserveFounderContextLocale } from "@/lib/content-localization";
 import { marketResearchContextSignature, normalizeMarketResearch } from "@/lib/market-sizing";
+import { marketResearchDocumentSchema, researchDocumentDigests } from "@/lib/gtm-research-documents";
 
 const requestSchema = z.object({
   assessmentId: z.string().uuid(),
@@ -231,7 +232,7 @@ export async function POST(request: Request) {
         .limit(12),
       admin
         .from("gtm_plans")
-        .select("id,founder_context,recent_messages,turn_count,generation_count,market_research,market_research_confirmed_at,content_locale,founder_context_locale,market_research_locale")
+        .select("id,founder_context,recent_messages,turn_count,generation_count,market_research,market_research_documents,market_research_confirmed_at,content_locale,founder_context_locale,market_research_locale")
         .eq("assessment_id", assessment.id)
         .in("status", ["draft", "active"])
         .maybeSingle(),
@@ -266,7 +267,10 @@ export async function POST(request: Request) {
     ...(contextSourceLocale === locale ? submittedContext : {})
   } as GtmFounderContext;
   const confirmedResearch = normalizeMarketResearch(existingPlan?.market_research);
-  const legacyConfirmed = confirmedResearch?.marketSizingMethodologyVersion === "legacy" && Boolean(existingPlan?.market_research_confirmed_at);
+  const parsedDocuments = z.array(marketResearchDocumentSchema).safeParse(existingPlan?.market_research_documents ?? []);
+  if (!parsedDocuments.success) return NextResponse.json({ message: en ? "The saved research documents are invalid." : "저장된 조사 자료 상태가 올바르지 않습니다." }, { status: 500 });
+  const documentDigests = researchDocumentDigests(parsedDocuments.data);
+  const legacyConfirmed = confirmedResearch?.marketSizingMethodologyVersion === "legacy" && documentDigests.length === 0 && Boolean(existingPlan?.market_research_confirmed_at);
   const message = sanitizeFounderText(parsed.data.message);
   if (parsed.data.questionKey && !isFounderQuestionKey(parsed.data.questionKey)) {
     return NextResponse.json({ message: en ? "The clarification question is invalid." : "확인 질문 정보가 올바르지 않습니다." }, { status: 400 });
@@ -283,7 +287,7 @@ export async function POST(request: Request) {
     : confirmedResearch?.researchContextSignature;
   if (!existingPlan?.market_research_confirmed_at || !confirmedResearch ||
       confirmedResearch.marketSizing.some((entry) => entry.status === "insufficient_evidence") ||
-      expectedResearchSignature !== marketResearchContextSignature(cleanContext)) {
+      expectedResearchSignature !== marketResearchContextSignature(cleanContext, documentDigests)) {
     return NextResponse.json({ message: en ? "Create and confirm market research for the current inputs before drafting the plan." : "현재 입력값으로 시장 조사를 만들고 확인한 뒤 실행 계획을 작성해 주세요." }, { status: 409 });
   }
 
