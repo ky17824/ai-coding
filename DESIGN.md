@@ -59,7 +59,7 @@
 - 추천은 실행 맥락 안에 둔다: 대시보드는 준비도와 답변 진단에 집중하고, 현재 액션과 연결된 AI 전문가 추천은 GTM 여정의 실행 보드가 끝난 뒤 충분한 여백을 둔 독립 섹션에서 제공한다.
 - 점수와 응답 분포를 분리한다: 큰 막대는 `3·4단계 응답 문항의 배점 합 / 단계 최대점수`와 80% 기준선을 보여주고, 얇은 막대는 1~4단계 응답 구성만 보여준다. 항목별 점수와 단계 합계가 같은 산식으로 검산되어야 한다.
 - 상태는 한 번, 행동은 항목마다 말한다: `선결 조건이 남았습니다` 같은 공통 문장은 카드 제목에서 한 번만 표시하고 각 행에는 고유한 조건, 현재 상태, 다음 행동만 보여준다.
-- 긴 조사 결과도 영역을 침범하지 않는다: 시장동향과 주요 경쟁사는 각각 경계가 있는 카드로 구분하고, 긴 출처·URL은 카드 안에서 줄바꿈한다.
+- 긴 조사 결과도 영역을 침범하지 않는다: 보고서 본문은 검증된 출처를 `[1]`, `[2]` 인용번호로 표시하고, 전체 URL과 서지정보는 마지막 참고문헌에 모은다. 같은 출처는 같은 번호를 재사용하며 카드와 표에는 원시 URL을 노출하지 않는다.
 - 시장 정의는 추정하지 않는다: 목표국가와 목표 고객군은 창업자가 명시적으로 확인한 구조화 값만 Gate B와 AI 조사 입력에 사용한다.
 - AI와 사람의 경계를 보인다: 내부 근거, 외부 사실, AI 가정, 전문가 확인을 라벨로 구분한다.
 - 결제 후에도 통제권은 사용자에게 있다: AI 전문가는 저장된 답변을 재사용하고 결과를 바꾸는 누락정보만 최대 2회 질문한다. `모름`은 중단이 아니라 유사사례 가정으로 전환하며, 사용자가 가정을 확인한 뒤에만 최종 보고서를 만든다.
@@ -76,7 +76,7 @@
 - Shape/radius/elevation: 기본 panel·card radius는 12px, 큰 feature band는 16px, button·status chip은 full-pill, icon·avatar는 원형으로 제한한다. 카드 표면은 저농도 2단 shadow만 사용하고 강한 3D edge는 기본 버튼에서 제거한다. 짙은 배경의 핵심 전환 CTA에는 white inverted surface와 한 단계 더 분명한 shadow를 허용하되 geometry·focus·motion은 공통 버튼과 같다.
 - Motion: 공통 버튼은 180ms 이내 색상·shadow 전환과 active `scale(0.97)`만 사용한다. hover에서 레이아웃 위치를 이동하지 않는다. 랜딩의 설명 애니메이션은 정보 이해를 돕는 경우에만 유지하고 사용자가 상호작용하면 정지할 수 있어야 한다. `prefers-reduced-motion`에서는 이동·scale·자동 스크롤·transition을 제거한다.
 - Imagery/iconography: 새로운 AI 일러스트·stock photography·아이콘 라이브러리를 추가하지 않는다. 제품의 실제 증거를 설명하는 데이터 미리보기와 단순 선형 아이콘만 사용하며 구조적 gradient·glassmorphism·과도한 blur를 사용하지 않는다.
-- Page rhythm: 공개 랜딩은 cream hero → white explanation → deep-green conversion band, 인증은 cream canvas 위 white card, 앱은 cream canvas 위 white panels, 보고서는 같은 토큰을 사용하고 인쇄 시 shadow·고정 toolbar를 제거한다.
+- Page rhythm: 공개 랜딩은 cream hero → white explanation → deep-green conversion band, 인증은 cream canvas 위 white card, 앱은 cream canvas 위 white panels, 보고서는 deep-green cover → metadata → executive summary·decision → market evidence → bibliography 순서로 같은 토큰을 사용하고 인쇄 시 shadow·고정 toolbar를 제거한다.
 
 ## Components
 
