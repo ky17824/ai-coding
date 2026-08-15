@@ -18,7 +18,7 @@ import {
   type SavedAction
 } from "@/lib/gtm-assistant";
 import { calculateReadiness, decidePlanHorizons, normalizeReadinessStatus } from "@/lib/readiness";
-import { PAID_PILOT_QUESTION_ID } from "@/lib/intake-questions";
+import { PAID_PILOT_QUESTION_ID, type SurveyVersion } from "@/lib/intake-questions";
 import type {
   EvidenceInput,
   GtmAssistantMessage,
@@ -27,7 +27,8 @@ import type {
   GtmPlanDraft,
   GtmPlanItem,
   ReadinessAnswer,
-  ReadinessLevel
+  ReadinessLevel,
+  SalesMotion
 } from "@/lib/types";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { preserveFounderContextLocale } from "@/lib/content-localization";
@@ -207,7 +208,7 @@ export async function POST(request: Request) {
   }
   const { data: assessment } = await admin
     .from("assessments")
-    .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,target_country,target_customer_segment,target_market_confirmed_at")
+    .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,target_country,target_customer_segment,target_market_confirmed_at,survey_version,sales_motion")
     .eq("id", parsed.data.assessmentId)
     .eq("organization_id", profile.organization_id)
     .maybeSingle();
@@ -319,13 +320,17 @@ export async function POST(request: Request) {
   });
   const targetCountry = cleanContext.targetCountry || assessment.target_country || "";
   const targetCustomer = cleanContext.targetCustomer || assessment.target_customer_segment || "";
+  const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
+  const salesMotion: SalesMotion = ["direct", "partner", "hybrid", "unknown"].includes(assessment.sales_motion)
+    ? assessment.sales_motion as SalesMotion
+    : "unknown";
   cleanContext.targetCountry = targetCountry;
   cleanContext.targetCustomer = targetCustomer;
   const readiness = calculateReadiness(readinessAnswers, {
     targetCountry,
     targetCustomerSegment: targetCustomer,
     confirmed: Boolean(targetCountry && targetCustomer)
-  }, locale);
+  }, locale, surveyVersion, salesMotion);
   const allowedHorizons = decidePlanHorizons(readiness);
   const needsPaidPilot = actions.some((action) => action.question_id === PAID_PILOT_QUESTION_ID);
 

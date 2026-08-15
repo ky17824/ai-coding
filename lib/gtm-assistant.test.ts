@@ -9,6 +9,7 @@ import {
   classifyFounderContextValue,
   finalizeMarketResearch,
   getPendingFounderQuestion,
+  getMarketResearchScope,
   MARKET_SIZING_MODEL,
   marketResearchResponseSchema,
   marketSizingEvidenceResponseSchema,
@@ -54,6 +55,27 @@ const completeContext: GtmFounderContext = {
 const sizingFilterKinds = ["demographic", "employment", "income", "behavior", "channel"] as const;
 
 describe("AI GTM assistant safeguards", () => {
+  it("uses readiness state rather than a raw answer count for research scope", () => {
+    expect(getMarketResearchScope({
+      reachedReadyStage: true,
+      deferredQuestionIds: [],
+      criticalSatisfied: true,
+      requiredQuestionsComplete: true
+    })).toBe("sellability_review");
+    expect(getMarketResearchScope({
+      reachedReadyStage: true,
+      deferredQuestionIds: ["test-no-discount"],
+      criticalSatisfied: true,
+      requiredQuestionsComplete: true
+    })).toBe("market_preresearch");
+    expect(getMarketResearchScope({
+      reachedReadyStage: false,
+      deferredQuestionIds: [],
+      criticalSatisfied: true,
+      requiredQuestionsComplete: true
+    })).toBe("market_preresearch");
+  });
+
   it("routes broad research and market sizing to the intended model tiers", () => {
     expect(ASSISTANT_MODEL).toBe("gpt-5.6-luna");
     expect(MARKET_SIZING_MODEL).toBe("gpt-5.6-sol");
@@ -111,7 +133,7 @@ describe("AI GTM assistant safeguards", () => {
     expect(plan.items[0]).toMatchObject({
       expertRequired: true,
       sourceActionItemId: "action-1",
-      sources: [{ kind: "diagnosis", title: "55문항 준비도 진단" }]
+      sources: [{ kind: "diagnosis", title: "완료한 준비도 진단" }]
     });
   });
 

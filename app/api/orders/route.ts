@@ -9,7 +9,7 @@ import {
 } from "@/lib/supabase/server";
 import { calculateSettlement } from "@/lib/orders";
 import { aiExpertServicesEnabled, getAiAgentService } from "@/lib/ai-agent-services";
-import { getAiOrderAmounts } from "@/lib/ai-agent-report";
+import { buildAiReadinessSnapshot, getAiOrderAmounts } from "@/lib/ai-agent-report";
 
 const schema = z.object({
   serviceId: z.string().min(1).max(80),
@@ -75,6 +75,18 @@ export async function POST(request: Request) {
   }
 
   if (aiService) {
+    const { data: assessment, error: assessmentError } = await admin.from("assessments")
+      .select("id,survey_version,sales_motion,target_country,target_customer_segment,target_market_confirmed_at")
+      .eq("organization_id", profile.organization_id)
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (assessmentError) return NextResponse.json({ message: en ? "We couldn't load the readiness assessment." : "준비도 진단을 불러오지 못했습니다." }, { status: 500 });
+    const { data: readinessRows, error: readinessError } = assessment
+      ? await admin.from("readiness_answers").select("question_id,level").eq("assessment_id", assessment.id).limit(55)
+      : { data: [], error: null };
+    if (readinessError) return NextResponse.json({ message: en ? "We couldn't load the readiness answers." : "준비도 답변을 불러오지 못했습니다." }, { status: 500 });
+    const readiness = buildAiReadinessSnapshot(assessment, readinessRows ?? []);
     const orderId = randomUUID();
     const paymentId = `gtm-${orderId}`;
     const now = new Date().toISOString();
@@ -107,6 +119,7 @@ export async function POST(request: Request) {
         type: aiService.type,
         deliverables: aiService.deliverables,
         requiredInputs: aiService.requiredInputs,
+        readiness,
         supplyPriceKrw: amounts.supplyAmountKrw,
         vatKrw: amounts.vatAmountKrw,
         priceKrw: amounts.grossAmountKrw

@@ -349,7 +349,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
       <aside className="assistant-sidebar panel">
         <span className="page-kicker">{en ? "AI GTM ASSISTANT" : "AI GTM 어시스턴트"}</span>
         <h1>{en ? "Turn your assessment into an execution plan" : "진단 결과를 실행 계획으로"}</h1>
-        <p>{en ? "Build a staged 30-, 60-, and 90-day plan from your 55 assessment answers and saved actions." : "55문항 결과와 저장된 액션만 사용해 단계별 실행계획(30·60·90 Day Plan)을 함께 만들어 드립니다."}</p>
+        <p>{en ? "Build a staged 30-, 60-, and 90-day plan from your completed readiness assessment and saved actions." : "완료한 준비도 진단과 저장된 액션으로 단계별 실행계획(30·60·90 Day Plan)을 함께 만들어 드립니다."}</p>
         <div className="assistant-score"><strong>{assessment.score}</strong><span>{assessment.status}</span></div>
         {assessment.isOnHold && (
           <ul>{assessment.gateMessages.map((message) => <li key={message}>{message}</li>)}</ul>

@@ -13,14 +13,16 @@ import {
   MARKET_SIZING_MODEL,
   marketSizingEvidenceResponseSchema,
   marketTrendResearchResponseSchema,
+  getMarketResearchScope,
   sanitizeFounderText
 } from "@/lib/gtm-assistant";
-import { normalizeReadinessStatus } from "@/lib/readiness";
+import { normalizeReadinessStatus, resolveAssessmentQuestions } from "@/lib/readiness";
+import { getIntakeQuestions, type SurveyVersion } from "@/lib/intake-questions";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { preserveFounderContextLocale } from "@/lib/content-localization";
 import { getMissingMarketSizingInputs, marketResearchContextSignature, mergeFounderSizingOverrides, normalizeMarketResearch } from "@/lib/market-sizing";
 import { collectAllowedResearchUrls, collectCitedUrls, researchQuotaDecision } from "@/lib/research-sources";
-import type { GtmFounderContext } from "@/lib/types";
+import type { GtmFounderContext, ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
 
 const founderContextSchema = z.object({
   offeringType: z.enum(["product", "service", "solution", "hybrid", ""]),
@@ -79,7 +81,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: en ? "We couldn't find your organization." : "조직 정보를 찾을 수 없습니다." }, { status: 403 });
   }
   const { data: assessment } = await admin.from("assessments")
-    .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages")
+    .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,survey_version,sales_motion")
     .eq("id", parsed.data.assessmentId)
     .eq("organization_id", profile.organization_id)
     .maybeSingle();
@@ -189,9 +191,47 @@ export async function POST(request: Request) {
     if (!reserved) return NextResponse.json({ message: en ? "Another research request is already running. Try again after it finishes." : "다른 시장 조사 요청이 진행 중입니다. 완료된 뒤 다시 시도해 주세요." }, { status: 409 });
   }
   const missingSizingInputs = getMissingMarketSizingInputs(founderContext);
-  const scope = (answers ?? []).length === 55
-    ? "sellability_review"
-    : "market_preresearch";
+  const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
+  const salesMotion: SalesMotion = ["direct", "partner", "hybrid", "unknown"].includes(assessment.sales_motion)
+    ? assessment.sales_motion as SalesMotion
+    : "unknown";
+  const readinessAnswers: ReadinessAnswer[] = (answers ?? []).flatMap((answer) =>
+    [1, 2, 3, 4].includes(Number(answer.level))
+      ? (() => {
+          const kind = ["note", "url", "file"].includes(answer.evidence_kind ?? "")
+            ? answer.evidence_kind as "note" | "url" | "file"
+            : null;
+          return [{
+          questionId: answer.question_id,
+          level: Number(answer.level) as ReadinessLevel,
+          evidence: kind && answer.evidence_value ? { kind, value: answer.evidence_value } : undefined
+        }];
+        })()
+      : []
+  );
+  const resolved = resolveAssessmentQuestions({
+    surveyVersion,
+    salesMotion,
+    targetMarket: {
+      targetCountry: parsed.data.founderContext.targetCountry,
+      targetCustomerSegment: parsed.data.founderContext.targetCustomer,
+      confirmed: true
+    },
+    answers: readinessAnswers
+  });
+  const answerById = new Map(readinessAnswers.map((answer) => [answer.questionId, answer]));
+  const criticalIds = getIntakeQuestions("ko", surveyVersion)
+    .filter((question) => question.critical && resolved.requiredIds.includes(question.id))
+    .map((question) => question.id);
+  const scope = getMarketResearchScope({
+    reachedReadyStage: ["진출 실행 가능", "Ready to Enter"].includes(normalizeReadinessStatus(assessment.status_label)),
+    deferredQuestionIds: resolved.deferredIds,
+    criticalSatisfied: criticalIds.every((id) => {
+      const answer = answerById.get(id);
+      return Boolean(answer && answer.level >= 3 && answer.evidence?.value);
+    }),
+    requiredQuestionsComplete: resolved.requiredIds.every((id) => answerById.has(id))
+  });
   const tools: OpenAI.Responses.Tool[] = [{ type: "web_search" }];
   if (process.env.OPENAI_GTM_VECTOR_STORE_ID) {
     tools.unshift({

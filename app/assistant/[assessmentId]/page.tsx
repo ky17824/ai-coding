@@ -9,7 +9,7 @@ import { getRequestLocale } from "@/lib/i18n-server";
 import type { GtmMarketResearch, GtmPlanItem, StoredGtmPlan } from "@/lib/types";
 import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import { localizeStoredGtmPlan } from "@/lib/content-localization";
-import { getIntakeItems, getIntakeQuestions } from "@/lib/intake-questions";
+import { getIntakeItems, getIntakeQuestions, type SurveyVersion } from "@/lib/intake-questions";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "AI GTM Assistant" : "AI GTM 어시스턴트" };
@@ -52,7 +52,7 @@ export default async function AssistantPage({
   if (!profile?.organization_id) redirect(localizedPath("/account/onboarding", locale));
   const { data: assessment } = await admin
     .from("assessments")
-    .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,target_country,target_customer_segment")
+    .select("id,overall_score,domain_scores,status_label,is_on_hold,gate_messages,target_country,target_customer_segment,survey_version")
     .eq("id", assessmentId)
     .eq("organization_id", profile.organization_id)
     .maybeSingle();
@@ -104,7 +104,8 @@ export default async function AssistantPage({
     ? getPendingFounderQuestion(initialPlan.founderContext, initialPlan.recentMessages, locale)
     : null;
 
-  const questions = new Map(getIntakeQuestions(locale).map((question) => [question.id, question]));
+  const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
+  const questions = new Map(getIntakeQuestions(locale, surveyVersion).map((question) => [question.id, question]));
   const items = new Map(getIntakeItems(locale).map((item) => [item.id, item]));
 
   return (

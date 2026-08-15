@@ -7,6 +7,8 @@ import {
   aiIntakeFields,
   auditAiAgentIntake,
   aiAgentReportSchema,
+  aiReadinessSnapshotSchema,
+  buildAiReadinessSnapshot,
   aiPublicResearchSchema,
   buildSafePublicResearchBrief,
   buildAiAgentInstructions,
@@ -58,7 +60,8 @@ const paidServiceSchema = z.object({
   completionInstructions: z.array(z.string().trim().min(1)).min(1),
   title: z.string().trim().min(1),
   type: z.literal("ai_agent"),
-  deliverables: z.array(z.string().trim().min(1)).min(1)
+  deliverables: z.array(z.string().trim().min(1)).min(1),
+  readiness: aiReadinessSnapshotSchema.optional()
 });
 
 type Intake = z.infer<typeof intakeSchema>;
@@ -101,7 +104,7 @@ async function loadOrder(orderId: string, userId: string) {
   const admin = createSupabaseAdminClient();
   if (!admin) return { admin: null, order: null, run: null };
   const { data: order } = await admin.from("orders")
-    .select("id,organization_id,buyer_id,status,order_kind,product_key,amount_krw,service_snapshot")
+    .select("id,organization_id,buyer_id,status,order_kind,product_key,amount_krw,service_snapshot,created_at")
     .eq("id", orderId).eq("buyer_id", userId).maybeSingle();
   if (!order || order.order_kind !== "ai_agent" || !order.product_key) return { admin, order: null, run: null };
   const { data: run } = await admin.from("ai_agent_runs").select("*").eq("order_id", orderId).maybeSingle();
@@ -120,21 +123,50 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   if (!run || !["paid", "service_started", "completed"].includes(order.status)) {
     return NextResponse.json({ message: en ? "Payment confirmation is still being processed." : "결제 확인을 처리 중입니다. 잠시 후 다시 확인해 주세요." }, { status: 402 });
   }
-  const { data: latestAssessment, error: assessmentError } = await admin.from("assessments")
-    .select("id,overall_score,status_label,gate_messages,completed_at,target_country,target_customer_segment")
-    .eq("organization_id", order.organization_id).order("completed_at", { ascending: false }).limit(1).maybeSingle();
-  if (assessmentError) return NextResponse.json({ message: en ? "We couldn't load the saved readiness assessment." : "저장된 준비도 진단을 불러오지 못했습니다." }, { status: 500 });
-  const intakeBaseline = { targetCountry: latestAssessment?.target_country ?? "", targetCustomer: latestAssessment?.target_customer_segment ?? "" };
+  const parsedService = paidServiceSchema.safeParse(order.service_snapshot);
+  if (!parsedService.success || parsedService.data.productId !== order.product_key) return NextResponse.json({ message: en ? "We couldn't find the paid AI product contract." : "결제 당시 AI 상품 실행 기준을 찾을 수 없습니다." }, { status: 409 });
+  const service = { ...parsedService.data, id: parsedService.data.productId };
+  let readiness = parsedService.data.readiness;
+  if (!readiness) {
+    const { data: legacyAssessment, error: assessmentError } = await admin.from("assessments")
+      .select("id,overall_score,status_label,gate_messages,completed_at,target_country,target_customer_segment,target_market_confirmed_at,survey_version,sales_motion")
+      .eq("organization_id", order.organization_id)
+      .lte("completed_at", order.created_at)
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (assessmentError) return NextResponse.json({ message: en ? "We couldn't load the saved readiness assessment." : "저장된 준비도 진단을 불러오지 못했습니다." }, { status: 500 });
+    const { data: legacyAnswers, error: legacyAnswersError } = legacyAssessment
+      ? await admin.from("readiness_answers").select("question_id,level").eq("assessment_id", legacyAssessment.id).limit(55)
+      : { data: [], error: null };
+    if (legacyAnswersError) return NextResponse.json({ message: en ? "We couldn't load the saved readiness answers." : "저장된 준비도 답변을 불러오지 못했습니다." }, { status: 500 });
+    readiness = buildAiReadinessSnapshot(legacyAssessment, legacyAnswers ?? []);
+  }
+  const { data: boundRun, error: bindError } = await admin.rpc("bind_ai_agent_readiness_snapshot", { p_order_id: orderId, p_readiness_snapshot: readiness });
+  if (bindError || !boundRun) return NextResponse.json({ message: en ? "We couldn't bind the paid readiness scope." : "결제 시점의 준비도 범위를 고정하지 못했습니다." }, { status: 500 });
+  const boundReadiness = aiReadinessSnapshotSchema.safeParse(boundRun.scope_snapshot?.readiness);
+  if (!boundReadiness.success) return NextResponse.json({ message: en ? "The paid readiness scope is invalid." : "결제 시점의 준비도 범위가 올바르지 않습니다." }, { status: 500 });
+  readiness = boundReadiness.data;
+  const { data: boundAssessment, error: assessmentError } = readiness.assessmentId
+    ? await admin.from("assessments")
+      .select("id,overall_score,status_label,gate_messages,completed_at,target_country,target_customer_segment")
+      .eq("id", readiness.assessmentId)
+      .eq("organization_id", order.organization_id)
+      .maybeSingle()
+    : { data: null, error: null };
+  if (assessmentError) return NextResponse.json({ message: en ? "We couldn't load the bound readiness assessment." : "고정된 준비도 진단을 불러오지 못했습니다." }, { status: 500 });
+  const activeRun = boundRun;
+  const intakeBaseline = { targetCountry: boundAssessment?.target_country ?? "", targetCustomer: boundAssessment?.target_customer_segment ?? "" };
 
   if (parsed.data.action === "submit_intake") {
     const normalizedIntake = clearUnknownIntakeValues(parsed.data.intake);
     const nextScope = normalizeAiAgentScope(normalizedIntake);
-    const savedScope = normalizeAiAgentScope(run.scope_snapshot ?? {});
+    const savedScope = normalizeAiAgentScope(activeRun.scope_snapshot ?? {});
     const scopeUnknown = normalizedIntake.unknownFields.some((field) => ["offering", "targetCountry", "targetCustomer"].includes(field));
-    if (Number(run.generation_count ?? 0) >= 2) {
+    if (Number(activeRun.generation_count ?? 0) >= 2) {
       return NextResponse.json({ message: en ? "The included correction has already been used." : "포함된 사실 정정 재생성을 이미 사용했습니다." }, { status: 409 });
     }
-    if (Number(run.generation_count ?? 0) > 0 && (scopeUnknown || JSON.stringify(nextScope) !== JSON.stringify(savedScope))) {
+    if (Number(activeRun.generation_count ?? 0) > 0 && (scopeUnknown || JSON.stringify(nextScope) !== JSON.stringify(savedScope))) {
       return NextResponse.json({ message: en ? "Changing the offering, target country, or core customer requires a new order." : "제품·목표국가·핵심고객 변경은 새로운 유료 업무로 신청해야 합니다." }, { status: 409 });
     }
     const missing = missingFields(normalizedIntake, intakeBaseline);
@@ -158,10 +190,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   }
 
   if (parsed.data.action === "submit_clarification") {
-    const intake = intakeSchema.parse(run.intake ?? {});
+    const intake = intakeSchema.parse(activeRun.intake ?? {});
     const merged = { ...intake } as Intake;
     const unknown = new Set(merged.unknownFields);
-    const pendingIds = new Set(Array.isArray(run.pending_questions) ? run.pending_questions.map((question: { id?: string }) => question.id) : []);
+    const pendingIds = new Set(Array.isArray(activeRun.pending_questions) ? activeRun.pending_questions.map((question: { id?: string }) => question.id) : []);
     const acceptedAnswers: Record<string, string> = {};
     for (const [field, answer] of Object.entries(parsed.data.answers)) {
       if (!pendingIds.has(field)) continue;
@@ -177,14 +209,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       }
     }
     merged.unknownFields = [...unknown];
-    if (Number(run.generation_count ?? 0) > 0) {
+    if (Number(activeRun.generation_count ?? 0) > 0) {
       const scopeUnknown = merged.unknownFields.some((field) => ["offering", "targetCountry", "targetCustomer"].includes(field));
-      if (scopeUnknown || JSON.stringify(normalizeAiAgentScope(merged)) !== JSON.stringify(normalizeAiAgentScope(run.scope_snapshot ?? {}))) {
+      if (scopeUnknown || JSON.stringify(normalizeAiAgentScope(merged)) !== JSON.stringify(normalizeAiAgentScope(activeRun.scope_snapshot ?? {}))) {
         return NextResponse.json({ message: en ? "Changing the offering, target country, or core customer requires a new order." : "제품·목표국가·핵심고객 변경은 새로운 유료 업무로 신청해야 합니다." }, { status: 409 });
       }
     }
-    const round = Math.min(2, Number(run.clarification_round ?? 0) + 1);
-    const previousAnswers = Array.isArray(run.clarification_answers) ? run.clarification_answers : [];
+    const round = Math.min(2, Number(activeRun.clarification_round ?? 0) + 1);
+    const previousAnswers = Array.isArray(activeRun.clarification_answers) ? activeRun.clarification_answers : [];
     const confirmedFields = [...new Set([...previousAnswers, acceptedAnswers].flatMap((entry) => Object.keys(entry ?? {})))];
     let missing = missingFields(merged, intakeBaseline, confirmedFields);
     const nextStatus = nextAiAgentStep({ missingCriticalInputs: missing.length > 0, clarificationRound: round });
@@ -210,12 +242,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   }
 
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ message: en ? "The AI model is not configured." : "AI 모델이 구성되지 않았습니다." }, { status: 503 });
-  if (!["ready", "failed", "completed", "generating"].includes(run.status)) return NextResponse.json({ message: en ? "Review the required information first." : "필요정보와 가정을 먼저 확인해 주세요." }, { status: 409 });
-  const parsedService = paidServiceSchema.safeParse(order.service_snapshot);
-  if (!parsedService.success || parsedService.data.productId !== order.product_key) return NextResponse.json({ message: en ? "We couldn't find the paid AI product contract." : "결제 당시 AI 상품 실행 기준을 찾을 수 없습니다." }, { status: 409 });
-  const service = { ...parsedService.data, id: parsedService.data.productId };
-  const { data: answers, error: answersError } = latestAssessment
-    ? await admin.from("readiness_answers").select("question_id,level,evidence_kind,evidence_value").eq("assessment_id", latestAssessment.id).limit(55)
+  if (!["ready", "failed", "completed", "generating"].includes(activeRun.status)) return NextResponse.json({ message: en ? "Review the required information first." : "필요정보와 가정을 먼저 확인해 주세요." }, { status: 409 });
+  const { data: answers, error: answersError } = readiness.assessmentId
+    ? await admin.from("readiness_answers").select("question_id,level,evidence_kind,evidence_value").eq("assessment_id", readiness.assessmentId).limit(55)
     : { data: [], error: null };
   if (answersError) return NextResponse.json({ message: en ? "We couldn't load the saved readiness answers." : "저장된 준비도 답변을 불러오지 못했습니다." }, { status: 500 });
   const { data: reserved, error: reserveError } = await admin.rpc("reserve_ai_agent_generation", { p_order_id: orderId });
@@ -223,7 +252,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   if (!reserved?.generation_attempt_id) return NextResponse.json({ message: en ? "A report is already being generated or the correction limit was reached." : "이미 보고서를 생성 중이거나 사실 정정 재생성 한도를 사용했습니다." }, { status: 409 });
 
   const reportDate = new Date().toISOString().slice(0, 10);
-  const questions = getIntakeQuestions(parsed.data.locale);
+  const questions = getIntakeQuestions(parsed.data.locale, readiness.surveyVersion ?? "4.0");
+  const resolvedQuestionIds = new Set(readiness.resolvedQuestionIds);
+  const contractQuestionIds = readiness.assessmentId
+    ? service.questionIds.filter((id) => resolvedQuestionIds.has(id))
+    : service.questionIds;
   const itemStage = new Map(INTAKE_ITEMS.map((item) => [item.id, item.stageId]));
   const answerMap = new Map((answers ?? []).map((answer) => [answer.question_id, answer]));
   const currentStageId = INTAKE_STAGES.find((stage) => questions.some((question) => {
@@ -231,7 +264,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     return itemStage.get(question.itemId) === stage.id && Boolean(answer) && Number(answer?.level) < 3;
   }))?.id;
   const priorityRank = { critical: 0, current_gate: 1, low_score: 2, other: 3 } as const;
-  const relevantQuestions = questions.filter((question) => service.questionIds.includes(question.id)).map((question) => {
+  const relevantQuestions = questions.filter((question) => contractQuestionIds.includes(question.id)).map((question) => {
     const answer = answerMap.get(question.id);
     const stageId = itemStage.get(question.itemId);
     const priority: keyof typeof priorityRank = question.critical ? "critical" : answer && stageId === currentStageId ? "current_gate" : answer && Number(answer.level) < 3 ? "low_score" : "other";
@@ -241,7 +274,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     intake: reserved.intake,
     clarificationAnswers: reserved.clarification_answers,
     requiredAnalogAssumptions: reserved.assumptions,
-    latestReadiness: latestAssessment,
+    readiness: boundAssessment,
     relevantQuestions,
     reportDate
   };
@@ -300,7 +333,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     const reportResponse = await client.responses.parse({
       ...common,
       reasoning: { effort: service.productKind === "package" ? "high" : "medium", context: "current_turn" },
-      instructions: `${buildAiAgentInstructions(parsed.data.locale, service.title, service.deliverables)} ${(service.completionInstructions ?? []).join(" ")} ${en ? `Use every question ID exactly once in questionCoverage, ordered Critical, current_gate, low_score, other. Mark unused questions excluded with a reason. Cite source URLs only from publicEvidence. Resolve or explicitly record every contradiction. Required question IDs: ${service.questionIds.join(", ")}.` : `모든 문항 ID를 questionCoverage에 정확히 한 번 넣고 Critical, current_gate, low_score, other 순서로 정렬하세요. 사용하지 않은 문항은 제외 이유를 적으세요. 출처 URL은 publicEvidence에 있는 것만 사용하세요. 모순은 모두 해결하거나 명시적으로 기록하세요. 필수 문항 ID: ${service.questionIds.join(", ")}.`}`,
+      instructions: `${buildAiAgentInstructions(parsed.data.locale, service.title, service.deliverables)} ${(service.completionInstructions ?? []).join(" ")} ${en ? `Use every question ID exactly once in questionCoverage, ordered Critical, current_gate, low_score, other. Mark unused questions excluded with a reason. Cite source URLs only from publicEvidence. Resolve or explicitly record every contradiction. Required question IDs: ${contractQuestionIds.join(", ")}.` : `모든 문항 ID를 questionCoverage에 정확히 한 번 넣고 Critical, current_gate, low_score, other 순서로 정렬하세요. 사용하지 않은 문항은 제외 이유를 적으세요. 출처 URL은 publicEvidence에 있는 것만 사용하세요. 모순은 모두 해결하거나 명시적으로 기록하세요. 필수 문항 ID: ${contractQuestionIds.join(", ")}.`}`,
       input: [{ role: "user", content: [
         { type: "input_text", text: JSON.stringify({ product: { id: service.id, title: service.title, includedAgentIds: service.includedAgentIds, deliverables: service.deliverables }, privateContext, publicEvidence, privateFiles: referenceFiles.map((file: { fileName?: string }) => file.fileName).filter(Boolean) }) },
         ...privateFileInputs
@@ -311,7 +344,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     const report = aiAgentReportSchema.parse(reportResponse.output_parsed);
     validateAiAgentSources([...collectCitedUrls(report)], allowedUrls);
     validateAiAgentReport(report, {
-      questionIds: service.questionIds,
+      questionIds: contractQuestionIds,
       includedAgentIds: service.includedAgentIds,
       officialSourceQuestionIds: service.officialSourceQuestionIds,
       questionPriorities: Object.fromEntries(relevantQuestions.map((question) => [question.questionId, question.priority]))

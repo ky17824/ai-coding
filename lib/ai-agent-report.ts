@@ -1,5 +1,8 @@
 import { z } from "zod";
+import { getIntakeQuestions, type SurveyVersion } from "@/lib/intake-questions";
+import { resolveAssessmentQuestions } from "@/lib/readiness";
 import { canonicalResearchUrl } from "@/lib/research-sources";
+import type { ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
 
 export const aiIntakeFields = ["objective", "offering", "targetCountry", "targetCustomer", "currentEvidence", "constraints", "resources", "deadline"] as const;
 export type AiIntakeField = typeof aiIntakeFields[number];
@@ -20,6 +23,52 @@ const sourceSchema = z.object({
 
 const sizingRange = z.object({ low: z.number().nonnegative(), base: z.number().nonnegative(), high: z.number().nonnegative() })
   .refine((value) => value.low <= value.base && value.base <= value.high, "low ≤ base ≤ high가 필요합니다.");
+
+export const aiReadinessSnapshotSchema = z.object({
+  assessmentId: z.string().uuid().nullable(),
+  surveyVersion: z.enum(["4.0", "5.0"]).nullable(),
+  resolvedQuestionIds: z.array(z.string().trim().min(1).max(100)).max(55)
+}).refine(
+  (value) => value.assessmentId === null ? value.surveyVersion === null && value.resolvedQuestionIds.length === 0 : value.surveyVersion !== null,
+  "진단 ID가 없으면 준비도 스냅샷도 비어 있어야 합니다."
+);
+
+export function buildAiReadinessSnapshot(
+  assessment: {
+    id: string;
+    survey_version?: string | null;
+    sales_motion?: string | null;
+    target_country?: string | null;
+    target_customer_segment?: string | null;
+    target_market_confirmed_at?: string | null;
+  } | null,
+  rows: Array<{ question_id: string; level: number | string }> = []
+) {
+  if (!assessment) return aiReadinessSnapshotSchema.parse({ assessmentId: null, surveyVersion: null, resolvedQuestionIds: [] });
+  const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
+  const salesMotion: SalesMotion = ["direct", "partner", "hybrid", "unknown"].includes(assessment.sales_motion ?? "")
+    ? assessment.sales_motion as SalesMotion
+    : "unknown";
+  const answers: ReadinessAnswer[] = rows.flatMap((row) => [1, 2, 3, 4].includes(Number(row.level))
+    ? [{ questionId: row.question_id, level: Number(row.level) as ReadinessLevel }]
+    : []);
+  const resolved = resolveAssessmentQuestions({
+    surveyVersion,
+    salesMotion,
+    targetMarket: {
+      targetCountry: assessment.target_country ?? "",
+      targetCustomerSegment: assessment.target_customer_segment ?? "",
+      confirmed: Boolean(assessment.target_market_confirmed_at)
+    },
+    answers
+  });
+  const included = new Set([...resolved.requiredIds, ...resolved.deferredIds]);
+  return aiReadinessSnapshotSchema.parse({
+    assessmentId: assessment.id,
+    surveyVersion,
+    resolvedQuestionIds: getIntakeQuestions("ko", surveyVersion).filter((question) => included.has(question.id)).map((question) => question.id)
+  });
+}
 
 export const aiPublicResearchSchema = z.object({
   summary: reportText,

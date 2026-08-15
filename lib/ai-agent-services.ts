@@ -1,5 +1,5 @@
 import type { Locale } from "@/lib/i18n";
-import { INTAKE_QUESTIONS } from "@/lib/intake-questions";
+import { getIntakeQuestions } from "@/lib/intake-questions";
 import type { ServiceOffering } from "@/lib/types";
 
 type Copy = { ko: string; en: string };
@@ -60,7 +60,7 @@ const specialistRules: Record<string, { questionIds: string[]; instructions: Cop
   specialists.map((specialist) => [specialist.id, { questionIds: [], instructions: { ko: "", en: "" } }])
 );
 
-for (const question of INTAKE_QUESTIONS) {
+for (const question of getIntakeQuestions("ko", "5.0")) {
   const owner = question.itemId === "target-market" ? "ai-market-intelligence"
     : ["home-pmf", "market-testing"].includes(question.itemId) ? "ai-customer-validation"
     : ["bmlc-local-practice", "bmlc-hq-gap", "lpa-pricing-payment", "lpa-journey-blocker"].includes(question.id) ? "ai-local-bmc"

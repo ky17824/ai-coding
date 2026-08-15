@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   auditAiAgentIntake,
   aiAgentReportSchema,
+  aiReadinessSnapshotSchema,
+  buildAiReadinessSnapshot,
   buildSafePublicResearchBrief,
   buildAiAgentInstructions,
   calculateSolCostUsd,
@@ -17,6 +19,29 @@ import {
 } from "@/lib/ai-agent-report";
 
 describe("AI expert execution rules", () => {
+  it("validates an immutable readiness snapshot for paid AI work", () => {
+    expect(aiReadinessSnapshotSchema.parse({
+      assessmentId: "00000000-0000-4000-8000-000000000001",
+      surveyVersion: "5.0",
+      resolvedQuestionIds: ["mvc-why-global"]
+    })).toEqual({
+      assessmentId: "00000000-0000-4000-8000-000000000001",
+      surveyVersion: "5.0",
+      resolvedQuestionIds: ["mvc-why-global"]
+    });
+    expect(aiReadinessSnapshotSchema.safeParse({ assessmentId: null, surveyVersion: null, resolvedQuestionIds: [] }).success).toBe(true);
+  });
+  it("freezes only required and deferred v5 questions", () => {
+    const snapshot = buildAiReadinessSnapshot({
+      id: "00000000-0000-4000-8000-000000000001",
+      survey_version: "5.0",
+      sales_motion: "direct",
+      target_country: "싱가포르"
+    });
+    expect(snapshot.surveyVersion).toBe("5.0");
+    expect(snapshot.resolvedQuestionIds).not.toContain("partner-actual-work");
+    expect(snapshot.resolvedQuestionIds).toContain("mvc-purpose-alignment");
+  });
   it("records the whole AI order amount as platform revenue", () => {
     expect(getAiOrderAmounts(199000)).toEqual({
       supplyAmountKrw: 199000,

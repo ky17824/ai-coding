@@ -19,8 +19,8 @@ describe("AI expert service catalog", () => {
     expect(getAiAgentService("ai-comprehensive-entry", "ko")?.price).toBe(1190000);
     expect(AI_AGENT_SERVICES.every((service) => service.orchestrated)).toBe(true);
     const specialistQuestionIds = AI_AGENT_SERVICES.filter((service) => service.productKind === "specialist").flatMap((service) => service.questionIds);
-    expect(specialistQuestionIds).toHaveLength(55);
-    expect(new Set(specialistQuestionIds).size).toBe(55);
+    expect(specialistQuestionIds).toHaveLength(46);
+    expect(new Set(specialistQuestionIds).size).toBe(46);
     expect(AI_AGENT_SERVICES.every((service) => service.completionInstructions.length === service.includedAgentIds.length)).toBe(true);
   });
 

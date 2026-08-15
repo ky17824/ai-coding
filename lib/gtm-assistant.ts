@@ -17,6 +17,20 @@ import { canonicalResearchUrl } from "./research-sources";
 export const ASSISTANT_MODEL = "gpt-5.6-luna" as const;
 export const MARKET_SIZING_MODEL = "gpt-5.6-sol" as const;
 
+export function getMarketResearchScope(input: {
+  reachedReadyStage: boolean;
+  deferredQuestionIds: readonly string[];
+  criticalSatisfied: boolean;
+  requiredQuestionsComplete: boolean;
+}): "market_preresearch" | "sellability_review" {
+  return input.reachedReadyStage &&
+    input.deferredQuestionIds.length === 0 &&
+    input.criticalSatisfied &&
+    input.requiredQuestionsComplete
+    ? "sellability_review"
+    : "market_preresearch";
+}
+
 export function authoritativeMarketCountry(modelCountry: string, founderCountry?: string) {
   return founderCountry?.trim() || modelCountry;
 }
@@ -380,7 +394,7 @@ export function buildDeterministicPlan(
 ): GtmPlanDraft {
   const source: GtmPlanSource = {
     kind: "diagnosis",
-    title: locale === "en" ? "55-question readiness assessment" : "55문항 준비도 진단",
+    title: locale === "en" ? "Completed readiness assessment" : "완료한 준비도 진단",
     url: null,
     checkedAt: now.toISOString().slice(0, 10)
   };
