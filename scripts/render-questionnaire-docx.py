@@ -191,6 +191,11 @@ def add_paragraph(doc, text="", *, size=10, bold=False, italic=False, color=None
     return paragraph
 
 
+def keep_with_next(paragraph):
+    paragraph.paragraph_format.keep_with_next = True
+    return paragraph
+
+
 def load_catalog(root, locale, version, node):
     command = [node, str(root / "scripts/build-questionnaire-docx.js"), "--json", "--locale", locale, "--version", version]
     return json.loads(subprocess.run(command, cwd=root, check=True, capture_output=True, text=True).stdout)
@@ -241,23 +246,25 @@ def render(output, locale, version, node):
         heading.paragraph_format.keep_with_next = True
         add_paragraph(doc, stage["intro"], color="666666", after=12)
         for item in items_by_stage.get(stage["id"], []):
-            add_paragraph(doc, item["label"], size=13, bold=True, before=8, after=5)
+            keep_with_next(add_paragraph(doc, item["label"], size=13, bold=True, before=8, after=5))
             for question in questions_by_item.get(item["id"], []):
                 q_no += 1
-                paragraph = add_paragraph(doc, before=7, after=4)
+                paragraph = keep_with_next(add_paragraph(doc, before=7, after=4))
                 critical = "★ " if question.get("critical") else ""
                 add_text(paragraph, f"Q{q_no}. {critical}", size=10.5, bold=True)
                 add_text(paragraph, question["question"], size=10.5)
                 if question.get("help"):
-                    add_paragraph(doc, question["help"], size=9, italic=True, color="666666", after=3)
+                    keep_with_next(add_paragraph(doc, question["help"], size=9, italic=True, color="666666", after=3))
                 for index, option in enumerate(question["options"]):
-                    option_paragraph = add_paragraph(doc, f"☐ {'①②③④'[index]} {option}", after=2)
+                    option_paragraph = keep_with_next(add_paragraph(doc, f"☐ {'①②③④'[index]} {option}", after=2))
                     option_paragraph.paragraph_format.left_indent = Inches(0.2)
-                add_paragraph(doc, f'{copy["follow_up"]} — {question["followUp"]}', size=9, italic=True, color="666666", before=3, after=3)
+                keep_with_next(add_paragraph(doc, f'{copy["follow_up"]} — {question["followUp"]}', size=9, italic=True, color="666666", before=3, after=3))
                 box = doc.add_table(rows=1, cols=1)
                 box.alignment = WD_TABLE_ALIGNMENT.CENTER
                 set_cell_margins(box.cell(0, 0), 120)
                 add_text(box.cell(0, 0).paragraphs[0], "\n")
+                cant_split = OxmlElement("w:cantSplit")
+                box.rows[0]._tr.get_or_add_trPr().append(cant_split)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     doc.save(output)

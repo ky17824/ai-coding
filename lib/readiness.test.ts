@@ -38,6 +38,10 @@ describe("intake question set", () => {
     expect(normalizeReadinessStatus("극초기")).toBe("준비 1단계");
     expect(normalizeReadinessStatus("준비중")).toBe("준비 2단계");
     expect(normalizeReadinessStatus("준비완료")).toBe("준비 3단계");
+    expect(normalizeReadinessStatus("Readiness Stage 1")).toBe("준비 1단계");
+    expect(normalizeReadinessStatus("Readiness Stage 2")).toBe("준비 2단계");
+    expect(normalizeReadinessStatus("Readiness Stage 3")).toBe("준비 3단계");
+    expect(normalizeReadinessStatus("Ready to Enter")).toBe("진출 실행 가능");
     expect(normalizeReadinessStatus("진출 실행 가능")).toBe("진출 실행 가능");
   });
 

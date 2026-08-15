@@ -32,7 +32,11 @@ export const STAGES = INTAKE_STAGES;
 const LEGACY_STATUS_LABELS: Record<string, ReadinessStatus> = {
   "극초기": "준비 1단계",
   "준비중": "준비 2단계",
-  "준비완료": "준비 3단계"
+  "준비완료": "준비 3단계",
+  "Readiness Stage 1": "준비 1단계",
+  "Readiness Stage 2": "준비 2단계",
+  "Readiness Stage 3": "준비 3단계",
+  "Ready to Enter": "진출 실행 가능"
 };
 
 const LEVEL_MEANING: Record<ReadinessLevel, string> = {

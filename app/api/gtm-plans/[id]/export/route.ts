@@ -57,11 +57,16 @@ export async function GET(
     .order("horizon").order("sort_order");
   let readinessApplicabilityHtml = "";
   if (plan.assessment_id) {
-    const [{ data: assessment }, { data: answerRows }] = await Promise.all([
+    const [assessmentResult, answersResult] = await Promise.all([
       admin.from("assessments").select("survey_version,sales_motion,target_country,target_customer_segment,target_market_confirmed_at")
         .eq("id", plan.assessment_id).maybeSingle(),
       admin.from("readiness_answers").select("question_id,level").eq("assessment_id", plan.assessment_id).limit(55)
     ]);
+    if (assessmentResult.error || answersResult.error) {
+      return NextResponse.json({ message: en ? "We couldn't load the readiness coverage." : "준비도 문항 적용 범위를 불러오지 못했습니다." }, { status: 500 });
+    }
+    const assessment = assessmentResult.data;
+    const answerRows = answersResult.data;
     if (assessment) {
       const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
       const salesMotion: SalesMotion = ["direct", "partner", "hybrid", "unknown"].includes(assessment.sales_motion ?? "")
