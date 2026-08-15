@@ -1,5 +1,11 @@
 import type { Locale } from "@/lib/i18n";
-import { EN_ITEM_COPY, EN_QUESTION_COPY, EN_STAGE_COPY } from "@/lib/intake-questions.en";
+import {
+  EN_ITEM_COPY,
+  EN_QUESTION_COPY,
+  EN_STAGE_COPY,
+  V5_EN_DETAIL_OVERRIDES,
+  V5_EN_QUESTION_TEXT
+} from "@/lib/intake-questions.en";
 
 /**
  * 창업자 자가진단 55문항.
@@ -16,6 +22,40 @@ import { EN_ITEM_COPY, EN_QUESTION_COPY, EN_STAGE_COPY } from "@/lib/intake-ques
  * 창업자에게 증거를 요구하지 않는다.
  */
 export type AnswerLevel = 1 | 2 | 3 | 4;
+export type SurveyVersion = "4.0" | "5.0";
+export const LATEST_SURVEY_VERSION: SurveyVersion = "5.0";
+
+export const V5_RETIRED_IDS = [
+  "mvc-stop-criteria",
+  "res-key-person-risk",
+  "mkt-icp-source",
+  "mkt-inbound-signal",
+  "mkt-bias-check",
+  "bmlc-hq-gap",
+  "lpa-pricing-payment",
+  "org-decision-cases",
+  "alloc-conditional-limit"
+] as const;
+
+export const V5_REWRITTEN_IDS = [
+  "mvc-resource-priority",
+  "pmf-paid-conversion",
+  "pmf-buying-roles",
+  "mkt-icp-count",
+  "mkt-country-compare",
+  "bmlc-na-basis",
+  "bmlc-local-practice",
+  "lpa-net-price",
+  "lpa-journey-blocker",
+  "test-defects",
+  "test-no-discount",
+  "test-counter-evidence",
+  "partner-shortfall",
+  "contract-control",
+  "contract-dependency-limit",
+  "alloc-capacity",
+  "alloc-concentration"
+] as const;
 
 /**
  * 스타트업이 파는 것이 제품인지 서비스인지 아직 모를 때가 많다. 그래서 문항은
@@ -960,6 +1000,133 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = [
   }
 ];
 
+const V5_RETIRED_ID_SET = new Set<string>(V5_RETIRED_IDS);
+const V5_REWRITTEN_ID_SET = new Set<string>(V5_REWRITTEN_IDS);
+
+const V5_KO_QUESTION_TEXT: Record<string, string> = {
+  "mvc-purpose-alignment": "대표와 경영진은 글로벌 진출 목적에 합의했나요?",
+  "mvc-resource-priority": "국내 사업과 글로벌 사업에 인력·예산을 배정할 때 적용할 우선순위 기준이 정해져 있나요?",
+  "mvc-reference-market": "제품·서비스의 가치가 글로벌 고객에게도 통하는지 검증할 초기 목표시장을 정했나요?",
+  "res-tce": "인증·현지화·인력·법률·물류 비용을 포함한 총 진입 비용을 계산했나요?",
+  "res-cash-runway": "현지 매출이 예상보다 늦어질 때 자체 자금으로 몇 개월 동안 버틸 수 있는지 계산했나요?",
+  "res-no-grant-scope": "정부 지원금 없이 자체 자금으로 실행할 최소 진출 범위를 정했나요?",
+  "res-owner-time": "글로벌 진출 책임자와 그 사람이 매주 투입할 시간을 정했나요?",
+  "pmf-paid-conversion": "현재 고객이 실제로 비용을 지불했다는 가장 강한 증거는 무엇인가요?",
+  "pmf-churn-cases": "관심을 보이다 이탈한 잠재 고객에게 그 이유를 직접 확인했나요?",
+  "pmf-buying-roles": "실제 사용자, 비용을 내는 사람, 구매를 결정하는 사람과 승인하는 사람을 구분해 확인했나요?",
+  "pmf-customer-words": "제품·서비스를 선택하거나 거절한 사람에게 그 이유를 직접 확인했나요?",
+  "mkt-icp-count": "초기 목표시장에서 실제로 접근 가능한 잠재 고객 또는 고객사 수를 명단과 출처를 바탕으로 산출했나요?",
+  "mkt-country-compare": "후보 국가를 시장성·진입비용·규제·고객 접근성이라는 동일 기준으로 비교해 우선순위를 정했나요?",
+  "bmlc-classification": "초기 목표국가에서 제품·서비스의 법적 분류를 공식 자료로 확인했나요?",
+  "bmlc-preconditions": "초기 목표국가에서 판매 전에 필요한 인허가·인증 요건을 확인했나요?",
+  "bmlc-na-basis": "각 규제 항목의 적용 여부와 판단 근거를 확인했나요?",
+  "bmlc-local-practice": "초기 목표국가의 가격 표시·계약·결제·정산 관행이 국내와 어떻게 다른지 확인했나요?",
+  "lpa-net-price": "세금·수수료·환전 비용·파트너 수수료를 제외한 순매출과 마진을 계산했나요?",
+  "lpa-infra-partner": "초기 목표국가에서 이용할 물류·결제·클라우드 공급업체 후보를 정했나요?",
+  "lpa-bridge-person": "현지 상황과 제품·서비스를 이해하고 본사와 현지를 연결할 담당자가 있나요?",
+  "lpa-journey-blocker": "현지 고객 여정(발견·비교·구매·결제·사용·지원)에서 중단되거나 막히는 지점을 직접 관찰했나요?",
+  "test-environment": "초기 목표국가의 실제 환경에서 제품·서비스가 정상 작동하는지 시험했나요?",
+  "test-defects": "현지 시험에서 발견한 제품·서비스 문제와 고객 여정의 마찰을 기록하고 해결 상태를 관리하나요?",
+  "test-message-worked": "어떤 현지 홍보 메시지나 제품 시연이 실제 문의로 이어졌는지 확인했나요?",
+  "test-no-discount": "할인이나 무료 제공 없이 목표 마진을 확보할 수 있는 가격으로 실제 결제한 고객이 있나요?",
+  "test-counter-evidence": "거절·중단·미전환·사용 장애 등 시장 가설을 반박하는 증거를 확인해 계획에 반영했나요?",
+  "partner-actual-work": "현지 파트너가 맡은 역할을 실제로 수행하고 있나요?",
+  "partner-economics": "파트너 판매와 직접 판매의 수익성을 숫자로 비교했나요?",
+  "partner-ecosystem-interviews": "사용자, 구매 담당자, 유통·조달 관계자, 규제 기관 등 서로 다른 현지 이해관계자의 의견이나 요구사항을 직접 확인했나요?",
+  "partner-shortfall": "파트너의 약속 물량·일정 이행 여부를 정기적으로 점검하고, 미달 시 조치 기준을 정했나요?",
+  "partner-cold-check": "기존 인맥 밖의 잠재 고객과 구매하지 않은 잠재 고객에게도 직접 의견을 들었나요?",
+  "plan-hypothesis-kpi": "초기 목표시장에서 검증할 가설과 이를 판단할 지표를 정했나요?",
+  "plan-stop-rule": "성과 미달 시 추가 투자를 중단할 수치 기준을 정했나요?",
+  "plan-single-tracker": "글로벌 진출의 목표·실적·담당자를 한곳에서 관리하나요?",
+  "plan-change-control": "현지화 변경의 승인자와 문제 발생 시 복구 책임자를 정했나요?",
+  "org-single-owner": "초기 목표시장의 매출과 손익을 최종 책임지는 담당자를 한 명으로 정했나요?",
+  "org-continuity": "핵심 인력이 자리를 비워도 글로벌 진출 업무를 계속할 수 있나요?",
+  "org-local-authority": "현지 책임자가 본사 승인 없이 결정할 수 있는 업무와 금액 한도를 정했나요?",
+  "org-escalation": "현지에서 긴급 문제가 발생하면 누구에게 몇 시간 이내에 보고할지 정했나요?",
+  "contract-control": "파트너 계약의 독점 범위·데이터·가격·계약 종료·고객 이전 조건을 확인하고, 사업 보호 조항에 반영했나요?",
+  "contract-exit": "파트너 계약 종료 후에도 확보한 고객을 우리 회사가 유지할 수 있나요?",
+  "contract-switch-cost": "파트너 교체에 필요한 예상 시간·비용과 대체 후보를 파악했나요?",
+  "contract-dependency-limit": "판매·고객 데이터·운영을 한 파트너에게 어느 정도까지 의존할지 한도와 대체 조치를 정했나요?",
+  "alloc-milestone-budget": "다음 단계 예산을 집행하기 위한 달성 조건을 정했나요?",
+  "alloc-capacity": "초기 출시나 파일럿 수요가 늘 때 생산·시스템·인력·공급 중 어디가 먼저 한계에 도달하는지 파악했나요?",
+  "alloc-concentration": "현재 매출이 있다면 특정 고객·채널에 매출이 과도하게 집중돼 있는지 측정하고 완화 기준을 정했나요?"
+};
+
+const V5_KO_DETAIL_OVERRIDES: Partial<Record<string, Partial<IntakeQuestion>>> = {
+  "mvc-resource-priority": {
+    options: ["아직 우선순위 기준을 생각해보지 못했습니다", "필요하다고 느끼지만 기준을 정하지는 않았습니다", "우선순위 기준을 정해 문서나 회의로 공유했습니다", "그 기준에 따라 실제 배정 결정을 여러 번 내렸습니다"],
+    followUp: "적용한 기준과 가장 최근의 배정 결정을 적어주세요."
+  },
+  "pmf-paid-conversion": {
+    options: ["아직 유료 고객 증거가 없습니다", "관심·문의·무료 사용은 있지만 유료 전환은 없습니다", "국내 유료 판매 또는 초기 목표국가의 유료 실증시험(PoC)·파일럿을 완료했습니다", "국내외 여러 고객에게서 재구매·갱신·사용량 증가가 반복되고 있습니다"],
+    followUp: "가장 강한 증거 사례를 시간순으로 적어주세요. 고객명은 '고객 A'처럼 익명으로 적으셔도 됩니다."
+  },
+  "pmf-buying-roles": {
+    options: ["아직 역할을 나눠서 확인해보지 못했습니다", "대략 짐작은 하지만 실제 거래에서 확인하지는 않았습니다", "최근 거래에서 사용자·지불자·결정자·승인자를 구분해 확인했습니다", "여러 거래에서 네 역할을 반복 확인하고 역할별 접근 방식에 반영하고 있습니다"],
+    followUp: "최근 거래에서 네 역할이 각각 누구였는지 적어주세요."
+  },
+  "mkt-icp-count": {
+    options: ["아직 세어보지 못했습니다", "시장 규모 자료나 산업 통계로 추정만 했습니다", "명단·채널·계정 데이터 같은 출처에서 직접 세어 산출했습니다", "그 명단을 최신으로 갱신하며 실제 접촉에 쓰고 있습니다"],
+    followUp: "산출한 고객·계정 수와 출처, 기준일을 적어주세요.",
+    action: "초기 목표국가의 구매 가능 고객을 명단·출처·기준일과 함께 산출한다"
+  },
+  "mkt-country-compare": {
+    options: ["한 나라만 보고 있어 비교해보지 못했습니다", "여러 나라를 살펴봤지만 같은 기준으로 정리하지는 않았습니다", "동일 기준으로 비교해 우선순위를 정했습니다", "인맥·지원사업 같은 우연한 조건을 빼고 따져도 순위가 유지되는지 확인했습니다"],
+    followUp: "비교 기준과 상위 국가 순위, 우연한 조건을 빼고 따졌을 때의 변화를 적어주세요.",
+    action: "후보 국가를 동일 기준으로 비교하고 우연한 조건을 뺀 뒤에도 순위가 유지되는지 확인한다"
+  },
+  "bmlc-na-basis": {
+    options: ["규제 요건을 아직 검토하지 못했습니다", "적용 여부를 내부 판단으로만 정리했고 근거 자료는 확인하지 못했습니다", "각 항목의 적용 여부와 판단 근거를 목록으로 확인했습니다", "전문가나 규제기관 확인을 받아 적용 여부와 근거를 확정했습니다"],
+    followUp: "주요 규제 항목의 적용 여부와 판단 근거를 적어주세요."
+  },
+  "bmlc-local-practice": {
+    options: ["아직 확인해보지 못했습니다", "자료로 대략 파악한 정도입니다", "현지 고객이나 파트너에게 차이를 직접 확인했습니다", "실제 견적·계약·정산에서 그 관행대로 거래해봤습니다"],
+    followUp: "국내와 달랐던 관행을 적어주세요.",
+    action: "가격 표시·계약·결제 수단·정산 주기 차이를 확인한다"
+  },
+  "lpa-net-price": {
+    options: ["아직 계산해보지 못했습니다", "대략 감은 있지만 항목별로 계산하지는 않았습니다", "항목별로 빼고 남는 순매출과 마진을 계산했습니다", "실제 거래 정산에서 그 계산이 맞는지 확인했습니다"],
+    followUp: "항목별 차감 내역과 남는 마진을 적어주세요."
+  },
+  "lpa-journey-blocker": {
+    options: ["아직 현지 고객이 전체 과정을 거쳐본 적이 없습니다", "이용은 있었지만 어디서 막히는지 지켜보지는 못했습니다", "여정 단계별로 중단·마찰 지점을 직접 관찰했습니다", "관찰한 지점을 고친 뒤 개선됐는지까지 확인했습니다"],
+    followUp: "어느 단계에서 막혔는지 단계별로 적어주세요."
+  },
+  "test-defects": {
+    options: ["아직 현지 시험을 하지 않아 기록할 내용이 없습니다", "시험은 했지만 문제를 따로 기록하지는 않았습니다", "발견된 문제와 여정 마찰을 기록하고 해결 여부를 관리하고 있습니다", "원인 분석과 재발 방지 조치까지 반복하고 있습니다"],
+    followUp: "기록된 문제와 아직 해결하지 못한 항목을 적어주세요."
+  },
+  "test-no-discount": {
+    options: ["아직 유료 거래 사례가 없습니다", "거래는 있었지만 할인·무료 제공에 의존했거나 목표 마진을 확보하지 못했습니다", "할인·무료 제공 없이 목표 마진을 확보한 유료 거래가 있습니다", "같은 가격 조건의 유료 거래가 여러 고객에게서 반복되고 있습니다"],
+    followUp: "목표 마진을 확보한 유료 거래와 가격 조건을 적어주세요."
+  },
+  "test-counter-evidence": {
+    options: ["그런 관점에서 살펴본 적이 없습니다", "걱정되는 신호는 있지만 증거로 확인하지는 못했습니다", "반박하는 증거를 확인해 기록했습니다", "그 증거를 반영해 가설이나 계획을 실제로 수정했습니다"],
+    followUp: "확인한 반증 증거와 수정한 내용을 적어주세요.",
+    action: "시장 가설을 반박하는 증거를 기록하고 가설·계획에 반영한다"
+  },
+  "partner-shortfall": {
+    options: ["아직 실제 파트너가 없어 이행 여부를 점검할 수 없습니다", "약속한 물량·일정은 있지만 이행 여부를 정기적으로 점검하지 않습니다", "약속한 물량·일정의 이행 여부를 정기적으로 점검합니다", "미달 기준과 조치 절차를 정해 점검 결과에 따라 적용하고 있습니다"],
+    followUp: "점검 주기, 미달 기준과 조치 절차를 적어주세요."
+  },
+  "contract-control": {
+    options: ["아직 파트너 계약을 맺지 않았습니다", "계약은 있지만 상대방 양식을 그대로 썼습니다", "다섯 가지 조건을 확인해 계약에 반영했습니다", "전문가 검토를 거쳐 보호 조항을 확정했습니다"],
+    followUp: "반영된 조항의 요지를 적어주세요. 계약서 원본은 보내지 않으셔도 됩니다."
+  },
+  "contract-dependency-limit": {
+    options: ["아직 생각해보지 못했습니다", "의존이 크다는 것은 알지만 한도를 정하지는 않았습니다", "판매·고객 데이터·운영에 대한 허용 한도와 대체 조치를 정해두었습니다", "한도와 대체 조치를 정기적으로 점검하고 대체 경로를 실제로 확인했습니다"],
+    followUp: "현재 의존 비중과 허용 한도, 대체 조치를 적어주세요."
+  },
+  "alloc-capacity": {
+    options: ["아직 생각해보지 못했습니다", "짐작은 하지만 확인해보지는 않았습니다", "먼저 한계에 도달할 지점을 파악하고 있습니다", "실제 수요 증가나 부하 시험으로 그 지점을 확인해봤습니다"],
+    followUp: "가장 먼저 한계에 도달할 지점과 그 근거를 적어주세요."
+  },
+  "alloc-concentration": {
+    options: ["집중 여부를 따로 살펴보지 않았습니다", "쏠려 있다는 것은 알지만 측정하거나 기준을 정하지는 않았습니다", "고객·채널별 매출 비중을 측정하고 완화 기준을 정해두었습니다", "고객·채널별 매출 비중을 정기적으로 갱신하고 기준 초과 전에 실행할 완화 조치를 점검합니다"],
+    followUp: "가장 큰 고객·채널의 매출 비중과 완화 기준을 적어주세요."
+  }
+};
+
 export function getIntakeStages(locale: Locale) {
   if (locale === "ko") return INTAKE_STAGES.map((stage) => ({ ...stage }));
   return INTAKE_STAGES.map((stage) => ({ ...stage, ...EN_STAGE_COPY[stage.id] }));
@@ -970,10 +1137,59 @@ export function getIntakeItems(locale: Locale) {
   return INTAKE_ITEMS.map((item) => ({ ...item, ...EN_ITEM_COPY[item.id] }));
 }
 
-export function getIntakeQuestions(locale: Locale): IntakeQuestion[] {
-  if (locale === "ko") return INTAKE_QUESTIONS;
-  return INTAKE_QUESTIONS.map((question) => ({
-    ...question,
-    ...EN_QUESTION_COPY[question.id]
-  }));
+export function getIntakeQuestions(
+  locale: Locale,
+  version: SurveyVersion = "4.0"
+): IntakeQuestion[] {
+  const localized = locale === "ko"
+    ? INTAKE_QUESTIONS
+    : INTAKE_QUESTIONS.map((question) => ({
+        ...question,
+        ...EN_QUESTION_COPY[question.id]
+      }));
+  if (version === "4.0") return localized;
+
+  return localized
+    .filter((question) => !V5_RETIRED_ID_SET.has(question.id))
+    .map((question) => ({
+      ...question,
+      question: locale === "ko"
+        ? V5_KO_QUESTION_TEXT[question.id]
+        : V5_EN_QUESTION_TEXT[question.id],
+      ...(locale === "ko"
+        ? V5_KO_DETAIL_OVERRIDES[question.id]
+        : V5_EN_DETAIL_OVERRIDES[question.id]),
+      weight: question.id === "bmlc-local-practice" ? 2 : question.weight
+    }));
+}
+
+export function getQuestionNumber(
+  questionId: string,
+  version: SurveyVersion = "4.0"
+): number | null {
+  const index = getIntakeQuestions("ko", version)
+    .findIndex((question) => question.id === questionId);
+  return index < 0 ? null : index + 1;
+}
+
+export function getEffectiveQuestionWeight(
+  questionId: string,
+  version: SurveyVersion = "4.0"
+): number | null {
+  return getIntakeQuestions("ko", version)
+    .find((question) => question.id === questionId)?.weight ?? null;
+}
+
+export function isAnswerCompatibleAcrossVersions(
+  questionId: string,
+  from: SurveyVersion,
+  to: SurveyVersion
+): boolean {
+  if (from === to) {
+    return getQuestionNumber(questionId, from) !== null;
+  }
+  return from === "4.0" &&
+    to === "5.0" &&
+    !V5_RETIRED_ID_SET.has(questionId) &&
+    !V5_REWRITTEN_ID_SET.has(questionId);
 }

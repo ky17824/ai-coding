@@ -1,4 +1,4 @@
-type QuestionCopy = {
+export type QuestionCopy = {
   question: string;
   options: [string, string, string, string];
   followUp: string;
@@ -379,4 +379,128 @@ export const EN_QUESTION_COPY: Record<string, QuestionCopy> = {
     "Enter the current share of the largest customer or channel and the allowed limit.",
     "Set dependency limits and risk-mitigation actions for any single customer, channel, or supplier."
   )
+};
+
+export const V5_EN_QUESTION_TEXT: Record<string, string> = {
+  "mvc-purpose-alignment": "Are the CEO and leadership team aligned on why the company is expanding globally?",
+  "mvc-resource-priority": "Do you have an agreed rule for allocating people and budget between domestic operations and global expansion?",
+  "mvc-reference-market": "Have you selected an initial target market in which to test whether the offering's value resonates with global customers?",
+  "res-tce": "Have you calculated the total cost of entry, including certification, localization, people, legal, and logistics costs?",
+  "res-cash-runway": "Have you calculated how many months the company can operate on its own cash if local revenue is delayed?",
+  "res-no-grant-scope": "Have you defined the minimum market-entry scope that can be executed without government funding?",
+  "res-owner-time": "Have you named the person accountable for global expansion and set their weekly time commitment?",
+  "pmf-paid-conversion": "What is the strongest evidence you have today that a customer has paid?",
+  "pmf-churn-cases": "Have you directly confirmed why interested prospects dropped out?",
+  "pmf-buying-roles": "Have you distinguished and confirmed the actual user, payer, decision-maker, and approver?",
+  "pmf-customer-words": "Have you asked people who selected or rejected the offering why they made that choice?",
+  "mkt-icp-count": "Have you counted the prospects or customer accounts you can actually reach in the initial target market, using a named list and sources?",
+  "mkt-country-compare": "Have you compared candidate countries on the same criteria—market potential, entry cost, regulation, and customer access—and ranked them?",
+  "bmlc-classification": "Have you verified the offering's legal classification in the initial target country using official sources?",
+  "bmlc-preconditions": "Have you identified the approvals and certifications required before selling in the initial target country?",
+  "bmlc-na-basis": "Have you determined whether each regulatory requirement applies and recorded the basis for that decision?",
+  "bmlc-local-practice": "Have you confirmed how price display, contracting, payment, and settlement practices in the initial target country differ from domestic practice?",
+  "lpa-net-price": "Have you calculated net revenue and margin after taxes, fees, currency-conversion costs, and partner commissions?",
+  "lpa-infra-partner": "Have you selected candidate logistics, payment, and cloud providers for the initial target country?",
+  "lpa-bridge-person": "Do you have a person who understands both local conditions and the offering and can connect headquarters with the local market?",
+  "lpa-journey-blocker": "Have you directly observed where local customers stall or drop off across discovery, comparison, purchase, payment, use, and support?",
+  "test-environment": "Have you tested whether the offering works under actual conditions in the initial target country?",
+  "test-defects": "Do you record product, service, and customer-journey issues found in local testing and track their resolution?",
+  "test-message-worked": "Have you identified which local promotion message or product demonstration actually generated inquiries?",
+  "test-no-discount": "Has a customer paid, without discounts or free offers, at a price that preserves your target margin?",
+  "test-counter-evidence": "Have you identified evidence that contradicts the market hypothesis—such as rejection, churn, non-conversion, or usage failure—and reflected it in the plan?",
+  "partner-actual-work": "Is the local partner actually performing its assigned role?",
+  "partner-economics": "Have you compared the profitability of partner-led and direct sales using numbers?",
+  "partner-ecosystem-interviews": "Have you directly confirmed the input or requirements of different local stakeholders, including users, buyers, distributors, procurement, and regulators?",
+  "partner-shortfall": "Do you regularly review whether the partner meets committed volumes and schedules, and have you set actions for shortfalls?",
+  "partner-cold-check": "Have you directly sought input from prospects outside your referral network and prospects who chose not to buy?",
+  "plan-hypothesis-kpi": "Have you defined the hypothesis to test in the initial target market and the metrics used to judge it?",
+  "plan-stop-rule": "Have you set numeric criteria for stopping further investment when performance falls short?",
+  "plan-single-tracker": "Do you manage global-expansion objectives, performance, and owners in one place?",
+  "plan-change-control": "Have you named the approver for localization changes and the owner responsible for recovery if a change causes problems?",
+  "org-single-owner": "Is one person ultimately accountable for revenue and profit in the initial target market?",
+  "org-continuity": "Can global-expansion work continue when a key team member is absent?",
+  "org-local-authority": "Have you defined which decisions and spending limits the local owner can approve without headquarters?",
+  "org-escalation": "When an urgent local issue occurs, have you defined who must be notified and within how many hours?",
+  "contract-control": "Does the partner contract cover exclusivity, data, pricing, termination, and customer transfer in a way that protects the business?",
+  "contract-exit": "Can the company retain the customers it acquired after the partner contract ends?",
+  "contract-switch-cost": "Have you estimated the time and cost required to replace the partner and identified alternatives?",
+  "contract-dependency-limit": "Have you set limits on how much sales, customer data, and operations may depend on one partner, along with fallback actions?",
+  "alloc-milestone-budget": "Have you defined the achievement criteria required before the next budget is released?",
+  "alloc-capacity": "Have you identified which of production, systems, people, or supply will reach its limit first as launch or pilot demand grows?",
+  "alloc-concentration": "If you have revenue, have you measured whether it is overly concentrated in specific customers or channels and set mitigation thresholds?"
+};
+
+export const V5_EN_DETAIL_OVERRIDES: Partial<Record<string, Partial<QuestionCopy>>> = {
+  "mvc-resource-priority": {
+    options: ["We have not yet thought about a priority rule", "We feel the need but have not set a rule", "We set a priority rule and shared it in writing or in meetings", "We have made repeated allocation decisions by that rule"],
+    followUp: "Describe the rule and your most recent allocation decision."
+  },
+  "pmf-paid-conversion": {
+    options: ["We have no paid-customer evidence yet", "We have interest, inquiries, or free usage, but no paid conversion", "We completed a domestic paid sale or a paid PoC or pilot in the initial target country", "Repeat purchases, renewals, or usage growth recur across customers at home or abroad"],
+    followUp: "List your strongest evidence in order. Anonymize customers as \"Customer A.\""
+  },
+  "pmf-buying-roles": {
+    options: ["We have not yet distinguished these roles", "We can guess, but have not confirmed them in real deals", "We confirmed user, payer, decision-maker, and approver in recent deals", "We confirm the four roles across multiple deals and use them to tailor our approach"],
+    followUp: "For a recent deal, name who held each of the four roles."
+  },
+  "mkt-icp-count": {
+    options: ["We have not counted yet", "We only estimated from market-size reports or industry statistics", "We counted directly from named lists, channels, or account data", "We keep the list current and use it for actual outreach"],
+    followUp: "State the count, its source, and the as-of date.",
+    action: "Count reachable accounts in the initial target country and record the list, source, and as-of date."
+  },
+  "mkt-country-compare": {
+    options: ["We are looking at one country only and have not compared", "We looked at several countries but not on the same criteria", "We compared on the same criteria and set priorities", "We verified the ranking holds even without personal ties or subsidies"],
+    followUp: "State your criteria, top ranking, and whether it changes without incidental advantages.",
+    action: "Compare candidate countries on the same criteria and confirm whether the ranking holds without incidental advantages."
+  },
+  "bmlc-na-basis": {
+    options: ["We have not reviewed regulatory requirements yet", "We sorted applicability by internal judgment only, without supporting evidence", "We recorded whether each requirement applies and the basis for the decision", "We confirmed applicability and its basis with an expert or regulator"],
+    followUp: "List the applicability decision and basis for each key requirement."
+  },
+  "bmlc-local-practice": {
+    options: ["We have not looked into this yet", "We have only a rough picture from desk research", "We confirmed the differences directly with local customers or partners", "We have transacted under those practices in real quotes, contracts, or settlements"],
+    followUp: "Describe the practices that differed from home.",
+    action: "Confirm local differences in price display, contracting, payment methods, and settlement cycles."
+  },
+  "lpa-net-price": {
+    options: ["We have not calculated this yet", "We have a rough sense but no line-item calculation", "We calculated net revenue and margin line by line", "We verified the calculation against real settlements"],
+    followUp: "List the deductions and the remaining margin."
+  },
+  "lpa-journey-blocker": {
+    options: ["No local customer has gone through the journey yet", "Customers have used it, but we did not observe where they stall", "We directly observed stall and friction points at each journey step", "We fixed observed points and verified the improvement"],
+    followUp: "Describe the friction, step by step."
+  },
+  "test-defects": {
+    options: ["We have not tested locally, so there is nothing to record", "We tested but did not record the issues", "We record issues and journey friction and track their resolution", "We repeatedly analyze root causes and prevent recurrence"],
+    followUp: "List recorded issues and what remains unresolved."
+  },
+  "test-no-discount": {
+    options: ["We have no paid deals yet", "We have transactions, but they rely on discounts or free offers or do not preserve our target margin", "A customer has paid without discounts or free offers at a price that preserves our target margin", "Paid transactions under the same pricing conditions recur across multiple customers"],
+    followUp: "Describe the paid transaction and pricing terms that preserved the target margin."
+  },
+  "test-counter-evidence": {
+    options: ["We have not looked from that angle", "We sense warning signs but have not confirmed them as evidence", "We confirmed and recorded contradicting evidence", "We revised our hypothesis or plan based on that evidence"],
+    followUp: "Describe the evidence and what you changed.",
+    action: "Record evidence that contradicts the market hypothesis and reflect it in the hypothesis and plan."
+  },
+  "partner-shortfall": {
+    options: ["We do not yet have an active partner whose delivery can be reviewed", "We have volume or schedule commitments but do not review delivery regularly", "We regularly review delivery against committed volume and schedules", "We have shortfall thresholds and apply defined actions based on review results"],
+    followUp: "State the review cadence, shortfall thresholds, and response actions."
+  },
+  "contract-control": {
+    options: ["We have not signed a partner contract yet", "We have a contract, but on the partner's standard terms", "We reviewed the five terms and reflected them in the contract", "We finalized the protective clauses with expert review"],
+    followUp: "Summarize the clauses. Do not attach the contract itself."
+  },
+  "contract-dependency-limit": {
+    options: ["We have not thought about this yet", "We know the dependency is high but have not set a limit", "We set dependency limits and fallbacks for sales, customer data, and operations", "We review the limits and fallbacks regularly and have verified an alternative route"],
+    followUp: "State current dependency, the limit, and the fallback."
+  },
+  "alloc-capacity": {
+    options: ["We have not thought about this yet", "We can guess but have not verified", "We have identified which point hits its limit first", "We verified it through real demand growth or load testing"],
+    followUp: "Name the first bottleneck and your evidence."
+  },
+  "alloc-concentration": {
+    options: ["We have not looked at concentration", "We know it is concentrated but have not measured it or set thresholds", "We measure revenue share by customer and channel and set mitigation thresholds", "We update revenue concentration by customer and channel regularly and review actions that can be taken before a threshold is breached"],
+    followUp: "State the largest customer or channel share and your thresholds."
+  }
 };
