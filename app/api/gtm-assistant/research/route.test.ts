@@ -10,15 +10,21 @@ describe("market research readiness scope", () => {
     expect(source).toContain("survey_version,sales_motion");
   });
 
-  it("uses Sol for every market-research generation step", () => {
-    expect(source).toContain("const sharedRequest = {\n      model: MARKET_SIZING_MODEL");
+  it("uses Luna for every market-research generation step", () => {
+    expect(source).toContain("const sharedRequest = {\n      model: ASSISTANT_MODEL");
     expect(source).toContain("const [synthesisResponse, privateSizingResponse]");
-    expect(source.match(/model: MARKET_SIZING_MODEL/g)).toHaveLength(3);
-    expect(source.match(/model: ASSISTANT_MODEL/g)).toHaveLength(2);
+    expect(source).not.toContain("MARKET_SIZING_MODEL");
+    expect(source.match(/model: ASSISTANT_MODEL/g)).toHaveLength(5);
     expect(source).toContain("const privateFounderContext = Object.fromEntries");
     expect(source).toContain("absence of optional founder inputs as negative evidence or an evidence gap");
     expect(source).toContain("const constraintsMatch =");
     expect(source).toContain("constraintsMatch && existingPlan.market_research_locale");
+  });
+
+  it("drops only unverified citations and preserves verified research", () => {
+    expect(source).toContain("stripUnverifiedSources");
+    expect(source).toContain("droppedUrls");
+    expect(source).not.toContain("if (unverifiedUrls.length > 0)");
   });
 
   it("finishes inside the platform deadline and uses the reduced search budget", () => {

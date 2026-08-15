@@ -12,7 +12,6 @@ import {
   marketCompetitorResearchResponseSchema,
   marketResearchSynthesisResponseSchema,
   marketResearchDocumentExtractionResponseSchema,
-  MARKET_SIZING_MODEL,
   marketSizingEvidenceResponseSchema,
   marketTrendResearchResponseSchema,
   getMarketResearchScope,
@@ -408,7 +407,7 @@ export async function POST(request: Request) {
       .map((document) => document.evidence);
     const privateFounderContext = Object.fromEntries(Object.entries({ validationEvidence: founderContext.validationEvidence, constraints: founderContext.constraints }).filter(([, value]) => value.trim()));
     const sharedRequest = {
-      model: MARKET_SIZING_MODEL,
+      model: ASSISTANT_MODEL,
       store: false,
       safety_identifier: createHash("sha256").update(user.id).digest("hex"),
       reasoning: { effort: "medium", context: "current_turn" },
@@ -457,7 +456,7 @@ export async function POST(request: Request) {
       }, { timeout: publicTimeoutMs, maxRetries: 0 }),
       client.responses.parse({
         ...sharedRequest,
-        model: MARKET_SIZING_MODEL,
+        model: ASSISTANT_MODEL,
         // ponytail: "high" effort measured ~246s for this stage (never fits the window); "medium" ~155–165s. Revisit when sizing moves to background mode.
         reasoning: { effort: "medium", context: "current_turn" },
         max_tool_calls: 5,
@@ -494,7 +493,7 @@ export async function POST(request: Request) {
     failureStage = "synthesis";
     const [synthesisResponse, privateSizingResponse] = await Promise.all([
       client.responses.parse({
-        model: MARKET_SIZING_MODEL,
+        model: ASSISTANT_MODEL,
         store: false,
         safety_identifier: createHash("sha256").update(user.id).digest("hex"),
         reasoning: { effort: "low", context: "current_turn" },
@@ -541,7 +540,7 @@ export async function POST(request: Request) {
       ...synthesisResponse.output_parsed.result,
       competitors: competitorResponse.output_parsed.result.competitors,
       marketSizingEvidence
-    }, researchNow, locale, parsed.data.founderContext, MARKET_SIZING_MODEL, documentDigests);
+    }, researchNow, locale, parsed.data.founderContext, ASSISTANT_MODEL, documentDigests);
 
     const needsEvidence = result.marketSizing.some((entry) => entry.status === "insufficient_evidence");
     const preserveConfirmedResearch = needsEvidence && Boolean(existingPlan?.market_research_confirmed_at);
