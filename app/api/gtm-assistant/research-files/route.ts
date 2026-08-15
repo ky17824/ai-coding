@@ -25,15 +25,23 @@ async function contextFor(assessmentId: string) {
   return { admin, assessment, profile, user } as const;
 }
 
+async function findOpenPlan(
+  admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  assessmentId: string
+) {
+  const { data: existing } = await admin.from("gtm_plans")
+    .select("id,created_by,market_research_documents")
+    .eq("assessment_id", assessmentId).in("status", ["draft", "active"]).maybeSingle();
+  return existing;
+}
+
 async function openPlan(
   admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
   assessmentId: string,
   organizationId: string,
   userId: string
 ) {
-  const { data: existing } = await admin.from("gtm_plans")
-    .select("id,created_by,market_research_documents")
-    .eq("assessment_id", assessmentId).in("status", ["draft", "active"]).maybeSingle();
+  const existing = await findOpenPlan(admin, assessmentId);
   if (existing) return existing;
   const { data: created } = await admin.from("gtm_plans").insert({
     organization_id: organizationId,
@@ -108,7 +116,7 @@ export async function DELETE(request: Request) {
   if (!parsed.success) return NextResponse.json({ message: "삭제할 자료를 확인해 주세요." }, { status: 400 });
   const context = await contextFor(parsed.data.assessmentId);
   if ("error" in context) return context.error;
-  const plan = await openPlan(context.admin, parsed.data.assessmentId, context.profile.organization_id, context.user.id);
+  const plan = await findOpenPlan(context.admin, parsed.data.assessmentId);
   if (!plan || plan.created_by !== context.user.id) return NextResponse.json({ message: "자료를 찾을 수 없습니다." }, { status: 404 });
 
   const { data: removed, error } = await context.admin.rpc("remove_gtm_research_document", {

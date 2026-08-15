@@ -95,7 +95,7 @@ async function prepareResearchDocuments(input: {
       if (signError || !signed?.signedUrl) throw new Error("research_file_unavailable");
       const fileInput = current.mimeType === "application/pdf"
         ? { type: "input_file" as const, file_url: signed.signedUrl, filename: current.displayName }
-        : { type: "input_image" as const, image_url: signed.signedUrl, detail: "low" as const };
+        : { type: "input_image" as const, image_url: signed.signedUrl, detail: "high" as const };
       const response = await input.client.responses.parse({
         model: ASSISTANT_MODEL,
         store: false,
