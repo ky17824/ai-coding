@@ -7,39 +7,11 @@ import { localizeStoredGtmPlan } from "@/lib/content-localization";
 import { resolveAssessmentQuestions } from "@/lib/readiness";
 import type { SurveyVersion } from "@/lib/intake-questions";
 import type { ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
+import { buildReferenceIndex, renderBibliography, renderCitationLinks } from "./citations";
 
 const escapeHtml = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
 }[char]!));
-
-const safeHref = (value: string | null) => {
-  try {
-    const url = new URL(value ?? "");
-    return ["http:", "https:"].includes(url.protocol) ? escapeHtml(url.toString()) : null;
-  } catch {
-    return null;
-  }
-};
-
-type ReportSource = { title: string; url: string | null; publisher: string };
-const sourceKey = (source: ReportSource) => source.url || `${source.publisher}:${source.title}`;
-
-export function buildReferenceIndex(sources: ReportSource[]) {
-  const references: { number: number; source: ReportSource; href: string | null }[] = [];
-  const numberByKey = new Map<string, number>();
-  for (const source of sources) {
-    const key = sourceKey(source);
-    if (numberByKey.has(key)) continue;
-    const number = references.length + 1;
-    numberByKey.set(key, number);
-    references.push({ number, source, href: safeHref(source.url) });
-  }
-  return { references, numberByKey };
-}
-
-export function citationNumbers(index: ReturnType<typeof buildReferenceIndex>, sources: ReportSource[]) {
-  return [...new Set(sources.map(sourceKey).map((key) => index.numberByKey.get(key)).filter((number): number is number => number !== undefined))];
-}
 
 const list = (entries: unknown[]) => `<ul>${entries.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")}</ul>`;
 
@@ -178,7 +150,7 @@ export async function GET(
     ...research.competitors.flatMap((entry) => entry.sources),
     ...research.contradictions.flatMap((entry) => entry.sources)
   ]);
-  const citations = (sources: ReportSource[]) => citationNumbers(referenceIndex, sources).map((number) => `[${number}]`).join(" ");
+  const citations = (sources: Parameters<typeof renderCitationLinks>[1]) => renderCitationLinks(referenceIndex, sources);
 
   const researchDocumentSummaryHtml = localizedPlan.marketResearchDocuments?.length
     ? `<h2>${en ? "Customer documents used" : "사용자 자료 반영"}</h2><p>${en ? "Only sanitized evidence counts are shown; original files are not included in this report." : "이 보고서에는 정제된 근거의 개수만 표시하며 원본 파일 내용은 포함하지 않습니다."}</p>${list(localizedPlan.marketResearchDocuments.map((document) => {
@@ -198,9 +170,8 @@ export async function GET(
     const title = entry.key === "beachhead" ? (en ? "Beachhead Market" : "교두보 시장(Beachhead Market)") : entry.label;
     const method = entry.method === "triangulated" ? (en ? "triangulated" : "상향식·하향식 교차검증") : (en ? "bottom up" : "상향식");
     const confidence = en ? entry.confidence : ({ high: "높음", medium: "보통", low: "낮음" }[entry.confidence]);
-    const sourceKind = (kind: string) => en ? kind.replaceAll("_", " ") : ({ fact: "공개 사실", founder_input: "창업자 입력", proxy_assumption: "대리 가정" }[kind] ?? kind);
     const sources = entry.sources.length > 0
-      ? `<h4>${en ? "Sources" : "근거 자료"}</h4><ul>${entry.sources.map((source) => { const href = safeHref(source.url); return `<li>${href ? `<a href="${href}">${escapeHtml(source.title)}</a>` : escapeHtml(source.title)}${source.publishedAt ? ` · ${escapeHtml(source.publishedAt)}` : ""}${source.checkedAt ? ` · ${en ? "checked" : "확인"} ${escapeHtml(source.checkedAt)}` : ""} · ${escapeHtml(sourceKind(source.kind))}</li>`; }).join("")}</ul>`
+      ? `<p><strong>${en ? "Sources" : "근거 자료"}</strong> ${citations(entry.sources)}</p>`
       : "";
     const calculationInputs = entry.calculationInputs.length > 0 ? `<h4>${en ? "Calculation inputs" : "계산 입력값"}</h4>${list(entry.calculationInputs.map((input) => `${input.name}: ${input.low}–${input.high} (${en ? "base" : "기준"} ${input.base}) ${input.unit} · ${input.sourceTitles.join(", ")}`))}` : "";
     const validation = entry.validation.length ? `<h4>${en ? "Validation" : "검증"}</h4>${list(entry.validation)}` : "";
@@ -211,8 +182,8 @@ export async function GET(
   const competitorLabel = (presence: string, type: string) => en ? `${presence} · ${type}` : `${{ local: "현지", regional: "지역", global: "글로벌" }[presence] ?? presence} · ${{ direct: "직접", adjacent: "인접", alternative: "대체재" }[type] ?? type}`;
   const sourceKindLabel = (value: string) => en ? value : ({ government: "정부·규제", industry: "산업자료", retail: "현지 유통", company: "기업 공식", consumer: "소비자", media: "미디어" }[value] ?? value);
   const trendCards = research.trends.map((entry) => `<article><p><strong>${escapeHtml(entry.title)}</strong> · ${escapeHtml(trendLabel(entry.category))}</p><p>${escapeHtml(en ? `${entry.confidence} confidence · ${entry.freshness}` : `신뢰도 ${{ low: "낮음", medium: "보통", high: "높음" }[entry.confidence]} · ${{ current: "최신", aging: "오래된 자료 포함", undated: "발행일 미상" }[entry.freshness]}`)}</p><p>${escapeHtml(entry.finding)}</p><p><strong>${en ? "Business implication" : "사업 시사점"}</strong><br>${escapeHtml(entry.implication)}</p><p><strong>${en ? "Sources" : "출처"}</strong> ${citations(entry.sources)}</p></article>`).join("");
-  const competitors = research.competitors.map((entry) => `<tr><td data-label="${en ? "Name" : "이름"}">${escapeHtml(entry.name)}</td><td data-label="${en ? "Type" : "유형"}">${escapeHtml(competitorLabel(entry.marketPresence, entry.type))}</td><td data-label="${en ? "Position" : "포지션"}">${escapeHtml(entry.relevance)}<br><strong>${en ? "Target customer" : "목표 고객"}</strong> ${escapeHtml(entry.targetCustomer)}<br><strong>${en ? "Value" : "제공 가치"}</strong> ${escapeHtml(entry.valueProposition)}${entry.strengths.length ? `<br><strong>${en ? "Strengths" : "강점"}</strong> ${escapeHtml(entry.strengths.join(" · "))}` : ""}${entry.weaknesses.length ? `<br><strong>${en ? "Weaknesses" : "약점"}</strong> ${escapeHtml(entry.weaknesses.join(" · "))}` : ""}</td><td data-label="${en ? "Price & channels" : "가격·채널"}">${escapeHtml(entry.pricePositioning)}${entry.channels.length ? `<br>${escapeHtml(entry.channels.join(" · "))}` : ""}</td><td data-label="${en ? "Differentiation gap" : "차별화 공백"}">${escapeHtml(entry.differentiationGap)}<br><strong>${en ? "Sources" : "출처"}</strong> ${escapeHtml(entry.sources.map((source) => source.title).join(" · "))}</td></tr>`).join("");
-  const sourceList = `<ol>${referenceIndex.references.map(({ number, source, href }) => `<li value="${number}">${href ? `<a href="${href}">${escapeHtml(source.title)}</a>` : escapeHtml(source.title)}${source.publisher ? ` · ${escapeHtml(source.publisher)}` : ""}${source.publishedAt ? ` · ${escapeHtml(source.publishedAt)}` : ""}</li>`).join("")}</ol>`;
+  const competitors = research.competitors.map((entry) => `<tr><td data-label="${en ? "Name" : "이름"}">${escapeHtml(entry.name)}</td><td data-label="${en ? "Type" : "유형"}">${escapeHtml(competitorLabel(entry.marketPresence, entry.type))}</td><td data-label="${en ? "Position" : "포지션"}">${escapeHtml(entry.relevance)}<br><strong>${en ? "Target customer" : "목표 고객"}</strong> ${escapeHtml(entry.targetCustomer)}<br><strong>${en ? "Value" : "제공 가치"}</strong> ${escapeHtml(entry.valueProposition)}${entry.strengths.length ? `<br><strong>${en ? "Strengths" : "강점"}</strong> ${escapeHtml(entry.strengths.join(" · "))}` : ""}${entry.weaknesses.length ? `<br><strong>${en ? "Weaknesses" : "약점"}</strong> ${escapeHtml(entry.weaknesses.join(" · "))}` : ""}</td><td data-label="${en ? "Price & channels" : "가격·채널"}">${escapeHtml(entry.pricePositioning)}${entry.channels.length ? `<br>${escapeHtml(entry.channels.join(" · "))}` : ""}</td><td data-label="${en ? "Differentiation gap" : "차별화 공백"}">${escapeHtml(entry.differentiationGap)}<br><strong>${en ? "Sources" : "출처"}</strong> ${citations(entry.sources)}</td></tr>`).join("");
+  const sourceList = renderBibliography(referenceIndex);
   const contradictions = research.contradictions.length ? `<h2>${en ? "Conflicting evidence" : "상충 근거"}</h2>${research.contradictions.map((entry) => `<article><h3>${escapeHtml(entry.topic)}</h3><p>${escapeHtml(entry.summary)}</p><p><strong>${en ? "Sources" : "출처"}</strong> ${citations(entry.sources)}</p></article>`).join("")}` : "";
   const planItems = localizedPlan.items.map((item) => `<article><p><strong>${item.horizon} ${en ? "days" : "일"} · ${escapeHtml(item.priority)}</strong></p><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.rationale)}</p><dl><dt>${en ? "Owner" : "담당"}</dt><dd>${escapeHtml(item.ownerLabel)}</dd><dt>${en ? "Due date" : "기한"}</dt><dd>${escapeHtml(item.dueDate)}</dd><dt>${en ? "Completion evidence" : "완료 근거"}</dt><dd>${escapeHtml(item.completionEvidence)}</dd></dl></article>`).join("");
   const fontUrl = escapeHtml(new URL("/fonts/PretendardVariable.woff2", request.url).toString());
@@ -226,7 +197,8 @@ export async function GET(
     .replace(offeringDefinitionHeading, `${readinessApplicabilityHtml}${offeringDefinitionHeading}`)
     .replace("</head>", `<style>@media(max-width:700px){td:before{content:attr(data-label);display:block;color:#1d7b4c;font-size:13px;font-weight:800}}</style></head>`)
     .replace(legacyTrends, `<h2>${en ? "Research coverage" : "조사 커버리지"}</h2><p>${research.researchCoverage.lanes.length} ${en ? "research areas" : "개 조사영역"} · ${research.researchCoverage.sourceCount} ${en ? "unique sources" : "개 고유 출처"} · ${research.researchCoverage.uniqueDomainCount} ${en ? "domains" : "개 도메인"} · ${research.researchCoverage.competitorCount} ${en ? "competitors" : "개 경쟁 후보"}</p><p><strong>${en ? "Source mix" : "출처 구성"}</strong><br>${Object.entries(research.researchCoverage.sourceTypes).map(([kind, count]) => `${sourceKindLabel(kind)} ${count}`).join(" · ")}</p>${research.researchCoverage.coverageGaps.length ? `<p class="notice"><strong>${en ? "Coverage gaps" : "보완할 조사 범위"}</strong><br>${escapeHtml(research.researchCoverage.coverageGaps.map((gap) => coverageGapLabel(gap, en)).join(" · "))}</p>` : ""}<h2>${en ? "Market trends" : "시장동향"}</h2><div class="grid">${trendCards}</div>`)
-    .replace(legacyCompetitors, `<h2>${en ? "Competitive landscape" : "경쟁 구도"}</h2><table><caption>${en ? "Verified competitor candidates" : "확인된 경쟁 후보"}</caption><thead><tr><th>${en ? "Name" : "이름"}</th><th>${en ? "Type" : "유형"}</th><th>${en ? "Relevance" : "관련성"}</th><th>${en ? "Price & channels" : "가격·채널"}</th><th>${en ? "Differentiation gap" : "차별화 공백"}</th></tr></thead><tbody>${competitors}</tbody></table>${contradictions}<h2>${en ? "Research sources" : "전체 조사 출처"}</h2>${sourceList}`);
+    .replace(legacyCompetitors, `<h2>${en ? "Competitive landscape" : "경쟁 구도"}</h2><table><caption>${en ? "Verified competitor candidates" : "확인된 경쟁 후보"}</caption><thead><tr><th>${en ? "Name" : "이름"}</th><th>${en ? "Type" : "유형"}</th><th>${en ? "Relevance" : "관련성"}</th><th>${en ? "Price & channels" : "가격·채널"}</th><th>${en ? "Differentiation gap" : "차별화 공백"}</th></tr></thead><tbody>${competitors}</tbody></table>${contradictions}`)
+    .replace("</body>", `<h2>${en ? "Research sources" : "전체 조사 출처"}</h2>${sourceList}</body>`);
   return new NextResponse(comprehensiveHtml, {
     headers: {
       "content-type": "text/html; charset=utf-8",

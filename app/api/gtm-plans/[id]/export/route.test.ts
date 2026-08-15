@@ -32,7 +32,8 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient: () => admin
 }));
 
-import { buildReferenceIndex, citationNumbers, GET } from "@/app/api/gtm-plans/[id]/export/route";
+import { GET } from "@/app/api/gtm-plans/[id]/export/route";
+import { buildReferenceIndex, citationNumbers, renderBibliography, renderCitationLinks } from "@/app/api/gtm-plans/[id]/export/citations";
 
 const get = () => GET(new Request("https://example.com/api/gtm-plans/plan-1/export"), {
   params: Promise.resolve({ id: "plan-1" })
@@ -60,5 +61,19 @@ describe("market report citations", () => {
     expect(index.references[0].href).toBe("https://a.example/report");
     expect(index.references[1].href).toBeNull();
     expect(citationNumbers(index, [source, source])).toEqual([1]);
+  });
+
+  it("uses numbered links in report content and keeps URLs in the bibliography", () => {
+    const source = { title: "A", url: "https://a.example/report", publisher: "A" };
+    const unsafe = { title: "Unsafe", url: "javascript:alert(1)", publisher: "B" };
+    const index = buildReferenceIndex([source, source, unsafe]);
+    const body = renderCitationLinks(index, [source, source]);
+    const bibliography = renderBibliography(index);
+
+    expect(body).toBe('<a href="#reference-1">[1]</a>');
+    expect(body).not.toContain("https://a.example/report");
+    expect(bibliography).toContain('id="reference-1"');
+    expect(bibliography).toContain('href="https://a.example/report"');
+    expect(bibliography).not.toContain('href="javascript:alert(1)"');
   });
 });
