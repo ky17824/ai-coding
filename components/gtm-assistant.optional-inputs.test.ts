@@ -31,4 +31,13 @@ describe("AI GTM assistant optional early-stage inputs", () => {
     expect(source).toContain("researchDisplayConstraints.trim() === context.constraints.trim()");
     expect(source).toContain("setResearchDisplayConstraints(context.constraints)");
   });
+
+  it("keeps research and workshop progress independent and shows research errors beside the research button", () => {
+    expect(source).toContain("researchBusy");
+    expect(source).toContain("workshopBusy");
+    expect(source).not.toContain("const [busy, setBusy]");
+    expect(source).toContain('className="assistant-research-status"');
+    expect(source).toContain('role={researchError ? "alert" : "status"}');
+    expect(source).toContain("다시 조사");
+  });
 });

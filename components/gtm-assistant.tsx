@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { marketResearchContextSignature } from "@/lib/market-sizing";
@@ -191,7 +191,10 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
     initialPlan?.marketResearch ? marketResearchContextSignature(initialPlan.founderContext, researchDocumentDigests(initialPlan.marketResearchDocuments ?? [])) : ""
   );
   const [researchDisplayConstraints, setResearchDisplayConstraints] = useState(initialPlan?.marketResearch ? initialPlan.founderContext.constraints ?? "" : "");
-  const [busy, setBusy] = useState(false);
+  const [researchBusy, setResearchBusy] = useState(false);
+  const [workshopBusy, setWorkshopBusy] = useState(false);
+  const [researchElapsedSeconds, setResearchElapsedSeconds] = useState(0);
+  const [researchError, setResearchError] = useState("");
   const [fileBusy, setFileBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [workshopFailed, setWorkshopFailed] = useState(false);
@@ -199,6 +202,19 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
     marketResearch && researchDisplaySignature === marketResearchContextSignature(context, researchDocumentDigests(researchDocuments)) &&
     researchDisplayConstraints.trim() === context.constraints.trim()
   );
+
+  useEffect(() => {
+    if (!researchBusy) return;
+    setResearchElapsedSeconds(0);
+    const timer = window.setInterval(() => setResearchElapsedSeconds((seconds) => seconds + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [researchBusy]);
+
+  const researchStatus = researchElapsedSeconds < 45
+    ? en ? "Searching current public evidence…" : "최신 공개자료를 찾고 있습니다…"
+    : researchElapsedSeconds < 150
+      ? en ? "Comparing sources and calculating the market range…" : "근거를 교차검증하고 시장 범위를 계산하고 있습니다…"
+      : en ? "Finalizing the report. This may take another minute…" : "보고서를 종합하고 있습니다. 최대 1분 정도 더 걸릴 수 있습니다…";
 
   async function runWorkshop(answerOverride?: string, forcePlan = false) {
     if (!researchMatchesContext || !researchConfirmed) {
@@ -214,7 +230,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
       ? { ...context, [question.questionKey]: answer } as GtmFounderContext
       : context;
     if (nextContext !== context) setContext(nextContext);
-    setBusy(true);
+    setWorkshopBusy(true);
     setNotice("");
     setWorkshopFailed(false);
     try {
@@ -257,12 +273,13 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
       setNotice(error instanceof Error ? error.message : en ? "Something went wrong." : "오류가 발생했습니다.");
       setWorkshopFailed(true);
     } finally {
-      setBusy(false);
+      setWorkshopBusy(false);
     }
   }
 
   async function runResearch() {
-    setBusy(true);
+    setResearchBusy(true);
+    setResearchError("");
     setNotice("");
     try {
       const response = await fetch("/api/gtm-assistant/research", {
@@ -291,9 +308,9 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
       setResearchDisplayConstraints(context.constraints);
       setNotice(payload.message ?? (en ? "The AI market and competitive research is ready. Review it before continuing." : "AI 시장·경쟁 사전조사를 만들었습니다. 내용을 확인해 주세요."));
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : en ? "Something went wrong." : "오류가 발생했습니다.");
+      setResearchError(error instanceof Error ? error.message : en ? "Something went wrong." : "오류가 발생했습니다.");
     } finally {
-      setBusy(false);
+      setResearchBusy(false);
     }
   }
 
@@ -457,7 +474,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
                   id="gtm-research-file"
                   type="file"
                   accept=".pdf,.png,.jpg,.jpeg"
-                  disabled={busy || fileBusy || researchDocuments.length >= 3}
+                  disabled={researchBusy || workshopBusy || fileBusy || researchDocuments.length >= 3}
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     event.target.value = "";
@@ -470,13 +487,17 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
                 <span><strong>{document.displayName}</strong><small>{en
                   ? ({ uploaded: "Ready to sanitize", processed: "Sanitized", failed: "Sanitization failed", cleanup_pending: "Original deletion pending" }[document.status])
                   : ({ uploaded: "정제 대기", processed: "정제 완료", failed: "정제 실패", cleanup_pending: "원본 삭제 재시도 필요" }[document.status])}</small></span>
-                <button className="text-link" type="button" onClick={() => void deleteResearchFile(document.id)} disabled={busy || fileBusy}>{en ? "Remove" : "삭제"}</button>
+                <button className="text-link" type="button" onClick={() => void deleteResearchFile(document.id)} disabled={researchBusy || workshopBusy || fileBusy}>{en ? "Remove" : "삭제"}</button>
               </li>)}</ul>}
             </section>
           )}
-          <button className="button button--primary" type="button" onClick={runResearch} disabled={busy}>
-            {busy ? (en ? "Researching…" : "조사하고 있습니다…") : marketResearch ? (en ? "Run research again" : "시장·경쟁 사전조사 다시 만들기") : (en ? "Run AI market research" : "AI 시장·경쟁 사전조사")}
+          <button className="button button--primary" type="button" onClick={runResearch} disabled={researchBusy || workshopBusy || fileBusy}>
+            {researchBusy ? (en ? "Researching…" : "조사 진행 중…") : marketResearch ? (en ? "Run research again" : "시장·경쟁 사전조사 다시 만들기") : (en ? "Run AI market research" : "AI 시장·경쟁 사전조사")}
           </button>
+          {(researchBusy || researchError) && <div className="assistant-research-status" role={researchError ? "alert" : "status"} aria-live="polite">
+            <span>{researchError || researchStatus}</span>
+            {researchError && <button className="button button--ghost button--small" type="button" onClick={runResearch}>{en ? "Try research again" : "다시 조사"}</button>}
+          </div>}
         </div>
 
         {marketResearch && (
@@ -535,16 +556,16 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
             )}
           </label>
           <div className="assistant-prompt-actions">
-            <button className="button button--primary" type="button" onClick={() => runWorkshop()} disabled={busy}>
-              {busy ? (en ? "Drafting your plan…" : "계획을 작성하고 있습니다…") : question ? (en ? "Answer and continue" : "답변하고 계속") : (en ? "Create AI GTM plan" : "AI GTM 계획 만들기")}
+            <button className="button button--primary" type="button" onClick={() => runWorkshop()} disabled={workshopBusy || researchBusy}>
+              {workshopBusy ? (en ? "Drafting your plan…" : "계획을 작성하고 있습니다…") : question ? (en ? "Answer and continue" : "답변하고 계속") : (en ? "Create AI GTM plan" : "AI GTM 계획 만들기")}
             </button>
             {question && (
-              <button className="button button--ghost" type="button" onClick={() => runWorkshop(en ? "Needs verification" : "확인 필요")} disabled={busy}>
+              <button className="button button--ghost" type="button" onClick={() => runWorkshop(en ? "Needs verification" : "확인 필요")} disabled={workshopBusy || researchBusy}>
                 {en ? "Needs verification" : "확인 필요"}
               </button>
             )}
             {workshopFailed && (
-              <button className="button button--ghost" type="button" onClick={() => runWorkshop(undefined, true)} disabled={busy}>
+              <button className="button button--ghost" type="button" onClick={() => runWorkshop(undefined, true)} disabled={workshopBusy || researchBusy}>
                 {en ? "Create plan with current information" : "현재 정보로 계획 만들기"}
               </button>
             )}

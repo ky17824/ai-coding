@@ -3902,6 +3902,28 @@ fieldset.offering-picker {
   justify-self: start;
 }
 
+.assistant-research-status {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius-card);
+  background: var(--success-bg);
+  color: var(--green-dark);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.assistant-research-status[role="alert"] {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+}
+
 .assistant-research {
   display: grid;
   gap: 22px;
