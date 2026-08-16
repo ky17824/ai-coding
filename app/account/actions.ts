@@ -123,28 +123,53 @@ export async function deleteAccount(
   if (confirmation !== user.email.toLowerCase()) {
     return { ok: false, message: en ? "Enter the email address for this account exactly as shown." : "현재 계정 이메일을 정확히 입력해 주세요." };
   }
+  const finishAuthDeletion = async (): Promise<AccountState> => {
+    const { error } = await admin.auth.admin.deleteUser(user.id, true);
+    if (error) return { ok: false, message: en ? "We could not finish deleting the authentication account. Please try again." : "인증 계정 삭제를 마치지 못했습니다. 다시 시도해 주세요." };
+    await supabase.auth.signOut();
+    redirect(localizedPath("/", locale));
+  };
+  const { data: closingProfile, error: profileError } = await admin.from("profiles").select("role,deleted_at").eq("id", user.id).maybeSingle();
+  if (profileError || !closingProfile) {
+    return { ok: false, message: en ? "We could not verify this account." : "계정 상태를 확인하지 못했습니다." };
+  }
+  if (closingProfile.deleted_at) return finishAuthDeletion();
+  if (closingProfile.role === "admin") {
+    return { ok: false, message: en ? "Another administrator must change this account to a non-administrator role before it can be closed." : "관리자 계정은 다른 관리자가 일반 역할로 변경한 뒤 탈퇴할 수 있습니다." };
+  }
+  const { error: reserveError } = await admin.rpc("begin_profile_closure", { p_user_id: user.id });
+  if (reserveError?.message === "admin_closure_forbidden") {
+    return { ok: false, message: en ? "Another administrator must change this account to a non-administrator role before it can be closed." : "관리자 계정은 다른 관리자가 일반 역할로 변경한 뒤 탈퇴할 수 있습니다." };
+  }
+  if (reserveError) return { ok: false, message: en ? "We could not prepare this account for closure." : "계정 탈퇴를 준비하지 못했습니다." };
+
+  const cancelClosure = async (message: string): Promise<AccountState> => {
+    const { error } = await admin.rpc("cancel_profile_closure", { p_user_id: user.id });
+    return error
+      ? { ok: false, message: en ? "We could not restore the account after stopping closure. Retry account closure to recover or contact support." : "탈퇴 중단 후 계정 상태를 복구하지 못했습니다. 탈퇴를 다시 시도해 복구하거나 고객지원에 문의해 주세요." }
+      : { ok: false, message };
+  };
   const kakaoIdentity = user.identities?.find((identity) => identity.provider === "kakao");
   if (kakaoIdentity) {
     const serviceUserId = kakaoServiceUserId([kakaoIdentity]);
     if (!serviceUserId) {
-      return { ok: false, message: en ? "We could not verify the linked Kakao account, so your account was not closed." : "카카오 연결 정보를 확인하지 못해 탈퇴를 중단했습니다." };
+      return cancelClosure(en ? "We could not verify the linked Kakao account, so your account was not closed." : "카카오 연결 정보를 확인하지 못해 탈퇴를 중단했습니다.");
     }
     const unlink = await ensureKakaoUnlinked(serviceUserId, process.env.KAKAO_ADMIN_KEY);
     if (!unlink.ok) {
-      return { ok: false, message: en ? "We could not disconnect Kakao, so your account was not closed. Please try again shortly." : "카카오 연결을 해제하지 못해 탈퇴를 중단했습니다. 잠시 후 다시 시도해 주세요." };
+      return cancelClosure(en ? "We could not disconnect Kakao, so your account was not closed. Please try again shortly." : "카카오 연결을 해제하지 못해 탈퇴를 중단했습니다. 잠시 후 다시 시도해 주세요.");
     }
   }
-  const { error: anonymizeError } = await admin.from("profiles").update({
-    display_name: en ? "Deleted user" : "탈퇴한 사용자",
-    email: `deleted+${user.id}@removed.invalid`,
-    job_title: null,
-    phone_enc: null,
-    marketing_opt_in: false,
-    deleted_at: new Date().toISOString()
-  }).eq("id", user.id);
-  if (anonymizeError) return { ok: false, message: en ? "We could not anonymize the account." : "계정을 익명화하지 못했습니다." };
-  const { error: deleteError } = await admin.auth.admin.deleteUser(user.id, true);
-  if (deleteError) return { ok: false, message: en ? "We could not finish deleting the authentication account. Please try again." : "인증 계정 삭제를 마치지 못했습니다. 다시 시도해 주세요." };
-  await supabase.auth.signOut();
-  redirect(localizedPath("/", locale));
+  const { error: anonymizeError } = await admin.rpc("close_profile", {
+    p_user_id: user.id,
+    p_display_name: en ? "Deleted user" : "탈퇴한 사용자",
+    p_anonymized_email: `deleted+${user.id}@removed.invalid`
+  });
+  if (anonymizeError?.message === "admin_closure_forbidden") {
+    return cancelClosure(en ? "Another administrator must change this account to a non-administrator role before it can be closed." : "관리자 계정은 다른 관리자가 일반 역할로 변경한 뒤 탈퇴할 수 있습니다.");
+  }
+  if (anonymizeError) {
+    return cancelClosure(en ? "We could not anonymize the account." : "계정을 익명화하지 못했습니다.");
+  }
+  return finishAuthDeletion();
 }

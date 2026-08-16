@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { PhoneReveal } from "@/components/phone-reveal";
 import { SiteHeader } from "@/components/site-header";
+import { AdminNav } from "@/components/admin-nav";
 import { getIntakeQuestions } from "@/lib/intake-questions";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
@@ -22,7 +23,7 @@ export default async function AdminCompanyPage({ params }: { params: Promise<{ i
   const en = locale === "en";
   const statusText = (value: string) => en ? ({ "준비 1단계": "Readiness Stage 1", "준비 2단계": "Readiness Stage 2", "준비 3단계": "Readiness Stage 3", "진출 실행 가능": "Ready to Enter" }[value] ?? value) : value;
   const admin = createSupabaseAdminClient();
-  if (actor?.role !== "admin") redirect(localizedPath("/dashboard", locale));
+  if (actor?.role !== "admin" || actor.deleted_at) redirect(localizedPath("/dashboard", locale));
   if (!admin) throw new Error("Supabase admin client is not configured");
   const { id } = await params;
   const [{ data: organization }, { data: profiles }, { data: assessments }, { data: actions }, { data: orders }] = await Promise.all([
@@ -53,6 +54,7 @@ export default async function AdminCompanyPage({ params }: { params: Promise<{ i
         <Link href={localizedPath("/admin", locale)} className="text-link">← {en ? "Companies" : "기업 목록"}</Link>
         <span className="page-kicker">{en ? "COMPANY OPERATIONS" : "기업 운영(Company Operations)"}</span>
         <h1 className="page-title">{organization.name}</h1>
+        <AdminNav locale={locale} />
         <div className="company-summary panel">
           <div><span>{en ? "Contact" : "담당자"}</span><strong>{contact?.display_name ?? "-"}</strong><small>{contact?.job_title ?? (en ? "Job title not provided" : "직위 미등록")} · {contact?.email ?? ""}</small></div>
           <div><span>{en ? "Latest assessment" : "최근 진단"}</span><strong>{latest ? statusText(normalizeReadinessStatus(latest.status_label)) : en ? "Not assessed" : "미진단"}</strong><small>{latest ? `${latest.overall_score}${en ? " points" : "점"} · ${new Date(latest.completed_at).toLocaleDateString(dateLocale)}` : ""}</small></div>

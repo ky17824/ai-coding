@@ -28,8 +28,8 @@ export async function applyProvider(
   const locale: Locale = formData.get("locale") === "en" ? "en" : "ko";
   const en = locale === "en";
   const user = await requireUser();
-  const admin = createSupabaseAdminClient();
-  if (!user || !admin) return { ok: false, message: en ? "Please sign in." : "로그인이 필요합니다." };
+  const supabase = await createSupabaseServerClient();
+  if (!user || !supabase) return { ok: false, message: en ? "Please sign in." : "로그인이 필요합니다." };
   const parsed = providerSchema.safeParse({
     headline: formData.get("headline"),
     biography: formData.get("biography"),
@@ -40,21 +40,19 @@ export async function applyProvider(
     return { ok: false, message: en ? "Provide more detail about your experience and verification evidence." : "경력과 검증 자료를 더 구체적으로 작성해 주세요." };
   }
 
-  const { error } = await admin.from("provider_profiles").insert({
-    user_id: user.id,
-    headline: parsed.data.headline,
-    biography: parsed.data.biography,
-    expertise: parsed.data.expertise
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean),
-    verification_note: parsed.data.verificationNote
+  const { error } = await supabase.rpc("apply_for_provider", {
+    p_headline: parsed.data.headline,
+    p_biography: parsed.data.biography,
+    p_expertise: parsed.data.expertise.split(",").map((item) => item.trim()).filter(Boolean),
+    p_verification_note: parsed.data.verificationNote
   });
   if (error?.code === "23505") {
     return { ok: false, message: en ? "You have already submitted an expert application." : "이미 전문가 신청서를 제출했습니다." };
   }
+  if (error?.message === "admin_provider_forbidden") {
+    return { ok: false, message: en ? "Administrator accounts cannot apply as experts. Use a separate expert account." : "관리자 계정으로는 전문가 신청을 할 수 없습니다. 별도 전문가 계정을 사용해 주세요." };
+  }
   if (error) return { ok: false, message: en ? "We couldn't save the application." : "신청서를 저장하지 못했습니다." };
-  await admin.from("profiles").update({ role: "provider" }).eq("id", user.id);
   revalidatePath(localizedPath("/provider", locale));
   return { ok: true, message: en ? "Application received. Our operations team will review it." : "신청이 접수되었습니다. 관리자 검토를 기다려 주세요." };
 }
@@ -66,10 +64,10 @@ export async function approveProvider(formData: FormData) {
   if (!user || !supabase || !admin) return;
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role,deleted_at")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "admin") return;
+  if (profile?.role !== "admin" || profile.deleted_at) return;
   const providerId = String(formData.get("providerId") ?? "");
   const decision = String(formData.get("decision") ?? "");
   if (!providerId || !["approved", "rejected"].includes(decision)) return;

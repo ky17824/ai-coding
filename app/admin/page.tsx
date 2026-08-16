@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
+import { AdminNav } from "@/components/admin-nav";
 import { approveProvider } from "@/app/provider/actions";
 import {
   buildExpertDemand,
@@ -46,7 +47,7 @@ export default async function AdminPage({
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
   const isDemo = !supabase && process.env.NODE_ENV === "development";
-  if (profile?.role !== "admin" && !isDemo) redirect(localizedPath("/dashboard", locale));
+  if ((profile?.role !== "admin" || profile.deleted_at) && !isDemo) redirect(localizedPath("/dashboard", locale));
   if (!admin) throw new Error("Supabase admin client is not configured");
 
   const [organizationsResult, profilesResult, assessmentsResult, actionsResult, ordersResult, providersResult, reviewsResult] = await Promise.all([
@@ -147,6 +148,7 @@ export default async function AdminPage({
         <span className="page-kicker">OPERATIONS</span>
         <h1 className="page-title">{en ? "Operations Admin" : "운영 관리자"}</h1>
         <p className="page-description">{en ? "Use live data to find the companies and expert-supply bottlenecks that need attention today." : "오늘 처리할 기업과 전문가 수급 병목을 실제 데이터로 확인합니다."}</p>
+        <AdminNav locale={locale} />
 
         <div className="admin-metrics">
           {[
