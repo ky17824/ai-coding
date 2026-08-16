@@ -9,11 +9,11 @@ export function ServiceCard({ service, locale = "ko" }: { service: ServiceOfferi
   return (
     <article className="service-card">
       <div className="service-card__topline">
-        <span className={`pill pill--${service.type}`}>
+        <span className={`pill pill--${service.type}${service.tier ? ` pill--tier-${service.tier.toLowerCase()}` : ""}`}>
           {service.type === "mentoring"
             ? locale === "en" ? "1:1 Mentoring" : "1:1 멘토링"
             : service.type === "ai_agent"
-              ? service.productKind === "package" ? (locale === "en" ? "AI Package" : "AI 패키지") : (locale === "en" ? "AI Specialist" : "AI 전문가")
+              ? service.tierLabel ?? (service.productKind === "package" ? (locale === "en" ? "AI Package" : "AI 패키지") : (locale === "en" ? "AI Specialist" : "AI 전문가"))
               : locale === "en" ? "Consulting Package" : "컨설팅 패키지"}
         </span>
         {service.type !== "ai_agent" ? <span className="rating" aria-label={`${locale === "en" ? "Rating" : "평점"} ${service.rating}`}>★ {service.rating} <small>({service.reviewCount})</small></span> : null}

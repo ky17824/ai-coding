@@ -146,3 +146,14 @@ export const TIER_BADGE: Record<Tier, Copy> = {
   D: { ko: "전문가 진행", en: "Expert-led" },
   M: { ko: "멘토", en: "Mentor" }
 };
+
+/** 화면 필터의 영역 라벨. products.ts의 `area` 값이 키다. */
+export const AREA_LABEL: Record<string, Copy> = {
+  "시장·경쟁": { ko: "시장·경쟁", en: "Market" },
+  "고객 검증": { ko: "고객 검증", en: "Customer" },
+  "현지화": { ko: "현지화", en: "Localization" },
+  "규제": { ko: "규제", en: "Regulation" },
+  "파트너": { ko: "파트너", en: "Partners" },
+  "자금": { ko: "자금", en: "Funding" },
+  "실행": { ko: "실행", en: "Execution" }
+};

@@ -4,18 +4,25 @@ import { ServiceCard } from "@/components/service-card";
 import { getPublishedServices } from "@/lib/services";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { aiExpertServicesEnabled } from "@/lib/ai-agent-services";
+import { CATALOG_AREAS } from "@/lib/catalog/products";
+import { AREA_LABEL } from "@/lib/catalog/copy";
+import { localizedPath } from "@/lib/i18n";
+import Link from "next/link";
 
 export async function generateMetadata(): Promise<Metadata> {
   const en = (await getRequestLocale()) === "en";
   return { title: aiExpertServicesEnabled() ? (en ? "AI Expert Services" : "AI 전문가 서비스") : (en ? "Expert Services" : "전문가 서비스") };
 }
 
-export default async function ServicesPage({ searchParams }: { searchParams: Promise<{ tag?: string }> }) {
+export default async function ServicesPage({ searchParams }: { searchParams: Promise<{ tag?: string; area?: string }> }) {
   const locale = await getRequestLocale();
   const services = await getPublishedServices(locale);
-  const requestedTag = (await searchParams).tag?.trim() ?? "";
-  const matched = requestedTag ? services.filter((service) => service.tags.includes(requestedTag)) : services;
-  const visibleServices = matched.length ? matched : services;
+  const params = await searchParams;
+  const requestedTag = params.tag?.trim() ?? "";
+  const requestedArea = params.area?.trim() ?? "";
+  const byArea = requestedArea ? services.filter((service) => service.area === requestedArea) : services;
+  const matched = requestedTag ? byArea.filter((service) => service.tags.includes(requestedTag)) : byArea;
+  const visibleServices = matched.length ? matched : (requestedArea ? byArea : services);
   const en = locale === "en";
   const aiEnabled = aiExpertServicesEnabled();
   const specialists = visibleServices.filter((service) => service.productKind === "specialist");
@@ -39,6 +46,12 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         {requestedTag && <p className="notice-banner" role="status">{matched.length
           ? en ? `${matched.length} matching service${matched.length === 1 ? "" : "s"} found.` : `관련 ${aiEnabled ? "AI 전문가 " : ""}서비스 ${matched.length}개를 찾았습니다.`
           : en ? "No exact match is available, so the full catalog is shown." : "딱 맞는 서비스가 없어 전체 목록을 보여 드립니다."}</p>}
+        {aiEnabled && <nav className="filter-row filter-row--areas" aria-label={en ? "Filter by readiness area" : "준비도 영역 필터"}>
+          <Link href={localizedPath("/services", locale)} className={requestedArea ? undefined : "active"}>{en ? "All" : "전체"}</Link>
+          {CATALOG_AREAS.map((area) => (
+            <Link key={area} href={localizedPath(`/services?area=${encodeURIComponent(area)}`, locale)} className={requestedArea === area ? "active" : undefined}>{AREA_LABEL[area]?.[locale] ?? area}</Link>
+          ))}
+        </nav>}
         {!aiEnabled && <div className="filter-row"><button className="active" type="button">{en ? "All" : "전체"}</button><button type="button">{en ? "1:1 Mentoring" : "1:1 멘토링"}</button><button type="button">{en ? "Consulting Package" : "컨설팅 패키지"}</button></div>}
         {aiEnabled ? <>
           {specialists.length > 0 && <section className="service-catalog-section" aria-labelledby="specialist-services-title">

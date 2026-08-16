@@ -1092,6 +1092,23 @@ main[lang="en"] .hero h1 {
   color: var(--green-dark);
 }
 
+/* 계층 배지. A는 AI가 끝까지, B는 고객 정보가 필요하고, C·D·M은 사람 인건비가 원가다. */
+.pill--tier-b {
+  background: var(--cream);
+  color: var(--green-uplift);
+}
+
+.pill--tier-c,
+.pill--tier-d {
+  background: #fff0dc;
+  color: #935915;
+}
+
+.pill--tier-m {
+  background: #e5f5ea;
+  color: var(--green);
+}
+
 .service-model {
   color: var(--green);
   font-size: 13px;
@@ -2372,6 +2389,36 @@ main[lang="en"] .hero h1 {
   border-color: var(--green);
   background: var(--surface-soft);
   color: var(--green-dark);
+}
+
+.filter-row--areas {
+  flex-wrap: wrap;
+}
+
+.filter-row a {
+  min-height: 42px;
+  padding: 0 15px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--green-dark);
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: none;
+  box-shadow: var(--button-shadow-small);
+}
+
+.filter-row a:hover {
+  border-color: var(--green);
+  background: var(--surface-soft);
+}
+
+.filter-row a.active {
+  border-color: var(--green-dark);
+  background: var(--green-dark);
+  color: var(--mint);
 }
 
 .filter-row button.active {
