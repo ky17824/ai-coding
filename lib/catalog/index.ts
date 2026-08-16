@@ -2,13 +2,13 @@ import type { Locale } from "@/lib/i18n";
 import type { SurveyVersion } from "@/lib/intake-questions";
 import type { ServiceOffering } from "@/lib/types";
 import { CATALOG_PRODUCTS } from "./products";
-import { BOUNDARY_INTRO, HUMAN_BOUNDARY, PRODUCT_COPY, PROVIDER, REQUIRED_INPUTS, TIER_BADGE } from "./copy";
+import { BOUNDARY_INTRO, HUMAN_BOUNDARY, PRODUCT_COPY, PROVIDER, REQUIRED_INPUT_BY_AGENT, SHARED_REQUIRED_INPUT, TIER_BADGE, TIER_FIRST_STEP } from "./copy";
 import { buildSpecialistRules, OFFICIAL_SOURCE_AGENT_ID } from "./rules";
 import { LABOR_RATES, PLATFORM_FEE_RATE, type CatalogProduct, type Phase } from "./types";
 
 export type { CatalogProduct, Phase, Tier } from "./types";
 export { CATALOG_PRODUCTS } from "./products";
-export { TIER_BADGE, BOUNDARY_INTRO } from "./copy";
+export { TIER_BADGE, BOUNDARY_INTRO, TIER_FIRST_STEP } from "./copy";
 export { buildSpecialistRules, OFFICIAL_SOURCE_AGENT_ID } from "./rules";
 export { LABOR_RATES, PLATFORM_FEE_RATE } from "./types";
 
@@ -85,7 +85,11 @@ export function localizeCatalogProduct(
     reviewCount: 0,
     productKind: product.productKind,
     includedAgentIds: product.includedAgentIds,
-    requiredInputs: REQUIRED_INPUTS[locale],
+    // 공통 입력 + 포함 전문가별 추가 입력. 무엇을 준비해야 하는지가 상품마다 다르다.
+    requiredInputs: [
+      SHARED_REQUIRED_INPUT[locale],
+      ...new Set(product.includedAgentIds.map((id) => REQUIRED_INPUT_BY_AGENT[id]?.[locale]).filter(Boolean))
+    ] as string[],
     questionIds: [...new Set(productRules.flatMap((rule) => rule.questionIds))],
     officialSourceQuestionIds: product.includedAgentIds.includes(OFFICIAL_SOURCE_AGENT_ID)
       ? rules[OFFICIAL_SOURCE_AGENT_ID].questionIds

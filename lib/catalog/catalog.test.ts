@@ -96,6 +96,19 @@ describe("scope boundary", () => {
     }
   });
 
+  it("asks for the inputs each product actually needs", () => {
+    // 전 상품 동일 boilerplate 재발 방지. B 계층은 회사 내부 정보가 곧 차별점이다.
+    expect(getCatalogService("ai-tce-finance")?.requiredInputs?.join(" ")).toContain("자금");
+    expect(getCatalogService("ai-gtm-operations")?.requiredInputs?.join(" ")).toContain("권한");
+    expect(getCatalogService("ai-market-intelligence")?.requiredInputs?.join(" ")).not.toContain("자금");
+    // 패키지는 포함 상품의 입력을 모두 요구한다.
+    expect(getCatalogService("pkg-entry-design")?.requiredInputs?.length).toBe(8);
+    // 어느 상품이든 공통 입력 한 줄은 맨 앞에 온다.
+    for (const service of getCatalogServices("ko")) {
+      expect(service.requiredInputs?.[0]).toContain("목표 국가와 고객");
+    }
+  });
+
   it("lists only the boundaries that apply to what the product includes", () => {
     // 자금 계획에 파트너 의향이, 시장조사에 세무가 붙던 boilerplate 재발 방지.
     expect(getCatalogService("ai-tce-finance")?.humanVerification?.join(" ")).not.toContain("파트너");

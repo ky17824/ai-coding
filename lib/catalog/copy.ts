@@ -122,9 +122,33 @@ export const PRODUCT_COPY: Record<string, ProductCopy> = {
   }
 };
 
-export const REQUIRED_INPUTS: CopyList = {
-  ko: ["목표 국가와 고객, 판매할 제품 또는 서비스", "관련 준비도 진단 답변과 지금 가진 근거", "제약 조건과 쓸 수 있는 자원, 목표 기한"],
-  en: ["Target country, customer, and offering", "Relevant readiness answers and evidence", "Constraints, resources, and deadline"]
+/** 어느 상품에나 필요한 기본 입력. 준비도 진단을 마쳤다면 대부분 자동으로 채워진다. */
+export const SHARED_REQUIRED_INPUT: Copy = {
+  ko: "목표 국가와 고객, 판매할 제품 또는 서비스 (준비도 진단 답변에서 자동으로 불러옵니다)",
+  en: "Target country, customer, and offering (carried over from your readiness answers)"
+};
+
+/**
+ * 상품별 추가 입력. 전 상품에 같은 세 줄을 붙이면 무엇을 준비해야 하는지 알 수 없다.
+ * B 계층은 여기 적힌 회사 내부 정보가 없으면 결과가 유사사례 가정으로 채워진다.
+ */
+export const REQUIRED_INPUT_BY_AGENT: Record<string, Copy> = {
+  "ai-market-intelligence": { ko: "비교하고 싶은 후보 국가가 있다면 함께 알려 주세요.", en: "Any candidate countries you want compared." },
+  "ai-entry-requirements": { ko: "제품의 소재·성분·용도 등 품목 분류에 영향을 주는 정보", en: "Materials, ingredients, and intended use — anything that affects classification." },
+  "ai-partner-research": { ko: "찾는 파트너의 역할(유통·총판·시공 등)과 우선 도시", en: "The partner role you need (distributor, reseller, installer) and priority cities." },
+  "ai-customer-validation": { ko: "지금까지 받은 고객 반응과 그 근거 (인터뷰 기록, 유료 전환 기록 등)", en: "Customer responses so far and the evidence behind them (interviews, paid conversions)." },
+  "ai-local-bmc": { ko: "현재 사업모델 — 가격·결제 방식·전달 방식", en: "Your current business model: price, payment, and delivery." },
+  "ai-tce-finance": { ko: "쓸 수 있는 자금과 인건비, 목표 기한", en: "Available funds, personnel cost, and target date." },
+  "ai-gtm-operations": { ko: "조직 구성과 담당자, 각자의 권한 범위", en: "Your team, who owns what, and their authority." }
+};
+
+/** 계층별 진행 방식 1단계. A는 공개 자료만으로, B는 회사 내부 정보가 있어야 끝난다. */
+export const TIER_FIRST_STEP: Record<Tier, Copy> = {
+  A: { ko: "공개 자료만으로 진행되므로 목표 국가·고객·제품만 확인하면 시작합니다.", en: "This runs on public sources, so it starts once the country, customer, and offering are confirmed." },
+  B: { ko: "회사 내부 정보가 필요합니다. 아래 필요정보를 채우지 않으면 그 부분은 유사사례 가정으로 표시됩니다.", en: "This needs information only you have. Anything you leave blank is filled with a labelled analog assumption." },
+  C: { ko: "AI 조사 결과를 먼저 만들고, 배정된 자격자가 검토를 시작합니다.", en: "The AI research runs first, then the assigned licensed expert begins review." },
+  D: { ko: "담당 전문가를 배정한 뒤 일정을 조율합니다.", en: "An expert is assigned and the schedule is arranged with you." },
+  M: { ko: "멘토를 배정한 뒤 상담 일정을 잡습니다.", en: "A mentor is assigned and the session is scheduled." }
 };
 
 /**
