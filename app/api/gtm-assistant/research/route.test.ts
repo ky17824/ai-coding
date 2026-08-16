@@ -10,11 +10,15 @@ describe("market research readiness scope", () => {
     expect(source).toContain("survey_version,sales_motion");
   });
 
-  it("uses Luna for every market-research generation step", () => {
+  it("uses Luna and public Top-Down evidence without private sizing overrides", () => {
     expect(source).toContain("const sharedRequest = {\n      model: ASSISTANT_MODEL");
-    expect(source).toContain("const [synthesisResponse, privateSizingResponse]");
+    expect(source).toContain("const synthesisResponse = await");
     expect(source).not.toContain("MARKET_SIZING_MODEL");
-    expect(source.match(/model: ASSISTANT_MODEL/g)).toHaveLength(5);
+    expect(source.match(/model: ASSISTANT_MODEL/g)).toHaveLength(4);
+    expect(source).toContain('marketSizingMethodologyVersion === "market-sizing-v3-top-down"');
+    expect(source).toContain("marketSizingV3TopDownUpgradeAttemptedAt");
+    expect(source).not.toContain("privateSizingResponse");
+    expect(source).not.toContain("mergeFounderSizingOverrides");
     expect(source).toContain("const privateFounderContext = Object.fromEntries");
     expect(source).toContain("absence of optional founder inputs as negative evidence or an evidence gap");
     expect(source).toContain("const constraintsMatch =");
@@ -32,7 +36,7 @@ describe("market research readiness scope", () => {
     expect(source).toContain("RESEARCH_DEADLINE_MS = 285_000");
     expect(source).toContain("PUBLIC_RESEARCH_TIMEOUT_MS = 205_000");
     // A retry of a long call can never fit inside the deadline; SDK default retries pushed runs past Vercel's 300s kill.
-    expect(source.match(/maxRetries: 0/g)).toHaveLength(6);
+    expect(source.match(/maxRetries: 0/g)).toHaveLength(5);
     expect(source).toContain('reasoning: { effort: "medium", context: "current_turn" },\n        max_tool_calls: 5');
     expect(source).toContain("SYNTHESIS_TIMEOUT_MS = 55_000");
     expect(source).toContain("max_tool_calls: 3");

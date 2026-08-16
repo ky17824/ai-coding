@@ -53,7 +53,7 @@ export function researchQuotaDecision(
 ) {
   if (count < 3) return "reserve" as const;
   if (!attemptedAt && methodologyVersion !== "market-research-v2") return "legacy_upgrade" as const;
-  if (methodologyVersion === "market-research-v2" && sizingMethodologyVersion !== "market-sizing-v2" && !sizingAttemptedAt) return "sizing_upgrade" as const;
+  if (methodologyVersion === "market-research-v2" && sizingMethodologyVersion !== "market-sizing-v3-top-down" && !sizingAttemptedAt) return "top_down_upgrade" as const;
   return "limit" as const;
 }
 

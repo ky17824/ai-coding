@@ -43,7 +43,7 @@ export const marketSizingSourceSchema = z.object({
   publisher: z.string().min(1).max(180),
   publishedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   checkedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  kind: z.enum(["fact", "founder_input", "proxy_assumption"])
+  kind: z.enum(["fact", "proxy_assumption"])
 });
 
 const evidenceMeta = {
@@ -53,7 +53,8 @@ const evidenceMeta = {
 };
 
 export const marketSizingEvidenceSchema = z.object({
-  methodologyVersion: z.literal("market-sizing-v2"),
+  methodologyVersion: z.literal("market-sizing-v3-top-down"),
+  targetCountry: z.string().min(1).max(100),
   currency: z.string().regex(/^[A-Z]{3}$/),
   referenceYear: z.number().int().min(2000).max(2100),
   marketDefinition: z.object({
@@ -61,43 +62,14 @@ export const marketSizingEvidenceSchema = z.object({
     excluded: z.string().min(1).max(500),
     annualRevenueUnit: z.string().min(1).max(180)
   }),
-  scenarioAnalysis: z.object({
-    decisionVariable: z.string().min(1).max(180),
-    selectedScenario: z.enum(["A", "B"]),
-    scenarios: z.array(z.object({
-      key: z.enum(["A", "B", "C"]),
-      country: z.string().min(1).max(100),
-      definition: z.string().min(1).max(300),
-      startingPopulation: rangeSchema,
-      startingPopulationSources: z.array(marketSizingSourceSchema).min(1).max(6),
-      filters: z.array(z.object({
-        kind: z.enum(["demographic", "employment", "income", "behavior", "channel"]),
-        name: z.string().min(1).max(180),
-        active: z.boolean(),
-        factor: factorRangeSchema,
-        sources: z.array(marketSizingSourceSchema).min(1).max(4)
-      })).length(5),
-      annualRevenuePerCustomer: rangeSchema,
-      annualRevenuePerCustomerSources: z.array(marketSizingSourceSchema).min(1).max(6),
-      recommendation: z.enum(["selected", "review", "rejected"]),
-      rationale: z.string().min(1).max(400)
-    })).length(3)
-  }),
   tam: z.object({
     status: z.enum(["estimated", "insufficient_evidence"]),
-    bottomUp: z.object({
-      customerCount: rangeSchema.nullable(),
-      annualRevenuePerCustomer: rangeSchema.nullable(),
-      formula: z.string().min(1).max(300),
-      customerCountSources: z.array(marketSizingSourceSchema).max(8),
-      annualRevenuePerCustomerSources: z.array(marketSizingSourceSchema).max(8)
-    }),
     topDownPaths: z.array(z.object({
       name: z.string().min(1).max(180),
       range: rangeSchema,
       formula: z.string().min(1).max(300),
-      sources: z.array(marketSizingSourceSchema).max(6)
-    })).max(2),
+      sources: z.array(marketSizingSourceSchema).min(1).max(6)
+    })).length(2),
     cagrPercent: cagrRangeSchema.nullable(),
     ...evidenceMeta
   }),
@@ -108,26 +80,22 @@ export const marketSizingEvidenceSchema = z.object({
       name: z.string().min(1).max(180),
       factor: factorRangeSchema,
       sources: z.array(marketSizingSourceSchema).max(6)
-    })).max(8),
+    })).length(4),
     regulationPrerequisite: z.string().max(400),
     ...evidenceMeta
   }),
   som: z.object({
     status: z.enum(["estimated", "insufficient_evidence"]),
     horizonYears: z.number().int().min(3).max(5),
-    sharePercent: somShareRangeSchema.nullable(),
-    capacityRevenue: rangeSchema.nullable(),
-    shareSources: z.array(marketSizingSourceSchema).max(8),
-    capacitySources: z.array(marketSizingSourceSchema).max(8),
+    sharePercent: somShareRangeSchema,
+    shareSources: z.array(marketSizingSourceSchema).min(1).max(8),
     ...evidenceMeta
   }),
   beachhead: z.object({
     status: z.enum(["estimated", "insufficient_evidence"]),
     segment: z.string().min(1).max(300),
-    customerCount: rangeSchema.nullable(),
-    annualRevenuePerCustomer: rangeSchema.nullable(),
-    customerCountSources: z.array(marketSizingSourceSchema).max(8),
-    annualRevenuePerCustomerSources: z.array(marketSizingSourceSchema).max(8),
+    shareOfSam: factorRangeSchema,
+    shareSources: z.array(marketSizingSourceSchema).min(1).max(8),
     cohesion: z.object({
       buysSimilarProducts: z.boolean(),
       similarSalesCycle: z.boolean(),
@@ -141,52 +109,6 @@ export const marketSizingEvidenceSchema = z.object({
 
 export type MarketSizingEvidence = z.infer<typeof marketSizingEvidenceSchema>;
 type Range = z.infer<typeof rangeSchema>;
-
-export const founderSizingOverridesSchema = z.object({
-  tamCustomerCount: rangeSchema.nullable(),
-  tamAnnualRevenuePerCustomer: rangeSchema.nullable(),
-  somCapacityRevenue: rangeSchema.nullable(),
-  beachheadCustomerCount: rangeSchema.nullable(),
-  beachheadAnnualRevenuePerCustomer: rangeSchema.nullable()
-});
-
-export function mergeFounderSizingOverrides(
-  evidence: MarketSizingEvidence,
-  overrides: z.infer<typeof founderSizingOverridesSchema>,
-  checkedAt: string,
-  locale: Locale
-) {
-  const result = structuredClone(evidence);
-  const source = {
-    title: locale === "en" ? "Founder input" : "창업자 입력",
-    url: null,
-    publisher: locale === "en" ? "Founder" : "창업자",
-    publishedAt: null,
-    checkedAt,
-    kind: "founder_input" as const
-  };
-  if (overrides.tamCustomerCount) {
-    result.tam.bottomUp.customerCount = overrides.tamCustomerCount;
-    result.tam.bottomUp.customerCountSources = [source];
-  }
-  if (overrides.tamAnnualRevenuePerCustomer) {
-    result.tam.bottomUp.annualRevenuePerCustomer = overrides.tamAnnualRevenuePerCustomer;
-    result.tam.bottomUp.annualRevenuePerCustomerSources = [source];
-  }
-  if (overrides.somCapacityRevenue) {
-    result.som.capacityRevenue = overrides.somCapacityRevenue;
-    result.som.capacitySources = [source];
-  }
-  if (overrides.beachheadCustomerCount) {
-    result.beachhead.customerCount = overrides.beachheadCustomerCount;
-    result.beachhead.customerCountSources = [source];
-  }
-  if (overrides.beachheadAnnualRevenuePerCustomer) {
-    result.beachhead.annualRevenuePerCustomer = overrides.beachheadAnnualRevenuePerCustomer;
-    result.beachhead.annualRevenuePerCustomerSources = [source];
-  }
-  return result;
-}
 
 export function validateMarketSizingEvidence(evidence: MarketSizingEvidence) {
   const issues = { tam: [] as string[], sam: [] as string[], som: [] as string[], beachhead: [] as string[] };
@@ -208,47 +130,8 @@ export function validateMarketSizingEvidence(evidence: MarketSizingEvidence) {
       }
     });
   };
-  const scenarioKeys = evidence.scenarioAnalysis.scenarios.map((scenario) => scenario.key);
-  if (new Set(scenarioKeys).size !== 3 || !["A", "B", "C"].every((key) => scenarioKeys.includes(key as "A" | "B" | "C"))) {
-    issues.tam.push("ICP scenario analysis requires unique A, B, and C scenarios.");
-  }
-  const selectedScenario = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === evidence.scenarioAnalysis.selectedScenario);
-  if (!selectedScenario || selectedScenario.recommendation !== "selected" || evidence.scenarioAnalysis.scenarios.filter((scenario) => scenario.recommendation === "selected").length !== 1) {
-    issues.tam.push("ICP scenario analysis requires exactly one selected A or B scenario.");
-  }
-  const scenarioA = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === "A");
-  const scenarioB = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === "B");
-  const scenarioC = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === "C");
-  if (scenarioA && scenarioB && scenarioA.country.normalize("NFKC").trim().toLowerCase() !== scenarioB.country.normalize("NFKC").trim().toLowerCase()) {
-    issues.tam.push("Scenario A and B must use the same country.");
-  }
-  if (scenarioA && scenarioC && scenarioA.country.normalize("NFKC").trim().toLowerCase() === scenarioC.country.normalize("NFKC").trim().toLowerCase()) {
-    issues.tam.push("Scenario C must use an alternate country.");
-  }
-  for (const scenario of evidence.scenarioAnalysis.scenarios) {
-    const kinds = scenario.filters.map((filter) => filter.kind);
-    if (new Set(kinds).size !== 5) issues.tam.push(`Scenario ${scenario.key} requires one demographic, employment, income, behavior, and channel stage.`);
-    const inactiveCount = scenario.filters.filter((filter) => !filter.active).length;
-    if ((scenario.key === "B" && inactiveCount !== 1) || (scenario.key !== "B" && inactiveCount !== 0)) {
-      issues.tam.push(`Scenario ${scenario.key} has an invalid active-filter pattern.`);
-    }
-    if (scenario.key === "B" && scenarioA) {
-      const removed = scenario.filters.find((filter) => !filter.active);
-      const original = scenarioA.filters.find((filter) => filter.kind === removed?.kind);
-      if (!removed || !original || original.factor.base >= 1) issues.tam.push("Scenario B must remove a restrictive Scenario A filter.");
-    }
-    requireSources(scenario.startingPopulationSources, `Scenario ${scenario.key} starting population`, "tam");
-    scenario.filters.forEach((filter) => requireSources(filter.sources, `Scenario ${scenario.key} filter ${filter.name}`, "tam"));
-    requireSources(scenario.annualRevenuePerCustomerSources, `Scenario ${scenario.key} annual revenue per customer`, "tam");
-  }
-  if (evidence.tam.bottomUp.customerCount || evidence.tam.bottomUp.annualRevenuePerCustomer || evidence.tam.topDownPaths.length > 0) {
-    if (evidence.tam.bottomUp.customerCount) {
-      requireSources(evidence.tam.bottomUp.customerCountSources, "TAM customer count", "tam");
-    }
-    if (evidence.tam.bottomUp.annualRevenuePerCustomer) {
-      requireSources(evidence.tam.bottomUp.annualRevenuePerCustomerSources, "TAM annual revenue per customer", "tam");
-    }
-    evidence.tam.topDownPaths.forEach((path) => requireSources(path.sources, `TAM top-down path ${path.name}`, "tam"));
+  evidence.tam.topDownPaths.forEach((path) => requireSources(path.sources, `TAM top-down path ${path.name}`, "tam"));
+  if (evidence.tam.topDownPaths.length === 2) {
     const factUrls = evidence.tam.topDownPaths.map((path) =>
       path.sources.find((source) => source.kind === "fact" && source.url)?.url
     );
@@ -264,25 +147,13 @@ export function validateMarketSizingEvidence(evidence: MarketSizingEvidence) {
       issues.tam.push("Each TAM top-down path requires an independent public fact URL.");
     }
   }
-  if (evidence.sam.filters.length > 0) {
-    evidence.sam.filters.forEach((filter) => requireSources(filter.sources, `SAM filter ${filter.name}`, "sam"));
-    const kinds = new Set(evidence.sam.filters.map((filter) => filter.kind));
-    for (const kind of ["geography", "customer_fit", "channel", "regulatory"] as const) {
-      if (!kinds.has(kind)) issues.sam.push(`SAM requires a ${kind} filter.`);
-    }
+  evidence.sam.filters.forEach((filter) => requireSources(filter.sources, `SAM filter ${filter.name}`, "sam"));
+  const kinds = new Set(evidence.sam.filters.map((filter) => filter.kind));
+  for (const kind of ["geography", "customer_fit", "channel", "regulatory"] as const) {
+    if (!kinds.has(kind)) issues.sam.push(`SAM requires a ${kind} filter.`);
   }
-  if (evidence.som.sharePercent) {
-    requireSources(evidence.som.shareSources, "SOM obtainable share", "som");
-  }
-  if (evidence.som.capacityRevenue) {
-    requireSources(evidence.som.capacitySources, "SOM sales capacity", "som");
-  }
-  if (evidence.beachhead.customerCount) {
-    requireSources(evidence.beachhead.customerCountSources, "Beachhead customer count", "beachhead");
-  }
-  if (evidence.beachhead.annualRevenuePerCustomer) {
-    requireSources(evidence.beachhead.annualRevenuePerCustomerSources, "Beachhead annual revenue per customer", "beachhead");
-  }
+  requireSources(evidence.som.shareSources, "SOM obtainable share", "som");
+  requireSources(evidence.beachhead.shareSources, "Beachhead share of SAM", "beachhead");
   return issues;
 }
 
@@ -335,29 +206,17 @@ function average(ranges: Range[]): Range {
   };
 }
 
-function multiplyFactors(filters: { factor: Range; active?: boolean }[]): Range {
-  return filters.filter((filter) => filter.active !== false).reduce((result, filter) => multiply(result, filter.factor), {
+function multiplyFactors(filters: { factor: Range }[]): Range {
+  return filters.reduce((result, filter) => multiply(result, filter.factor), {
     low: 1,
     base: 1,
     high: 1
   });
 }
 
-function scenarioCustomerCount(scenario: MarketSizingEvidence["scenarioAnalysis"]["scenarios"][number]): Range {
-  return multiply(scenario.startingPopulation, multiplyFactors(scenario.filters));
-}
-
-export function marketSizingScenarioMatchesCountry(evidence: MarketSizingEvidence, targetCountry: string) {
-  const selected = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === evidence.scenarioAnalysis.selectedScenario);
-  return Boolean(selected && selected.country.normalize("NFKC").trim().toLowerCase() === targetCountry.normalize("NFKC").trim().toLowerCase());
-}
-
-function minRange(left: Range, right: Range): Range {
-  return {
-    low: Math.min(left.low, right.low),
-    base: Math.min(left.base, right.base),
-    high: Math.min(left.high, right.high)
-  };
+export function marketSizingMatchesCountry(evidence: MarketSizingEvidence, targetCountry: string) {
+  return evidence.targetCountry.normalize("NFKC").trim().toLowerCase() ===
+    targetCountry.normalize("NFKC").trim().toLowerCase();
 }
 
 function assertOrderedRange(range: Range) {
@@ -426,117 +285,47 @@ export function calculateMarketSizing(
 ): GtmMarketSizingEntry[] {
   const sourceIssues = validateMarketSizingEvidence(evidence);
   [
-    ...evidence.scenarioAnalysis.scenarios.flatMap((scenario) => [
-      scenario.startingPopulation,
-      ...scenario.filters.map((filter) => filter.factor),
-      scenario.annualRevenuePerCustomer
-    ]),
-    evidence.tam.bottomUp.customerCount,
-    evidence.tam.bottomUp.annualRevenuePerCustomer,
     ...evidence.tam.topDownPaths.map((path) => path.range),
     ...evidence.sam.filters.map((filter) => filter.factor),
     evidence.som.sharePercent,
-    evidence.som.capacityRevenue,
-    evidence.beachhead.customerCount,
-    evidence.beachhead.annualRevenuePerCustomer
-  ].filter((range): range is Range => Boolean(range)).forEach(assertOrderedRange);
-  const selectedScenario = evidence.scenarioAnalysis.scenarios.find((scenario) => scenario.key === evidence.scenarioAnalysis.selectedScenario);
-  const founderCustomerCount = evidence.tam.bottomUp.customerCountSources.some((source) => source.kind === "founder_input")
-    ? evidence.tam.bottomUp.customerCount : null;
-  const founderAnnualRevenue = evidence.tam.bottomUp.annualRevenuePerCustomerSources.some((source) => source.kind === "founder_input")
-    ? evidence.tam.bottomUp.annualRevenuePerCustomer : null;
-  const derivedCustomerCount = selectedScenario ? scenarioCustomerCount(selectedScenario) : null;
-  const bottomUpCustomerCount = founderCustomerCount ?? derivedCustomerCount;
-  const bottomUpAnnualRevenue = founderAnnualRevenue ?? selectedScenario?.annualRevenuePerCustomer ?? null;
-  const bottomUp = bottomUpCustomerCount && bottomUpAnnualRevenue
-    ? multiply(bottomUpCustomerCount, bottomUpAnnualRevenue)
-    : null;
-  const topDown = evidence.tam.topDownPaths.length > 0
+    evidence.beachhead.shareOfSam
+  ].forEach(assertOrderedRange);
+  const topDown = evidence.tam.topDownPaths.length === 2
     ? average(evidence.tam.topDownPaths.map((path) => path.range))
-    : null;
-  const varianceDenominator = bottomUp && topDown ? (bottomUp.base + topDown.base) / 2 : 0;
-  const variance = bottomUp && topDown && varianceDenominator > 0
-    ? Math.abs(bottomUp.base - topDown.base) / varianceDenominator * 100
     : null;
   const topDownFactUrls = evidence.tam.topDownPaths.map((path) => path.sources.find((source) =>
     source.kind === "fact" && source.url && isRecent(source, evidence.referenceYear)
   )?.url);
   const topDownIsCurrent = topDownFactUrls.length === 2 && topDownFactUrls.every(Boolean) && new Set(topDownFactUrls).size === 2;
-  const tamBlocked = sourceIssues.tam.length > 0 || (bottomUp !== null && bottomUp.base <= 0) ||
-    !topDown || topDown.base <= 0 || !topDownIsCurrent ||
-    (variance !== null && variance > 100);
-  const tamRange = tamBlocked ? null : bottomUp ? average([bottomUp, topDown]) : topDown;
-  const samRange = !tamRange || sourceIssues.sam.length > 0 || evidence.sam.filters.length === 0
+  const tamRange = sourceIssues.tam.length > 0 || !topDown || topDown.base <= 0 || !topDownIsCurrent ? null : topDown;
+  const samRange = !tamRange || sourceIssues.sam.length > 0
     ? null
     : multiply(tamRange, multiplyFactors(evidence.sam.filters));
-  const demandSom = samRange && evidence.som.sharePercent
+  const somRange = samRange && sourceIssues.som.length === 0
     ? multiply(samRange, {
         low: evidence.som.sharePercent.low / 100,
         base: evidence.som.sharePercent.base / 100,
         high: evidence.som.sharePercent.high / 100
       })
     : null;
-  const somRange = sourceIssues.som.length > 0 || !demandSom || !evidence.som.capacityRevenue
-    ? null
-    : minRange(demandSom, evidence.som.capacityRevenue);
   const beachheadCohesive = evidence.beachhead.cohesion.buysSimilarProducts &&
     evidence.beachhead.cohesion.similarSalesCycle && evidence.beachhead.cohesion.wordOfMouthPotential;
-  const beachheadRange = sourceIssues.beachhead.length === 0 && beachheadCohesive &&
-      evidence.beachhead.customerCount && evidence.beachhead.annualRevenuePerCustomer && evidence.beachhead.expansionPath.length > 0
-    ? multiply(evidence.beachhead.customerCount, evidence.beachhead.annualRevenuePerCustomer)
+  const beachheadRange = samRange && sourceIssues.beachhead.length === 0 && beachheadCohesive && evidence.beachhead.expansionPath.length > 0
+    ? multiply(samRange, evidence.beachhead.shareOfSam)
     : null;
-  const tamSources = uniqueSources([
-    ...evidence.scenarioAnalysis.scenarios.flatMap((scenario) => [
-      ...scenario.startingPopulationSources,
-      ...scenario.filters.flatMap((filter) => filter.sources),
-      ...scenario.annualRevenuePerCustomerSources
-    ]),
-    ...evidence.tam.bottomUp.customerCountSources,
-    ...evidence.tam.bottomUp.annualRevenuePerCustomerSources,
-    ...evidence.tam.topDownPaths.flatMap((path) => path.sources)
-  ]);
-  const confidence: GtmMarketSizingEntry["confidence"] = !tamRange || variance === null || !topDownIsCurrent
-    ? "low"
-    : variance <= 20 && evidence.tam.topDownPaths.length === 2 ? "high" : variance <= 20 ? "medium" : "low";
-  const varianceMessage = variance === null
-    ? []
-    : [locale === "en"
-        ? `top-down/bottom-up variance ${variance.toFixed(1)}%`
-        : `하향식·상향식 편차 ${variance.toFixed(1)}%`];
+  const tamSources = uniqueSources(evidence.tam.topDownPaths.flatMap((path) => path.sources));
+  const confidence: GtmMarketSizingEntry["confidence"] = tamRange ? "high" : "low";
   const sourceRecencyMessage = [locale === "en"
     ? `recent-source gate ${topDownIsCurrent ? "passed" : "needs review"}`
     : `최근 3년 자료 검증 ${topDownIsCurrent ? "통과" : "재검토 필요"}`];
-  const scenarioValidation = selectedScenario
-    ? [locale === "en"
-        ? `Selected ICP scenario ${selectedScenario.key} · ${evidence.scenarioAnalysis.decisionVariable}`
-        : `선택 ICP 시나리오 ${selectedScenario.key} · ${evidence.scenarioAnalysis.decisionVariable}`]
-    : [];
-  const scenarioAssumptions = evidence.scenarioAnalysis.scenarios
-    .filter((scenario) => scenario.key !== evidence.scenarioAnalysis.selectedScenario)
-    .map((scenario) => {
-      const scenarioTam = multiply(scenarioCustomerCount(scenario), scenario.annualRevenuePerCustomer);
-      return `Scenario ${scenario.key} TAM ${estimate(scenarioTam, evidence.currency, locale)}: ${scenario.definition} — ${scenario.rationale}`;
-    });
-  const bottomUpFormula = selectedScenario
-    ? [
-        founderCustomerCount ? (locale === "en" ? "founder customer count" : "창업자 입력 고객 수") : (locale === "en" ? `Scenario ${selectedScenario.key} starting population` : `시나리오 ${selectedScenario.key} 시작 인구`),
-        ...(!founderCustomerCount ? selectedScenario.filters.filter((filter) => filter.active).map((filter) => filter.name) : []),
-        founderAnnualRevenue ? (locale === "en" ? "founder annual revenue per customer" : "창업자 입력 연간 고객당 매출") : (locale === "en" ? "annual category revenue per customer" : "연간 카테고리 고객당 매출")
-      ].join(" × ")
-    : locale === "en" ? "Public customer count × annual revenue per customer" : "공개 고객 수 × 연간 고객당 매출";
   const tamGaps = [
     ...evidence.tam.evidenceGaps,
     ...(locale === "en" ? sourceIssues.tam : sourceIssues.tam.map(() => "수치 입력의 근거 URL·발행일·최근 3년 자료를 확인해 주세요.")),
-    ...(!bottomUp ? [locale === "en" ? "Countable customers and annual revenue per customer" : "직접 산정 가능한 고객 수와 연간 고객당 매출"] : []),
-    ...(bottomUp && bottomUp.base <= 0 ? [locale === "en" ? "Positive bottom-up base values" : "0보다 큰 상향식 기준값"] : []),
-    ...(!topDownIsCurrent ? [locale === "en" ? "Two independent public top-down sources from the last three years" : "최근 3년 이내의 독립적인 하향식 공개 근거 2개"] : []),
-    ...(variance !== null && variance > 100 ? [locale === "en" ? "Reconcile the market definition before publishing" : "시장 정의를 재검토한 뒤 다시 산정"] : [])
+    ...(!topDownIsCurrent ? [locale === "en" ? "Two independent public Top-Down sources from the last three years" : "최근 3년 이내의 독립적인 Top-Down 공개 근거 2개"] : [])
   ];
   const beachheadGaps = [
     ...evidence.beachhead.evidenceGaps,
-    ...(locale === "en" ? sourceIssues.beachhead : sourceIssues.beachhead.map(() => "교두보 시장 고객 수·고객당 매출의 최신 근거를 확인해 주세요.")),
-    ...(!evidence.beachhead.customerCount ? [locale === "en" ? "Directly reachable first-segment customer count" : "직접 접근 가능한 최초 고객군 수"] : []),
-    ...(!evidence.beachhead.annualRevenuePerCustomer ? [locale === "en" ? "Annual revenue per Beachhead customer" : "교두보 고객당 연간 매출"] : []),
+    ...(locale === "en" ? sourceIssues.beachhead : sourceIssues.beachhead.map(() => "교두보 시장 비중의 최신 근거를 확인해 주세요.")),
     ...(!beachheadCohesive ? [locale === "en" ? "Verify all three Beachhead cohesion conditions" : "교두보 시장의 세 가지 응집성 조건 검증"] : []),
     ...(evidence.beachhead.expansionPath.length === 0 ? [locale === "en" ? "Adjacent-market expansion path" : "인접시장 확장 경로"] : [])
   ];
@@ -547,26 +336,15 @@ export function calculateMarketSizing(
       label: "TAM",
       status: tamRange ? "estimated" : "insufficient_evidence",
       range: tamRange,
-      method: topDown ? "triangulated" : "bottom_up",
-      formula: bottomUp
-        ? bottomUpFormula
-        : locale === "en"
-          ? "Triangulated range from two independent recent public market paths"
-          : "최근 공개자료의 독립적인 시장 경로 2개를 교차검증한 범위",
-      calculationInputs: [
-        ...(selectedScenario && !founderCustomerCount ? [{ name: locale === "en" ? `Scenario ${selectedScenario.key} starting population` : `시나리오 ${selectedScenario.key} 시작 인구`, ...selectedScenario.startingPopulation, unit: locale === "en" ? "count" : "명", sourceTitles: selectedScenario.startingPopulationSources.map((source) => source.title), sources: selectedScenario.startingPopulationSources }] : []),
-        ...(selectedScenario && !founderCustomerCount ? selectedScenario.filters.filter((filter) => filter.active).map((filter) => ({ name: filter.name, ...filter.factor, unit: "ratio", sourceTitles: filter.sources.map((source) => source.title), sources: filter.sources })) : []),
-        ...(selectedScenario && !founderAnnualRevenue ? [{ name: locale === "en" ? `Scenario ${selectedScenario.key} annual revenue per customer` : `시나리오 ${selectedScenario.key} 연간 고객당 매출`, ...selectedScenario.annualRevenuePerCustomer, unit: `${evidence.currency}/${locale === "en" ? "year" : "년"}`, sourceTitles: selectedScenario.annualRevenuePerCustomerSources.map((source) => source.title), sources: selectedScenario.annualRevenuePerCustomerSources }] : []),
-        ...(founderCustomerCount ? [{ name: locale === "en" ? "Founder customer/end-user count" : "창업자 입력 고객·최종사용자 수", ...founderCustomerCount, unit: locale === "en" ? "count" : "개", sourceTitles: evidence.tam.bottomUp.customerCountSources.map((source) => source.title), sources: evidence.tam.bottomUp.customerCountSources }] : []),
-        ...(founderAnnualRevenue ? [{ name: locale === "en" ? "Founder annual revenue per customer" : "창업자 입력 연간 고객당 매출", ...founderAnnualRevenue, unit: `${evidence.currency}/${locale === "en" ? "year" : "년"}`, sourceTitles: evidence.tam.bottomUp.annualRevenuePerCustomerSources.map((source) => source.title), sources: evidence.tam.bottomUp.annualRevenuePerCustomerSources }] : []),
-        ...evidence.tam.topDownPaths.map((path) => ({ name: path.name, ...path.range, unit: `${evidence.currency}/year`, sourceTitles: path.sources.map((source) => source.title), sources: path.sources }))
-      ],
-      assumptions: [...evidence.tam.assumptions, ...scenarioAssumptions],
+      method: "top_down",
+      formula: locale === "en" ? "Average of two independent recent public market-revenue paths" : "최근 독립 공개자료 기반 시장매출 경로 2개의 평균",
+      calculationInputs: evidence.tam.topDownPaths.map((path) => ({ name: path.name, ...path.range, unit: `${evidence.currency}/year`, sourceTitles: path.sources.map((source) => source.title), sources: path.sources })),
+      assumptions: evidence.tam.assumptions,
       sources: tamSources,
       confidence,
       evidenceGaps: [...new Set(tamGaps)],
       sensitivityDrivers: evidence.tam.sensitivityDrivers,
-      validation: [...varianceMessage, ...sourceRecencyMessage, ...scenarioValidation],
+      validation: sourceRecencyMessage,
       cohesion: null,
       expansionPath: []
     }, evidence, locale),
@@ -575,7 +353,7 @@ export function calculateMarketSizing(
       label: "SAM",
       status: samRange ? "estimated" : "insufficient_evidence",
       range: samRange,
-      method: "bottom_up",
+      method: "top_down",
       formula: `TAM × ${evidence.sam.filters.map((filter) => filter.name).join(" × ")}`,
       calculationInputs: evidence.sam.filters.map((filter) => ({ name: filter.name, ...filter.factor, unit: "ratio", sourceTitles: filter.sources.map((source) => source.title), sources: filter.sources })),
       assumptions: [evidence.sam.regulationPrerequisite, ...evidence.sam.assumptions].filter(Boolean),
@@ -593,14 +371,11 @@ export function calculateMarketSizing(
       label: "SOM",
       status: somRange ? "estimated" : "insufficient_evidence",
       range: somRange,
-      method: "bottom_up",
-      formula: locale === "en" ? `min(SAM × obtainable share, ${evidence.som.horizonYears}-year sales capacity)` : `SAM × 획득 가능 점유율과 ${evidence.som.horizonYears}년 판매 역량 중 작은 값`,
-      calculationInputs: [
-        ...(evidence.som.sharePercent ? [{ name: locale === "en" ? "Obtainable share" : "획득 가능 점유율", ...evidence.som.sharePercent, unit: "%", sourceTitles: evidence.som.shareSources.map((source) => source.title), sources: evidence.som.shareSources }] : []),
-        ...(evidence.som.capacityRevenue ? [{ name: locale === "en" ? `${evidence.som.horizonYears}-year sales capacity` : `${evidence.som.horizonYears}년 판매 역량`, ...evidence.som.capacityRevenue, unit: evidence.currency, sourceTitles: evidence.som.capacitySources.map((source) => source.title), sources: evidence.som.capacitySources }] : [])
-      ],
+      method: "top_down",
+      formula: locale === "en" ? `SAM × public ${evidence.som.horizonYears}-year obtainable-share benchmark` : `SAM × 공개자료 기반 ${evidence.som.horizonYears}년 획득 가능 점유율`,
+      calculationInputs: [{ name: locale === "en" ? "Obtainable share" : "획득 가능 점유율", ...evidence.som.sharePercent, unit: "%", sourceTitles: evidence.som.shareSources.map((source) => source.title), sources: evidence.som.shareSources }],
       assumptions: evidence.som.assumptions,
-      sources: uniqueSources([...evidence.som.shareSources, ...evidence.som.capacitySources]),
+      sources: uniqueSources(evidence.som.shareSources),
       confidence: somRange ? confidence : "low",
       evidenceGaps: [...new Set([...evidence.som.evidenceGaps, ...(locale === "en" ? sourceIssues.som : sourceIssues.som.map(() => "SOM 점유율·판매 역량의 최신 근거를 확인해 주세요.")), ...(!samRange ? [locale === "en" ? "Validated SAM" : "검증된 SAM"] : [])])],
       sensitivityDrivers: evidence.som.sensitivityDrivers,
@@ -614,22 +389,16 @@ export function calculateMarketSizing(
       label: "Beachhead Market",
       status: beachheadRange ? "estimated" : "insufficient_evidence",
       range: beachheadRange,
-      method: "bottom_up",
-      formula: locale === "en" ? "Directly reachable first-segment customers × annual revenue per customer" : "직접 접근 가능한 최초 고객 수 × 연간 고객당 매출",
-      calculationInputs: [
-        ...(evidence.beachhead.customerCount ? [{ name: evidence.beachhead.segment, ...evidence.beachhead.customerCount, unit: locale === "en" ? "count" : "개", sourceTitles: evidence.beachhead.customerCountSources.map((source) => source.title), sources: evidence.beachhead.customerCountSources }] : []),
-        ...(evidence.beachhead.annualRevenuePerCustomer ? [{ name: locale === "en" ? "Annual revenue per customer" : "연간 고객당 매출", ...evidence.beachhead.annualRevenuePerCustomer, unit: `${evidence.currency}/${locale === "en" ? "year" : "년"}`, sourceTitles: evidence.beachhead.annualRevenuePerCustomerSources.map((source) => source.title), sources: evidence.beachhead.annualRevenuePerCustomerSources }] : [])
-      ],
+      method: "top_down",
+      formula: locale === "en" ? "SAM × sourced share of the first cohesive segment" : "SAM × 근거가 확인된 최초 응집 고객군 비중",
+      calculationInputs: [{ name: evidence.beachhead.segment, ...evidence.beachhead.shareOfSam, unit: "ratio", sourceTitles: evidence.beachhead.shareSources.map((source) => source.title), sources: evidence.beachhead.shareSources }],
       assumptions: evidence.beachhead.assumptions,
-      sources: uniqueSources([...evidence.beachhead.customerCountSources, ...evidence.beachhead.annualRevenuePerCustomerSources]),
+      sources: uniqueSources(evidence.beachhead.shareSources),
       confidence: beachheadRange ? "medium" : "low",
       evidenceGaps: [...new Set(beachheadGaps)],
       sensitivityDrivers: evidence.beachhead.sensitivityDrivers,
-      validation: beachheadRange && beachheadRange.base < 5_000_000
-        ? [locale === "en"
-            ? "Beachhead is below the US$5 million planning benchmark; treat this as a warning, not a hard rejection."
-            : "교두보 시장이 US$5 million 기획 기준보다 작습니다. 탈락 조건이 아닌 경고로 해석하세요."]
-        : [],
+      validation: beachheadRange && samRange && beachheadRange.high <= samRange.high
+        ? [locale === "en" ? "SAM ≥ Beachhead hierarchy passed" : "SAM ≥ 교두보 시장 계층 검증 통과"] : [],
       cohesion: evidence.beachhead.cohesion,
       expansionPath: evidence.beachhead.expansionPath
     }, evidence, locale)
@@ -819,8 +588,8 @@ export function normalizeMarketResearch(value: unknown): GtmMarketResearch | nul
     researchMethodologyVersion: research.researchMethodologyVersion === "market-research-v2"
       ? "market-research-v2" : "legacy",
     marketSizing,
-    marketSizingMethodologyVersion: ["market-sizing-v1", "market-sizing-v2"].includes(String(research.marketSizingMethodologyVersion))
-      ? research.marketSizingMethodologyVersion as "market-sizing-v1" | "market-sizing-v2" : "legacy",
+    marketSizingMethodologyVersion: ["market-sizing-v3-top-down", "market-sizing-v2", "market-sizing-v1"].includes(String(research.marketSizingMethodologyVersion))
+      ? research.marketSizingMethodologyVersion as GtmMarketResearch["marketSizingMethodologyVersion"] : "legacy",
     marketDefinition: research.marketDefinition && typeof research.marketDefinition === "object"
       ? research.marketDefinition as GtmMarketResearch["marketDefinition"]
       : { included: "", excluded: "", annualRevenueUnit: "" },

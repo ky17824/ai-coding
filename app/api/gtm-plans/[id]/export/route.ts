@@ -171,7 +171,11 @@ export async function GET(
 
   const marketSizes = research.marketSizing.map((entry) => {
     const title = entry.key === "beachhead" ? (en ? "Beachhead Market" : "교두보 시장(Beachhead Market)") : entry.label;
-    const method = entry.method === "triangulated" ? (en ? "triangulated" : "상향식·하향식 교차검증") : (en ? "bottom up" : "상향식");
+    const method = entry.method === "top_down"
+      ? (en ? "Top-Down · public-evidence estimate" : "Top-Down · 공개자료 기반 하향식 추정")
+      : entry.method === "triangulated"
+        ? (en ? "triangulated" : "상향식·하향식 교차검증")
+        : (en ? "bottom up" : "상향식");
     const confidence = en ? entry.confidence : ({ high: "높음", medium: "보통", low: "낮음" }[entry.confidence]);
     const status = entry.status === "estimated" ? (en ? "Estimated" : "추정치") : (en ? "Insufficient evidence" : "근거 부족");
     const sources = entry.sources.length > 0

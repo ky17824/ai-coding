@@ -145,6 +145,16 @@ describe("market report citations", () => {
     expect(insufficientCard.match(/근거 한계/g)).toHaveLength(1);
   });
 
+  it("labels Top-Down market-size estimates in the report", async () => {
+    setReportPlan({ marketSizing: [{
+      key: "tam", label: "TAM", status: "estimated", estimate: "₩1조", range: null,
+      method: "top_down", formula: "공개 시장자료 경로 2개 평균", calculationInputs: [], assumptions: [],
+      sources: [], confidence: "medium", evidenceGaps: [], sensitivityDrivers: [], validation: [], cohesion: null, expansionPath: []
+    }] });
+
+    expect(await (await get()).text()).toContain("Top-Down · 공개자료 기반 하향식 추정");
+  });
+
   it("renders 40 unique references without leaking or duplicating source URLs", async () => {
     const sources = Array.from({ length: 40 }, (_, index) => ({
       title: `Source ${index + 1}`,

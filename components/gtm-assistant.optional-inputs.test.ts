@@ -40,4 +40,9 @@ describe("AI GTM assistant optional early-stage inputs", () => {
     expect(source).toContain('role={researchError ? "alert" : "status"}');
     expect(source).toContain("다시 조사");
   });
+
+  it("labels Top-Down market-size estimates in both languages", () => {
+    expect(source).toContain("Top-Down · 공개자료 기반 하향식 추정");
+    expect(source).toContain("Top-Down · public-evidence estimate");
+  });
 });

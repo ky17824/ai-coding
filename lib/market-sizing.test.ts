@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMarketResearchCoverage, calculateMarketSizing, getMissingMarketSizingInputs, marketResearchContextSignature, marketSizingEvidenceSchema, marketSizingScenarioMatchesCountry, mergeFounderSizingOverrides, normalizeMarketResearch, type MarketSizingEvidence } from "./market-sizing";
+import { buildMarketResearchCoverage, calculateMarketSizing, getMissingMarketSizingInputs, marketResearchContextSignature, marketSizingEvidenceSchema, marketSizingMatchesCountry, normalizeMarketResearch, type MarketSizingEvidence } from "./market-sizing";
 import type { GtmMarketCompetitor, GtmMarketTrend, GtmResearchSource } from "./types";
 
 const range = (low: number, base: number, high: number) => ({ low, base, high });
@@ -12,18 +12,10 @@ const source = {
   kind: "fact" as const
 };
 const source2 = { ...source, title: "Independent market data", url: "https://example.org/market", publisher: "Independent Statistics" };
-const filterKinds = ["demographic", "employment", "income", "behavior", "channel"] as const;
-const scenarioFilters = (inactive?: (typeof filterKinds)[number]) => filterKinds.map((kind) => ({
-  kind,
-  name: kind,
-  active: kind !== inactive,
-  factor: kind === "demographic" ? range(0.5, 0.5, 0.5) : range(1, 1, 1),
-  sources: [source]
-}));
-
 function evidence(): MarketSizingEvidence {
   return {
-    methodologyVersion: "market-sizing-v2" as const,
+    methodologyVersion: "market-sizing-v3-top-down" as const,
+    targetCountry: "Singapore",
     currency: "USD",
     referenceYear: 2026,
     marketDefinition: {
@@ -31,57 +23,8 @@ function evidence(): MarketSizingEvidence {
       excluded: "Unrelated categories",
       annualRevenueUnit: "Annual customer spend"
     },
-    scenarioAnalysis: {
-      decisionVariable: "Income threshold",
-      selectedScenario: "A" as const,
-      scenarios: [
-        {
-          key: "A" as const,
-          country: "Singapore",
-          definition: "Founder ICP",
-          startingPopulation: range(1800, 2000, 2200),
-          startingPopulationSources: [source],
-          filters: scenarioFilters(),
-          annualRevenuePerCustomer: range(900, 1000, 1100),
-          annualRevenuePerCustomerSources: [source],
-          recommendation: "selected" as const,
-          rationale: "Matches the founder target"
-        },
-        {
-          key: "B" as const,
-          country: "Singapore",
-          definition: "Broader ICP",
-          startingPopulation: range(1800, 2000, 2200),
-          startingPopulationSources: [source],
-          filters: scenarioFilters("demographic"),
-          annualRevenuePerCustomer: range(850, 950, 1050),
-          annualRevenuePerCustomerSources: [source],
-          recommendation: "review" as const,
-          rationale: "Tests removal of the income threshold"
-        },
-        {
-          key: "C" as const,
-          country: "Malaysia",
-          definition: "Same ICP in an alternate market",
-          startingPopulation: range(3000, 3500, 4000),
-          startingPopulationSources: [source],
-          filters: scenarioFilters(),
-          annualRevenuePerCustomer: range(700, 800, 900),
-          annualRevenuePerCustomerSources: [source],
-          recommendation: "review" as const,
-          rationale: "Tests a larger nearby market"
-        }
-      ]
-    },
     tam: {
       status: "estimated" as const,
-      bottomUp: {
-        customerCount: range(900, 1000, 1100),
-        annualRevenuePerCustomer: range(900, 1000, 1100),
-        formula: "Customer count × annual revenue per customer",
-        customerCountSources: [source],
-        annualRevenuePerCustomerSources: [source]
-      },
       topDownPaths: [{
         name: "Country category revenue A",
         range: range(900_000, 950_000, 1_050_000),
@@ -96,7 +39,7 @@ function evidence(): MarketSizingEvidence {
       cagrPercent: range(5, 7, 9),
       assumptions: [],
       evidenceGaps: [],
-      sensitivityDrivers: ["Customer count"]
+      sensitivityDrivers: ["Published market range"]
     },
     sam: {
       status: "estimated" as const,
@@ -120,20 +63,16 @@ function evidence(): MarketSizingEvidence {
       status: "estimated" as const,
       horizonYears: 3,
       sharePercent: range(1, 3, 5),
-      capacityRevenue: range(10_000, 25_000, 60_000),
       shareSources: [source],
-      capacitySources: [source],
       assumptions: [],
       evidenceGaps: [],
-      sensitivityDrivers: ["Sales capacity"]
+      sensitivityDrivers: ["Obtainable share"]
     },
     beachhead: {
       status: "estimated" as const,
       segment: "Singapore clean-beauty retailers",
-      customerCount: range(20, 25, 30),
-      annualRevenuePerCustomer: range(900, 1000, 1100),
-      customerCountSources: [source],
-      annualRevenuePerCustomerSources: [source],
+      shareOfSam: range(0.1, 0.2, 0.3),
+      shareSources: [source],
       cohesion: {
         buysSimilarProducts: true,
         similarSalesCycle: true,
@@ -143,112 +82,41 @@ function evidence(): MarketSizingEvidence {
       expansionPath: ["Malaysia specialty retail", "ASEAN ecommerce"],
       assumptions: [],
       evidenceGaps: [],
-      sensitivityDrivers: ["Reachable retailer count"]
+      sensitivityDrivers: ["First-segment share"]
     }
   };
 }
 
 describe("market sizing", () => {
-  it("merges only founder overrides without changing public evidence", () => {
-    const input = evidence();
-    const publicTopDown = structuredClone(input.tam.topDownPaths);
-    const merged = mergeFounderSizingOverrides(input, {
-      tamCustomerCount: range(30, 40, 50),
-      tamAnnualRevenuePerCustomer: range(100, 120, 140),
-      somCapacityRevenue: range(5_000, 8_000, 10_000),
-      beachheadCustomerCount: range(10, 20, 30),
-      beachheadAnnualRevenuePerCustomer: range(100, 120, 140)
-    }, "2026-08-13", "en");
-
-    expect(merged.tam.topDownPaths).toEqual(publicTopDown);
-    expect(merged.tam.bottomUp.customerCountSources[0]).toMatchObject({ kind: "founder_input", url: null });
-    expect(merged.som.capacityRevenue?.base).toBe(8_000);
-    expect(input.tam.bottomUp.customerCount?.base).toBe(1_000);
-    const tam = calculateMarketSizing(merged, "en")[0];
-    expect(tam.calculationInputs.some((entry) => entry.name.startsWith("Scenario A"))).toBe(false);
-    expect(tam.calculationInputs.map((entry) => entry.name)).toEqual(expect.arrayContaining([
-      "Founder customer/end-user count", "Founder annual revenue per customer"
-    ]));
-  });
-
-  it("recomputes TAM, SAM, SOM, and a directly counted Beachhead Market", () => {
+  it("recomputes TAM, SAM, SOM, and Beachhead Market using Top-Down evidence only", () => {
     const input = evidence();
     expect(marketSizingEvidenceSchema.safeParse(input).success).toBe(true);
     const result = calculateMarketSizing(input, "en");
 
     expect(result.map((entry) => entry.key)).toEqual(["tam", "sam", "som", "beachhead"]);
-    expect(result[0].range?.base).toBe(975_000);
-    expect(result[1].range?.base).toBe(390_000);
-    expect(result[2].range?.base).toBe(11_700);
-    expect(result[3].range?.base).toBe(25_000);
-    expect(result[0].validation).toContain("top-down/bottom-up variance 5.1%");
-    expect(result[0].calculationInputs).toHaveLength(9);
-    expect(result[3].calculationInputs[0]).toMatchObject({ unit: "count", sourceTitles: ["Official market data"] });
-    expect(result[3].calculationInputs[0].sources[0].url).toBe("https://example.com/market");
-    expect(result[3].validation).toContain("Beachhead is below the US$5 million planning benchmark; treat this as a warning, not a hard rejection.");
+    expect(result.map((entry) => entry.method)).toEqual(["top_down", "top_down", "top_down", "top_down"]);
+    expect(result[0].range).toMatchObject(range(850_000, 950_000, 1_100_000));
+    expect(result[1].range).toMatchObject(range(297_500, 380_000, 495_000));
+    expect(result[2].range).toMatchObject(range(2_975, 11_400, 24_750));
+    expect(result[3].range).toMatchObject(range(29_750, 76_000, 148_500));
+    expect(result.flatMap((entry) => entry.sources).some((entry) => entry.kind === "founder_input")).toBe(false);
   });
 
-  it("derives the selected ICP customer count from structured funnel stages", () => {
+  it("keeps Top-Down evidence in the founder target country", () => {
     const input = evidence();
-    input.tam.bottomUp.customerCount = range(9_000_000, 10_000_000, 11_000_000);
 
-    const result = calculateMarketSizing(input, "en");
-
-    expect(result[0].range?.base).toBe(975_000);
-    expect(result[0].calculationInputs[0]).toMatchObject({ name: "Scenario A starting population", base: 2000 });
-    expect(result[0].assumptions.join(" ")).toContain("Scenario B TAM");
-    expect(result[0].validation).toContain("Selected ICP scenario A · Income threshold");
+    expect(marketSizingMatchesCountry(input, "Singapore")).toBe(true);
+    input.targetCountry = "Malaysia";
+    expect(marketSizingMatchesCountry(input, "Singapore")).toBe(false);
   });
 
-  it("keeps the selected sizing scenario in the founder target country", () => {
-    const input = evidence();
+  it("rejects founder inputs from Top-Down evidence", () => {
+    const input = structuredClone(evidence()) as unknown as {
+      tam: { topDownPaths: Array<{ sources: Array<Record<string, unknown>> }> };
+    };
+    input.tam.topDownPaths[0].sources[0] = { ...source, kind: "founder_input" };
 
-    expect(marketSizingScenarioMatchesCountry(input, "Singapore")).toBe(true);
-    input.scenarioAnalysis.selectedScenario = "B";
-    input.scenarioAnalysis.scenarios[1].country = "Malaysia";
-    expect(marketSizingScenarioMatchesCountry(input, "Singapore")).toBe(false);
-  });
-
-  it("shows only active Scenario B inputs and a server-owned formula", () => {
-    const input = evidence();
-    input.scenarioAnalysis.selectedScenario = "B";
-    input.scenarioAnalysis.scenarios[0].recommendation = "review";
-    input.scenarioAnalysis.scenarios[1].recommendation = "selected";
-    input.tam.bottomUp.formula = "Ignore the ICP funnel and use all buyers";
-
-    const tam = calculateMarketSizing(input, "en")[0];
-
-    expect(tam.formula).not.toContain("Ignore");
-    expect(tam.calculationInputs.some((entry) => entry.name === "demographic")).toBe(false);
-    expect(tam.formula).not.toContain("demographic");
-    expect(tam.formula).toContain("employment × income × behavior × channel");
-  });
-
-  it("caps SOM at the stated operational capacity", () => {
-    const input = evidence();
-    input.som.capacityRevenue = range(5_000, 8_000, 10_000);
-
-    expect(calculateMarketSizing(input, "en")[2].range).toMatchObject({
-      low: 2_905,
-      base: 8_000,
-      high: 10_000
-    });
-  });
-
-  it("uses the public ICP funnel when founder bottom-up inputs are unavailable", () => {
-    const input = evidence();
-    input.tam.bottomUp.customerCount = null;
-    input.tam.bottomUp.annualRevenuePerCustomer = null;
-    input.tam.bottomUp.customerCountSources = [];
-    input.tam.bottomUp.annualRevenuePerCustomerSources = [];
-
-    const result = calculateMarketSizing(input, "en");
-
-    expect(result[0]).toMatchObject({ status: "estimated", range: range(830_000, 975_000, 1_155_000), confidence: "high" });
-    expect(result[0].evidenceGaps).not.toContain("Countable customers and annual revenue per customer");
-    expect(result[1]).toMatchObject({ status: "estimated", range: range(290_500, 390_000, 519_750) });
-    expect(result[2]).toMatchObject({ status: "estimated", range: range(2_905, 11_700, 25_987.5) });
-    expect(result[3].status).toBe("estimated");
+    expect(marketSizingEvidenceSchema.safeParse(input).success).toBe(false);
   });
 
   it("derives estimate status from validated evidence instead of model status flags", () => {
@@ -265,7 +133,7 @@ describe("market sizing", () => {
 
   it("requires two top-down paths and all three Beachhead cohesion checks", () => {
     const input = evidence();
-    input.tam.topDownPaths.pop();
+    input.tam.topDownPaths = [input.tam.topDownPaths[0]] as typeof input.tam.topDownPaths;
     input.beachhead.cohesion.wordOfMouthPotential = false;
 
     const result = calculateMarketSizing(input, "en");
@@ -301,7 +169,7 @@ describe("market sizing", () => {
     const stale = { ...source, publishedAt: "2020-01-01" };
     input.sam.filters[0].sources = [stale];
     input.som.shareSources = [stale];
-    input.beachhead.customerCountSources = [stale];
+    input.beachhead.shareSources = [stale];
 
     const result = calculateMarketSizing(input, "en");
 
@@ -312,32 +180,31 @@ describe("market sizing", () => {
 
   it("applies the same recency gate to sourced proxy assumptions", () => {
     const input = evidence();
-    input.som.capacitySources = [{ ...source, kind: "proxy_assumption", publishedAt: "2020-01-01" }];
+    input.som.shareSources = [{ ...source, kind: "proxy_assumption", publishedAt: "2020-01-01" }];
 
     expect(calculateMarketSizing(input, "en")[2].status).toBe("insufficient_evidence");
   });
 
-  it("rejects incomplete scenario sets and future-dated sizing evidence", () => {
+  it("rejects future-dated sizing evidence", () => {
     const input = evidence();
-    input.scenarioAnalysis.scenarios[2].key = "B";
-    input.scenarioAnalysis.scenarios[0].startingPopulationSources[0] = { ...source, checkedAt: "2099-01-01" };
+    input.tam.topDownPaths[0].sources[0] = { ...source, checkedAt: "2099-01-01" };
 
     const result = calculateMarketSizing(input, "en");
 
     expect(result[0].status).toBe("insufficient_evidence");
-    expect(result[0].evidenceGaps.join(" ")).toContain("A, B, and C");
     expect(result[0].evidenceGaps.join(" ")).toContain("future");
   });
 
-  it("rejects missing ICP stages and impossible calendar dates", () => {
+  it("rejects incomplete SAM filters and impossible calendar dates", () => {
     const input = evidence();
-    input.scenarioAnalysis.scenarios[0].filters[4].kind = "behavior";
-    input.scenarioAnalysis.scenarios[0].startingPopulationSources[0] = { ...source, checkedAt: "2026-99-99" };
+    input.sam.filters.pop();
+    input.tam.topDownPaths[0].sources[0] = { ...source, checkedAt: "2026-99-99" };
 
     const result = calculateMarketSizing(input, "en");
 
     expect(result[0].status).toBe("insufficient_evidence");
-    expect(result[0].evidenceGaps.join(" ")).toContain("demographic, employment, income, behavior, and channel");
+    expect(result[1].status).toBe("insufficient_evidence");
+    expect(result[1].evidenceGaps.join(" ")).toContain("regulatory");
     expect(result[0].evidenceGaps.join(" ")).toContain("valid ISO calendar dates");
   });
 
@@ -397,6 +264,17 @@ describe("market sizing", () => {
       competitors: [{ marketPresence: "global", channels: [], sources: [{ title: "Brand A" }] }],
       researchCoverage: { sourceCount: 2, uniqueDomainCount: 2, competitorCount: 1 }
     });
+  });
+
+  it("preserves the Top-Down methodology when reading saved research", () => {
+    const normalized = normalizeMarketResearch({
+      kind: "market_research",
+      scope: "market_preresearch",
+      marketSizing: [],
+      marketSizingMethodologyVersion: "market-sizing-v3-top-down"
+    });
+
+    expect(normalized?.marketSizingMethodologyVersion).toBe("market-sizing-v3-top-down");
   });
 
   it("marks the eight-lane, diversified research target as covered", () => {

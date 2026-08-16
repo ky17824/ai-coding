@@ -59,9 +59,11 @@ function MarketSizeCard({ entry, en }: { entry: GtmMarketSizingEntry; en: boolea
   const confidence = en
     ? `${entry.confidence} confidence`
     : `신뢰도 ${entry.confidence === "high" ? "높음" : entry.confidence === "medium" ? "보통" : "낮음"}`;
-  const method = entry.method === "triangulated"
-    ? en ? "triangulated" : "상향식·하향식 교차검증"
-    : en ? "bottom up" : "상향식";
+  const method = entry.method === "top_down"
+    ? en ? "Top-Down · public-evidence estimate" : "Top-Down · 공개자료 기반 하향식 추정"
+    : entry.method === "triangulated"
+      ? en ? "triangulated" : "상향식·하향식 교차검증"
+      : en ? "bottom up" : "상향식";
   const sourceKind = (kind: string) => en
     ? kind.replaceAll("_", " ")
     : ({ fact: "공개 사실", founder_input: "창업자 입력", proxy_assumption: "대리 가정" }[kind] ?? kind);

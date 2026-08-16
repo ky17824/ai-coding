@@ -301,7 +301,7 @@ export interface GtmMarketResearch {
   executiveSummary: string;
   trends: GtmMarketTrend[];
   marketSizing: GtmMarketSizingEntry[];
-  marketSizingMethodologyVersion: "market-sizing-v2" | "market-sizing-v1" | "legacy";
+  marketSizingMethodologyVersion: "market-sizing-v3-top-down" | "market-sizing-v2" | "market-sizing-v1" | "legacy";
   marketSizingEvidence?: unknown;
   researchContextSignature: string;
   marketDefinition: {
