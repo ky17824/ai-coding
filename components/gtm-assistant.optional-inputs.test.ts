@@ -41,6 +41,21 @@ describe("AI GTM assistant optional early-stage inputs", () => {
     expect(source).toContain("다시 조사");
   });
 
+  it("turns the hard research limit into report-first next steps", () => {
+    const runResearch = source.slice(source.indexOf("async function runResearch"), source.indexOf("async function uploadResearchFile"));
+    const runWorkshop = source.slice(source.indexOf("async function runWorkshop"), source.indexOf("async function runResearch"));
+    expect(runResearch).toContain('payload.code === "research_limit"');
+    expect(runResearch.match(/showResearchLimit\(\)/g)).toHaveLength(2);
+    expect(runWorkshop).not.toContain('payload.code === "research_limit"');
+    expect(source).toContain("initialResearchLimitReached");
+    expect(runResearch).toContain("if (payload.researchLimitReached) showResearchLimit()");
+    expect(source).toContain("무료 시장·경쟁 사전조사 3회를 모두 사용했습니다.");
+    expect(source).toContain("마지막 시장보고서 보기 ↗");
+    expect(source).toContain("AI 시장조사 전문가 알아보기 →");
+    expect(source).toContain('id="research-limit-options"');
+    expect(source).toContain('role="status"');
+  });
+
   it("labels Top-Down market-size estimates in both languages", () => {
     expect(source).toContain("Top-Down · 공개자료 기반 하향식 추정");
     expect(source).toContain("Top-Down · public-evidence estimate");

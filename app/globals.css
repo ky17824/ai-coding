@@ -3924,6 +3924,72 @@ fieldset.offering-picker {
   color: var(--danger-ink);
 }
 
+.research-limit-options {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-band);
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.research-limit-options:focus-visible {
+  outline: 3px solid rgba(29, 123, 76, 0.25);
+  outline-offset: 2px;
+}
+
+.research-limit-options header,
+.research-limit-options article {
+  display: grid;
+  gap: 12px;
+}
+
+.research-limit-options h3,
+.research-limit-options p,
+.research-limit-options ul {
+  margin: 0;
+}
+
+.research-limit-options__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.research-limit-options article {
+  align-content: start;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.research-limit-options article > strong {
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.research-limit-options article > p,
+.research-limit-options article > ul,
+.research-limit-options article > small,
+.research-limit-options__recovery {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.research-limit-options article > ul {
+  padding-left: 20px;
+}
+
+.research-limit-options article > .button {
+  align-self: end;
+  justify-self: start;
+  margin-top: auto;
+}
+
 .assistant-research {
   display: grid;
   gap: 22px;
@@ -4512,6 +4578,18 @@ h2.plan-summary {
 
   .research-report-cta .assistant-plan-actions,
   .research-report-cta .button {
+    width: 100%;
+  }
+
+  .research-limit-options {
+    padding: 18px;
+  }
+
+  .research-limit-options__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .research-limit-options article > .button {
     width: 100%;
   }
 

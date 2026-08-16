@@ -41,7 +41,18 @@ interface Props {
   initialPlan: StoredGtmPlan | null;
   initialQuestion: GtmAssistantQuestion | null;
   researchUploadsEnabled: boolean;
+  initialResearchLimitReached: boolean;
+  recommendedResearchService?: {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    durationLabel: string;
+    deliverables: string[];
+  } | null;
 }
+
+const won = new Intl.NumberFormat("ko-KR");
 
 function safeExternalUrl(value: string | null) {
   try {
@@ -148,7 +159,7 @@ function coverageGapLabel(gap: string, en: boolean) {
   return labels[gap] ?? gap;
 }
 
-export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion, locale, researchUploadsEnabled }: Props) {
+export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion, locale, researchUploadsEnabled, initialResearchLimitReached, recommendedResearchService }: Props) {
   const en = locale === "en";
   const [planId, setPlanId] = useState(initialPlan?.id ?? "");
   const [planStatus, setPlanStatus] = useState(initialPlan?.status ?? "draft");
@@ -197,6 +208,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
   const [workshopBusy, setWorkshopBusy] = useState(false);
   const [researchElapsedSeconds, setResearchElapsedSeconds] = useState(0);
   const [researchError, setResearchError] = useState("");
+  const [researchLimitReached, setResearchLimitReached] = useState(initialResearchLimitReached);
   const [fileBusy, setFileBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [workshopFailed, setWorkshopFailed] = useState(false);
@@ -217,6 +229,11 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
     : researchElapsedSeconds < 150
       ? en ? "Comparing sources and calculating the market range…" : "근거를 교차검증하고 시장 범위를 계산하고 있습니다…"
       : en ? "Finalizing the report. This may take another two minutes…" : "보고서를 종합하고 있습니다. 최대 2분 정도 더 걸릴 수 있습니다…";
+
+  function showResearchLimit() {
+    setResearchLimitReached(true);
+    window.requestAnimationFrame(() => document.getElementById("research-limit-options")?.focus());
+  }
 
   async function runWorkshop(answerOverride?: string, forcePlan = false) {
     if (!researchMatchesContext || !researchConfirmed) {
@@ -290,17 +307,25 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
         body: JSON.stringify({ assessmentId: assessment.id, founderContext: context, locale })
       });
       const payload = (await response.json()) as {
+        code?: string;
         message?: string;
         planId?: string;
         result?: GtmMarketResearch;
         needsEvidence?: boolean;
         confirmed?: boolean;
         documents?: MarketResearchDocument[];
+        researchLimitReached?: boolean;
       };
+      if (payload.code === "research_limit") {
+        showResearchLimit();
+        return;
+      }
       if (!response.ok || !payload.result || !payload.planId) {
         throw new Error(payload.message ?? (en ? "We couldn't complete the market and competitive research." : "시장·경쟁 사전조사를 만들지 못했습니다."));
       }
       setPlanId(payload.planId);
+      if (payload.researchLimitReached) showResearchLimit();
+      else setResearchLimitReached(false);
       setMarketResearch(payload.result);
       setResearchConfirmed(Boolean(payload.confirmed));
       setResearchNeedsInputs(Boolean(payload.needsEvidence));
@@ -493,13 +518,36 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
               </li>)}</ul>}
             </section>
           )}
-          <button className="button button--primary" type="button" onClick={runResearch} disabled={researchBusy || workshopBusy || fileBusy}>
+          {!researchLimitReached && <button className="button button--primary" type="button" onClick={runResearch} disabled={researchBusy || workshopBusy || fileBusy}>
             {researchBusy ? (en ? "Researching…" : "조사 진행 중…") : marketResearch ? (en ? "Run research again" : "시장·경쟁 사전조사 다시 만들기") : (en ? "Run AI market research" : "AI 시장·경쟁 사전조사")}
-          </button>
+          </button>}
           {(researchBusy || researchError) && <div className="assistant-research-status" role={researchError ? "alert" : "status"} aria-live="polite">
             <span>{researchError || researchStatus}</span>
             {researchError && <button className="button button--ghost button--small" type="button" onClick={runResearch}>{en ? "Try research again" : "다시 조사"}</button>}
           </div>}
+          {researchLimitReached && <section id="research-limit-options" className="research-limit-options" role="status" aria-live="polite" tabIndex={-1}>
+            <header>
+              <span className="page-kicker">{en ? "RESEARCH LIMIT REACHED" : "무료 조사 완료"}</span>
+              <h3>{en ? "You have used all three free market and competitive research runs." : "무료 시장·경쟁 사전조사 3회를 모두 사용했습니다."}</h3>
+              <p>{en ? "You can continue using your latest result. Review it now, or use an AI market research specialist for a deeper analysis." : "마지막 조사 결과는 계속 확인할 수 있습니다. 현재 결과를 활용하거나, 더 깊은 분석이 필요하면 AI 시장조사 전문가를 이용해 보세요."}</p>
+            </header>
+            {marketResearch && planId ? <div className="research-limit-options__grid">
+              <article>
+                <span className="research-tag">{en ? "OPTION 1 · USE THE CURRENT RESULT" : "선택 1 · 기존 결과 활용"}</span>
+                <strong>{en ? "Review your latest comprehensive market report" : "마지막 종합 시장보고서를 확인하세요"}</strong>
+                <p>{en ? "Your saved market sizing, trends, competitors, evidence, and validation tasks remain available." : "저장된 시장규모·동향·경쟁구도·근거·검증 과제를 그대로 활용할 수 있습니다."}</p>
+                <a className="button button--primary" href={`${localizedPath(`/api/gtm-plans/${planId}/export`, locale)}?view=1`} target="_blank" rel="noreferrer">{en ? "View latest market report ↗" : "마지막 시장보고서 보기 ↗"}</a>
+              </article>
+              {recommendedResearchService && <article>
+                <span className="research-tag">{en ? "OPTION 2 · DEEPER ANALYSIS" : "선택 2 · 심화 분석"}</span>
+                <strong>{en ? `${recommendedResearchService.title} AI Specialist` : `AI ${recommendedResearchService.title} 전문가`}</strong>
+                <p>{recommendedResearchService.description}</p>
+                <ul>{recommendedResearchService.deliverables.map((deliverable) => <li key={deliverable}>{deliverable}</li>)}</ul>
+                <small>{en ? `₩${won.format(recommendedResearchService.price)}` : `${won.format(recommendedResearchService.price)}원`} · {recommendedResearchService.durationLabel}</small>
+                <Link className="button button--ghost" href={localizedPath(`/services/${recommendedResearchService.id}`, locale)}>{en ? "Explore the AI market research specialist →" : "AI 시장조사 전문가 알아보기 →"}</Link>
+              </article>}
+            </div> : <p className="research-limit-options__recovery">{en ? "We couldn't load your saved report. Refresh this page; if it still does not appear, contact the operations team." : "저장된 조사 결과를 불러오지 못했습니다. 페이지를 새로고침한 뒤에도 보이지 않으면 운영팀에 문의해 주세요."}</p>}
+          </section>}
         </div>
 
         {marketResearch && (

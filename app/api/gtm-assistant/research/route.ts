@@ -238,7 +238,14 @@ export async function POST(request: Request) {
       needsEvidence: existingResearch.marketSizing.some((entry) => entry.status === "insufficient_evidence"),
       confirmed: Boolean(existingPlan.market_research_confirmed_at),
       cached: true,
-      documents: researchDocuments
+      documents: researchDocuments,
+      researchLimitReached: researchQuotaDecision(
+        existingPlan.market_research_count ?? 0,
+        existingResearch.researchMethodologyVersion,
+        storedResearch.v2UpgradeAttemptedAt,
+        existingResearch.marketSizingMethodologyVersion,
+        storedResearch.marketSizingV3TopDownUpgradeAttemptedAt
+      ) === "limit"
     });
   }
   if (!researchUploadsEnabled && researchDocuments.length > 0) {
@@ -567,7 +574,8 @@ export async function POST(request: Request) {
           ? `Some sizing evidence is still missing: ${result.marketSizing.flatMap((entry) => entry.evidenceGaps).join("; ")}.${preserveConfirmedResearch ? " The previously confirmed report was preserved." : ""}`
           : `시장규모 근거가 부족합니다: ${result.marketSizing.flatMap((entry) => entry.evidenceGaps).join("; ")}.${preserveConfirmedResearch ? " 기존 확정 보고서는 보존했습니다." : ""}`
         : undefined,
-      documents: researchDocuments
+      documents: researchDocuments,
+      researchLimitReached: reservationCount >= 2
     });
   } catch (error) {
     const timeout = error instanceof ResearchDeadlineError || (error instanceof Error && /timed? ?out|aborted/i.test(error.message));

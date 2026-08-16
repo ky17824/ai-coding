@@ -66,6 +66,7 @@
 - 인증 수단이 달라도 계정은 하나다: 확인 이메일이 같은 OAuth identity는 같은 사용자 이력으로 연결하고 provider별로 별도 제품 경험을 만들지 않는다.
 - 인증 실패는 복구 행동을 말한다: callback 코드나 provider 오류를 노출하지 않고 재시도·이메일 로그인의 다음 행동을 안내한다.
 - 실패해도 진단은 남는다: AI·검색 장애 시 결정론적 액션을 사용할 수 있어야 한다.
+- 무료 조사 한도는 막다른 오류가 아니다: 3회를 사용한 뒤에는 재시도를 숨기고 마지막 종합 시장보고서를 기본 선택으로 제공한다. 저장된 결과가 있을 때만 더 깊은 조사를 위한 AI 시장정보·시장규모 전문가를 보조 선택으로 안내한다.
 - Tradeoffs: v4.0 결과의 재현성과 v5.0 고정 질문은행의 비교 가능성을 보존하되, 모든 문항 상시 노출보다 조건부 완주와 조기 가치를 우선한다.
 
 ## Visual language
@@ -83,6 +84,7 @@
 - Existing components to reuse: `SiteHeader`, 역할 기반 표면과 full-pill geometry를 공유하는 `.button` variants, `.panel`, `.notice-banner`, `.hold-banner`, `.priority`, `.meter`, `.offering-picker`, 서비스 카드, 기존 PortOne `CheckoutButton`, 주문 상세 화면
 - New/changed components: provider별 설정을 받는 `SocialLoginButton`, 허용된 callback 오류를 설명하는 `AuthErrorNotice`, 단계 잠금형 `AssessmentForm`, `TargetMarketConfirmation`, `GateDecision`, 중복 접두문을 제거한 `GatePrerequisiteSummary`, 통과 인정점수와 응답 분포를 분리한 `GateScoreChart`, 3단계 작업영역을 갖는 `GtmAssistant`, `LaunchDefinitionForm`, `MarketResearchBrief`, `ResearchCoverageSummary`, `MarketSizingTable`, `MarketTrendSection`, `CompetitorTable`, `SourceList`, `ComprehensiveMarketReport`, 준비 3단계 전 `ValidationDeferredNotice`, 준비 3단계 후 `OfferingValidationSummary`, `GateProgressSummary`, `QuestionProgressList`, `GateRecheck`, 계획 보고서 다운로드, AI 상품 카드·상세, 결제 후 `AiAgentWorkspace`, AI 결과 보고서
 - Variants and states: Gate locked/active/passed/stopped, target market missing/partial/confirmed, question satisfied/evidence_needed/improvement_needed/locked, assistant context_draft/researching/review_required/confirmed/plan_draft/active, market source/assumption/estimate/confirmation_needed, offering validation deferred/preliminary_reviewed, plan draft/active/superseded/completed, item not_started/in_progress/blocked/completed, founder/vault/web/deterministic source
+- Research quota state: `research_limit`은 danger alert가 아니라 neutral decision state다. 저장된 보고서 활용을 첫 CTA로, AI 전문가 상세를 두 번째 CTA로 제공하며 저장된 결과가 없으면 유료 전환을 노출하지 않는다.
 - Token/component ownership: 전역 토큰과 공통 상태는 `app/globals.css`; assistant 전용 레이아웃도 같은 파일의 기존 토큰을 사용한다.
 - Do not add a component library, Tailwind layer, icon package, font package, or 별도 design-token abstraction. `:root`의 작은 semantic token 집합과 기존 class를 단일 source로 사용한다.
 - 소셜 로그인은 공급자 이름과 로고가 보이는 접근 가능한 이름을 유지하면서 공통 버튼 규격을 따른다. 삭제·환불처럼 되돌리기 어려운 행동은 위험 의미를 색 이외의 문구로도 명확히 표시한다.

@@ -58,4 +58,9 @@ describe("market research readiness scope", () => {
     expect(sharedRequest).not.toContain("sanitizedDocumentEvidence");
     expect(source).toContain("privateDocumentEvidence: sanitizedDocumentEvidence");
   });
+
+  it("returns the durable research-limit state on cached and final responses", () => {
+    expect(source).toContain("researchLimitReached: researchQuotaDecision(");
+    expect(source).toContain("researchLimitReached: reservationCount >= 2");
+  });
 });

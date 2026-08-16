@@ -10,6 +10,8 @@ import type { GtmMarketResearch, GtmPlanItem, StoredGtmPlan } from "@/lib/types"
 import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import { localizeStoredGtmPlan } from "@/lib/content-localization";
 import { getIntakeItems, getIntakeQuestions, type SurveyVersion } from "@/lib/intake-questions";
+import { aiExpertServicesEnabled, getAiAgentService } from "@/lib/ai-agent-services";
+import { researchQuotaDecision } from "@/lib/research-sources";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "AI GTM Assistant" : "AI GTM 어시스턴트" };
@@ -65,7 +67,7 @@ export default async function AssistantPage({
       .order("created_at"),
     admin
       .from("gtm_plans")
-      .select("id,status,summary,assumptions,founder_context,market_research,market_research_documents,market_research_confirmed_at,recent_messages,turn_count,generation_count,model,content_locale,founder_context_locale,market_research_locale,gtm_plan_items(*)")
+      .select("id,status,summary,assumptions,founder_context,market_research,market_research_documents,market_research_confirmed_at,market_research_count,recent_messages,turn_count,generation_count,model,content_locale,founder_context_locale,market_research_locale,gtm_plan_items(*)")
       .eq("assessment_id", assessmentId)
       .in("status", ["draft", "active"])
       .maybeSingle()
@@ -106,6 +108,17 @@ export default async function AssistantPage({
     : null;
 
   const surveyVersion: SurveyVersion = assessment.survey_version === "5.0" ? "5.0" : "4.0";
+  const storedResearch = plan?.market_research && typeof plan.market_research === "object" && !Array.isArray(plan.market_research)
+    ? plan.market_research as Record<string, unknown>
+    : {};
+  const initialResearchLimitReached = Boolean(plan && researchQuotaDecision(
+    plan.market_research_count ?? 0,
+    storedResearch.researchMethodologyVersion,
+    storedResearch.v2UpgradeAttemptedAt,
+    storedResearch.marketSizingMethodologyVersion,
+    storedResearch.marketSizingV3TopDownUpgradeAttemptedAt
+  ) === "limit");
+  const researchService = aiExpertServicesEnabled() ? getAiAgentService("ai-market-intelligence", locale, surveyVersion) : null;
   const questions = new Map(getIntakeQuestions(locale, surveyVersion).map((question) => [question.id, question]));
   const items = new Map(getIntakeItems(locale).map((item) => [item.id, item]));
 
@@ -139,6 +152,15 @@ export default async function AssistantPage({
         initialQuestion={initialQuestion}
         locale={locale}
         researchUploadsEnabled={process.env.AI_GTM_RESEARCH_UPLOADS_ENABLED === "true"}
+        initialResearchLimitReached={initialResearchLimitReached}
+        recommendedResearchService={researchService ? {
+          id: researchService.id,
+          title: researchService.title,
+          description: researchService.description,
+          price: researchService.price,
+          durationLabel: researchService.durationLabel,
+          deliverables: researchService.deliverables
+        } : null}
       />
     </main>
   );
