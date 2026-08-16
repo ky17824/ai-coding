@@ -36,10 +36,18 @@ describe("dashboard execution summary", () => {
   it("uses stored aggregate results and versioned question details", () => {
     expect(source).toContain("survey_version,sales_motion");
     expect(source).not.toContain("calculateReadiness(");
-    expect(source).toContain("assessment.overall_score");
     expect(source).toContain("assessment.domain_scores");
     expect(source).toContain("assessment.gate_messages");
     expect(source).toContain("assessment.survey_version");
+  });
+
+  it("headlines the current stage progress, not the three-stage absolute score", () => {
+    // overall_score는 아직 시작하지 않은 단계까지 분모에 넣어, 바로 아래 단계 진행률(%)과
+    // 척도가 달라 같은 질문에 다른 답을 주는 것처럼 읽혔다. 화면에서는 쓰지 않는다.
+    expect(source).not.toContain("assessment.overall_score");
+    expect(source).not.toContain("/ 100");
+    expect(source).toContain("currentStageScore");
+    expect(source).toContain("GATE_THRESHOLD");
   });
 
   it("keeps breathing room above the previous-answer button", () => {

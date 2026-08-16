@@ -6,6 +6,7 @@ import { AnswerQuestionChart } from "@/components/answer-question-chart";
 import { StageSummaryPanel } from "@/components/stage-summary-panel";
 import {
   buildStageAnswerInsights,
+  GATE_THRESHOLD,
   normalizeGateMessage,
   formatReadinessStatus,
   questionsOfStage,
@@ -115,7 +116,9 @@ export default async function DashboardPage({
       .some((question) => !notApplicableIds.has(question.id) && answeredIds.has(question.id))
   );
   const displayDomainScores = storedDomainScores;
-  const displayOverallScore = assessment.overall_score;
+  // 화면에는 현재 단계의 진행률만 쓴다. 3단계 합산 절대점수(overall_score)는
+  // 아직 시작하지 않은 단계까지 분모에 넣어, 단계 진행률(%)과 척도가 달라 나란히 두면
+  // 서로 다른 답으로 읽힌다. 저장·관리자 화면에는 그대로 남는다.
   const gateMessages = [...new Set(((assessment.gate_messages as string[]) ?? []).map(normalizeGateMessage))];
   const displayIsOnHold = assessment.is_on_hold;
   const storedStageSummary = stageSummarySchema.safeParse(assessment.stage_summary);
@@ -129,6 +132,9 @@ export default async function DashboardPage({
   const selectedStageId = availableStages.some((stage) => stage.id === query.stage)
     ? query.stage
     : defaultStageId;
+  // 카드 헤드라인은 실제 현재 단계를 따른다. 아래 목록에서 다른 단계를 펼쳐 봐도 바뀌지 않는다.
+  const currentStageId = storedStageId ?? defaultStageId;
+  const currentStageScore = currentStageId ? displayDomainScores[currentStageId] ?? 0 : 0;
   const answerInsights = selectedStageId
     ? buildStageAnswerInsights(readinessAnswers, selectedStageId, locale, surveyVersion, salesMotion, targetMarket)
     : null;
@@ -155,7 +161,7 @@ export default async function DashboardPage({
           <article className="readiness-summary panel">
             <div className="summary-title">
               <span><small>{en ? "GLOBAL READINESS" : "시장진입 준비도(Global Readiness)"}</small><h2>{en ? "Readiness by stage" : "단계별 준비도"}</h2></span>
-              <span className="summary-score"><strong>{displayOverallScore}<span>/ 100</span></strong><small>{assessmentStatus}</small></span>
+              <span className="summary-score"><strong>{currentStageScore}<span>%</span></strong><small>{assessmentStatus}</small><em>{en ? `Pass at ${Math.round(GATE_THRESHOLD * 100)}%` : `통과 기준 ${Math.round(GATE_THRESHOLD * 100)}%`}</em></span>
             </div>
             <div className="domain-bars">
               {stages.map((stage) => (

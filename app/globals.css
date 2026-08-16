@@ -1476,6 +1476,14 @@ main[lang="en"] .hero h1 {
   font-size: 14px;
 }
 
+.summary-score em {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-style: normal;
+  letter-spacing: 0;
+}
+
 .summary-score small {
   margin-top: 6px;
   padding: 4px 8px;
