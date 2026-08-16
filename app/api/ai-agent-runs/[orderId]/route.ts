@@ -369,6 +369,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     if (error || !completed) throw new Error("stale_generation_attempt");
     return NextResponse.json({ report, generatedBy: MODEL });
   } catch (error) {
+    // DB에 남기기 전에 먼저 기록한다. 아래 RPC가 실패하면 원인이 어디에도 남지 않는다.
+    // 실제로 fail_ai_agent_generation의 타입 버그(020에서 수정) 때문에 실패한 실행의
+    // 원인을 사후에 알 방법이 없었다.
+    console.error("[ai-agent-run] generation failed", { orderId, attemptId: reserved.generation_attempt_id, error });
     const modelCostUsd = calculateSolCostUsd(usage);
     const costs = estimateAiVariableCosts({ modelCostUsd, webSearchCalls: usage.webSearchCalls, grossAmountKrw: order.amount_krw });
     const { data: failed, error: failError } = await admin.rpc("fail_ai_agent_generation", {
@@ -378,6 +382,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       p_web_search_calls: usage.webSearchCalls, p_model_cost_usd: modelCostUsd, p_tool_cost_usd: costs.toolCostUsd,
       p_payment_fee_krw: costs.paymentFeeKrw, p_support_storage_krw: costs.supportStorageKrw, p_total_variable_cost_krw: costs.totalVariableCostKrw
     });
+    if (failError || !failed) console.error("[ai-agent-run] failure handling did not persist", { orderId, failError, failed });
     if (failError || !failed) return NextResponse.json({ message: en ? "The generation state needs an operations review." : "생성 상태를 저장하지 못해 운영 확인이 필요합니다." }, { status: 500 });
     if (reserved.report) {
       return NextResponse.json({ report: reserved.report, correctionFailed: true, generationCount: reserved.generation_count, message: en ? "The correction attempt failed. The previous report is unchanged, and the included correction attempt was used." : "사실 정정 생성에 실패해 이전 보고서는 변경되지 않았으며, 포함된 정정 시도 1회는 사용되었습니다." });
