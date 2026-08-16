@@ -20,8 +20,9 @@ describe("service detail block convention", () => {
     expect(source).toContain('"How it works" : "진행 방식"');
   });
 
-  it("keeps the limits block visually separated and titled as a noun phrase", () => {
-    expect(source).toContain("detail-block--boundary");
+  it("titles the limits block as a noun phrase and gives it no special styling", () => {
+    // 블록은 전부 같은 모양이다. 배경 박스는 블록 흐름을 끊어 오히려 눈에 거슬린다.
+    expect(source).not.toContain("detail-block--boundary");
     expect(source).toContain('{en ? "Limits of this service" : "이 서비스의 한계"}');
     // 이전 제목들이 되살아나면 실패한다.
     expect(source).not.toContain("전문가 검증");

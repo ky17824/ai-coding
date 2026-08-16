@@ -2338,20 +2338,6 @@ main[lang="en"] .hero h1 {
   box-shadow: var(--button-shadow-small);
 }
 
-.detail-block--boundary {
-  padding: 20px 22px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  background: var(--surface-soft);
-}
-
-.detail-block--boundary > p {
-  margin: 0 0 12px;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
 .journey-expert-note {
   margin-top: 8px;
   display: block;
