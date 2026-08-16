@@ -70,8 +70,17 @@ export function CheckoutButton({
         amount?: number;
         message?: string;
         demo?: boolean;
+        requiresPayment?: boolean;
       };
-      if (!orderResponse.ok || !order.orderId || !order.paymentId) {
+      if (!orderResponse.ok || !order.orderId) {
+        throw new Error(order.message ?? (en ? "We couldn't create the order." : "주문을 생성하지 못했습니다."));
+      }
+      // 관리자 베타는 결제가 없다. paymentId를 읽기 전에 주문 상세로 보낸다.
+      if (order.requiresPayment === false) {
+        window.location.href = localizedPath(`/orders/${order.orderId}`, locale);
+        return;
+      }
+      if (!order.paymentId) {
         throw new Error(order.message ?? (en ? "We couldn't create the order." : "주문을 생성하지 못했습니다."));
       }
 

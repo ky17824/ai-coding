@@ -24,7 +24,7 @@ export interface CompanyRow {
     statusLabel: string;
   }[];
   actions: { serviceTag: string; completedAt: string | null }[];
-  orders: { status: OrderStatus; providerName: string; createdAt: string; assessmentId?: string | null }[];
+  orders: { status: OrderStatus; providerName: string; createdAt: string; assessmentId?: string | null; billingMode?: string }[];
 }
 
 export interface WorklistItem {
@@ -49,7 +49,8 @@ export function buildWorklist(rows: CompanyRow[], now: Date, locale: Locale = "k
     if (row.latestAssessment?.gateMessages.length) {
       items.push({ ...base, kind: "gate-blocked", label: en ? "Required stage gate blocked" : "필수 단계 통과 기준(Stage Gate) 차단" });
     }
-    if (row.orders.some((order) => order.status === "paid")) {
+    // 관리자 베타는 결제가 없으므로 "결제 후 미시작"이 성립하지 않는다.
+    if (row.orders.some((order) => order.status === "paid" && order.billingMode !== "admin_beta")) {
       items.push({ ...base, kind: "paid-not-started", label: en ? "Service not started after payment" : "결제 후 서비스 미시작" });
     }
   }

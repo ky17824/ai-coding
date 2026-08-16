@@ -28,7 +28,7 @@ export default async function OrderPage({
     user && admin
       ? await admin
           .from("orders")
-          .select("id,organization_id,buyer_id,status,amount_krw,service_snapshot,terms_snapshot,scheduled_at,created_at,order_kind,product_key,ai_agent_runs(*)")
+          .select("id,organization_id,buyer_id,status,amount_krw,service_snapshot,terms_snapshot,scheduled_at,created_at,order_kind,billing_mode,product_key,ai_agent_runs(*)")
           .eq("id", id)
           .eq("buyer_id", user.id)
           .maybeSingle()
@@ -54,6 +54,7 @@ export default async function OrderPage({
           scheduled_at: new Date(Date.now() + 7 * 86400000).toISOString(),
           created_at: new Date().toISOString(),
           order_kind: "human",
+          billing_mode: "paid",
           product_key: null,
           ai_agent_runs: []
         }
@@ -75,6 +76,9 @@ export default async function OrderPage({
   const terms = shownOrder.terms_snapshot as { refundPolicy: string };
   const aiRun = Array.isArray(shownOrder.ai_agent_runs) ? shownOrder.ai_agent_runs[0] : shownOrder.ai_agent_runs;
   const isAiOrder = shownOrder.order_kind === "ai_agent";
+  // 결제 없이 실행하는 관리자 테스트 주문. 화면에 원시 상태(paid)를 노출하지 않는다.
+  const isBetaOrder = shownOrder.billing_mode === "admin_beta";
+  const listPriceKrw = Number((snapshot as { listPriceKrw?: number }).listPriceKrw ?? 0);
   const { data: readinessBaseline } = isAiOrder && admin
     ? await admin.from("assessments").select("target_country,target_customer_segment").eq("organization_id", shownOrder.organization_id).order("completed_at", { ascending: false }).limit(1).maybeSingle()
     : { data: null };
@@ -96,8 +100,11 @@ export default async function OrderPage({
         <h1 className="page-title">{snapshot.title}</h1>
         <section className="order-detail panel">
           <div className="order-status-line">
-            <span className="pill">{shownOrder.status}</span>
-            <strong>{en ? `KRW ${won.format(shownOrder.amount_krw)}` : `${won.format(shownOrder.amount_krw)}원`}</strong>
+            <span className="pill">{isBetaOrder ? (en ? "Admin beta" : "관리자 베타") : shownOrder.status}</span>
+            <strong>{isBetaOrder
+              ? (en ? "KRW 0 charged" : "청구액 0원")
+              : en ? `KRW ${won.format(shownOrder.amount_krw)}` : `${won.format(shownOrder.amount_krw)}원`}</strong>
+            {isBetaOrder && listPriceKrw > 0 && <small>{en ? `List price KRW ${won.format(listPriceKrw)}` : `서비스 기준가 ${won.format(listPriceKrw)}원`}</small>}
           </div>
           <dl>
             <div>
@@ -128,7 +135,7 @@ export default async function OrderPage({
           </div>
           <OrderActions
             orderId={shownOrder.id}
-            refundable={(isAiOrder ? ["paid", "service_started", "completed"] : ["pending", "paid", "service_started", "completed"]).includes(shownOrder.status)}
+            refundable={!isBetaOrder && (isAiOrder ? ["paid", "service_started", "completed"] : ["pending", "paid", "service_started", "completed"]).includes(shownOrder.status)}
             reviewOnly={["service_started", "completed"].includes(shownOrder.status)}
             locale={locale}
           />

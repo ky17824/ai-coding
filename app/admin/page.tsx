@@ -55,7 +55,7 @@ export default async function AdminPage({
     admin.from("profiles").select("id,organization_id,display_name,job_title,deleted_at"),
     admin.from("assessments").select("id,organization_id,status_label,overall_score,gate_messages,completed_at,survey_version").order("completed_at", { ascending: false }),
     admin.from("action_items").select("organization_id,service_tag,completed_at"),
-    admin.from("orders").select("id,organization_id,provider_id,status,created_at,service_snapshot"),
+    admin.from("orders").select("id,organization_id,provider_id,status,created_at,billing_mode,service_snapshot"),
     admin.from("provider_profiles").select("id,headline,biography,expertise,verification_note,approval_status,created_at,profiles!inner(display_name,email)").order("created_at"),
     admin.from("reviews").select("rating").eq("status", "visible")
   ]);
@@ -97,6 +97,7 @@ export default async function AdminPage({
         const account = Array.isArray(provider?.profiles) ? provider.profiles[0] : provider?.profiles;
         return {
           status: entry.status as OrderStatus,
+          billingMode: entry.billing_mode as string | undefined,
           providerName: account?.display_name ?? (en ? "Expert unassigned" : "전문가 미지정"),
           createdAt: entry.created_at,
           assessmentId: typeof (entry.service_snapshot as { readiness?: { assessmentId?: unknown } } | null)?.readiness?.assessmentId === "string"

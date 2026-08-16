@@ -15,11 +15,22 @@ export async function POST(
   const { id } = await params;
   const { data: order } = await admin
     .from("orders")
-    .select("id,buyer_id,payment_id,status,order_kind,scheduled_at,service_started_at")
+    .select("id,buyer_id,payment_id,status,order_kind,billing_mode,scheduled_at,service_started_at")
     .eq("id", id)
     .single();
   if (!order || order.buyer_id !== user.id) {
     return NextResponse.json({ message: en ? "We couldn't find the order." : "주문을 찾을 수 없습니다." }, { status: 404 });
+  }
+  // 관리자 베타는 결제가 없으므로 게이트웨이를 부르지 않는다. 어떤 상태 변경보다 먼저 처리해야
+  // 아래에서 disputed로 바뀌어 실행 불가가 되는 것을 막는다(013:56은 paid|completed만 허용).
+  // 취소는 019의 부분 유니크 인덱스 슬롯을 풀어 같은 상품을 다시 시험할 수 있게 한다.
+  if (order.billing_mode === "admin_beta") {
+    const { error } = await admin.from("orders")
+      .update({ status: "cancelled" })
+      .eq("id", id)
+      .in("status", ["paid", "service_started"]);
+    if (error) return NextResponse.json({ message: en ? "We couldn't cancel the beta test." : "베타 테스트를 취소하지 못했습니다." }, { status: 500 });
+    return NextResponse.json({ status: "cancelled", message: en ? "The beta test was cancelled. It was never charged." : "베타 테스트를 취소했습니다. 결제된 금액은 없습니다." });
   }
   if (order.service_started_at || order.status === "service_started" || order.status === "completed") {
     const { error } = await admin.from("orders").update({ refund_requested_at: new Date().toISOString() }).eq("id", id);

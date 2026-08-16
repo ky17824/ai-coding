@@ -11,6 +11,7 @@ import { calculateSettlement } from "@/lib/orders";
 import { aiExpertServicesEnabled, getAiAgentService, resolveAiQuestionCatalogVersion } from "@/lib/ai-agent-services";
 import { buildAiReadinessSnapshot, getAiOrderAmounts } from "@/lib/ai-agent-report";
 import { getNewAssessmentSurveyVersion } from "@/lib/readiness-rollout";
+import { checkAdminBetaAccess } from "@/lib/admin-ai-beta";
 
 const schema = z.object({
   serviceId: z.string().min(1).max(80),
@@ -59,10 +60,23 @@ export async function POST(request: Request) {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("organization_id,role,job_title,phone_enc")
+    .select("organization_id,role,job_title,phone_enc,deleted_at")
     .eq("id", user.id)
     .single();
-  if (!profile?.organization_id || profile.role !== "startup") {
+  // 베타 자격은 AI 카탈로그 상품일 때만 본다. 이 게이트는 아래 사람 주문 분기도 함께 덮으므로
+  // 넓게 열면 베타 관리자가 정가 사람 주문을 만들고 정산 의무까지 생긴다.
+  const betaAccess = profile
+    ? checkAdminBetaAccess({
+        userId: user.id,
+        profile: { role: profile.role, deletedAt: profile.deleted_at },
+        isAiProduct: Boolean(aiCatalogService)
+      })
+    : { eligible: false as const, denial: "not_admin" as const };
+  if (!profile?.organization_id || (profile.role !== "startup" && !betaAccess.eligible)) {
+    if (profile?.role === "admin" && !betaAccess.eligible) {
+      // 운영자가 원인을 구분할 수 있도록 사유만 남긴다. 허용 목록은 절대 남기지 않는다.
+      console.info("[admin-beta] denied", { denial: betaAccess.denial });
+    }
     return NextResponse.json(
       { message: en ? "This service is available to startup accounts." : "스타트업 계정에서 구매할 수 있습니다." },
       { status: 403 }
@@ -97,21 +111,8 @@ export async function POST(request: Request) {
     const paymentId = `gtm-${orderId}`;
     const now = new Date().toISOString();
     const amounts = getAiOrderAmounts(aiService.price);
-    const { error } = await admin.from("orders").insert({
-      id: orderId,
-      organization_id: profile.organization_id,
-      buyer_id: user.id,
-      provider_id: null,
-      service_id: null,
-      order_kind: "ai_agent",
-      product_key: aiService.id,
-      payment_id: paymentId,
-      amount_krw: amounts.grossAmountKrw,
-      supply_amount_krw: amounts.supplyAmountKrw,
-      vat_amount_krw: amounts.vatAmountKrw,
-      platform_fee_krw: amounts.platformFeeKrw,
-      provider_amount_krw: amounts.providerAmountKrw,
-      service_snapshot: {
+    const isBeta = betaAccess.eligible;
+    const serviceSnapshot = {
         contractVersion: 1,
         questionCatalogVersion: surveyVersion,
         productId: aiService.id,
@@ -127,18 +128,68 @@ export async function POST(request: Request) {
         deliverables: aiService.deliverables,
         requiredInputs: aiService.requiredInputs,
         readiness,
-        supplyPriceKrw: amounts.supplyAmountKrw,
-        vatKrw: amounts.vatAmountKrw,
-        priceKrw: amounts.grossAmountKrw
-      },
-      terms_snapshot: {
+        // 베타도 실제 상품가를 보존한다. 청구는 0원이지만 무엇을 시험했는지는 남아야 한다.
+        listPriceKrw: amounts.grossAmountKrw,
+        supplyPriceKrw: isBeta ? 0 : amounts.supplyAmountKrw,
+        vatKrw: isBeta ? 0 : amounts.vatAmountKrw,
+        priceKrw: isBeta ? 0 : amounts.grossAmountKrw
+    };
+    const termsSnapshot = {
         version: 1,
         acceptedAt: now,
         sellerDisclosure: en ? "Borderless provides this AI expert service." : "Borderless가 AI 전문가 서비스를 제공합니다.",
-        refundPolicy: en ? "A full refund is available before report generation begins. After generation starts, requests are reviewed using the order record." : "보고서 생성 시작 전에는 전액 환불됩니다. 생성 시작 후에는 주문 기록을 기준으로 검토합니다.",
+        refundPolicy: isBeta
+          ? (en ? "Admin beta tests are not charged and are not eligible for a refund." : "관리자 베타 테스트는 결제·환불 대상이 아닙니다.")
+          : (en ? "A full refund is available before report generation begins. After generation starts, requests are reviewed using the order record." : "보고서 생성 시작 전에는 전액 환불됩니다. 생성 시작 후에는 주문 기록을 기준으로 검토합니다."),
+        paymentRequired: !isBeta,
+        refundEligible: !isBeta,
         includedClarificationRounds: 2,
         includedRegenerations: 1
-      },
+    };
+
+    if (isBeta) {
+      // 주문과 실행 레코드를 한 트랜잭션에서 만든다. 스냅샷은 위에서 유료와 똑같이 만들어 넘긴다.
+      const { error: betaError } = await admin.rpc("create_admin_beta_ai_order", {
+        p_order_id: orderId,
+        p_buyer_id: user.id,
+        p_organization_id: profile.organization_id,
+        p_product_key: aiService.id,
+        p_locale: parsed.data.locale,
+        p_service_snapshot: serviceSnapshot,
+        p_terms_snapshot: termsSnapshot
+      });
+      if (betaError) {
+        const duplicate = betaError.code === "23505";
+        console.info("[admin-beta] create failed", { code: betaError.code });
+        return NextResponse.json(
+          { message: duplicate
+              ? (en ? "A beta test for this service is already in progress. Finish or cancel it first." : "이 서비스의 베타 테스트가 이미 진행 중입니다. 마치거나 취소한 뒤 다시 시도해 주세요.")
+              : (en ? "We couldn't create the order." : "주문을 생성하지 못했습니다.") },
+          { status: duplicate ? 409 : 500 }
+        );
+      }
+      console.info("[admin-beta] order created", { orderId, productKey: aiService.id });
+      // paymentId를 클라이언트에 주지 않는다. 결제창을 열 이유가 없다.
+      return NextResponse.json({ orderId, amount: 0, requiresPayment: false });
+    }
+
+    const { error } = await admin.from("orders").insert({
+      id: orderId,
+      organization_id: profile.organization_id,
+      buyer_id: user.id,
+      provider_id: null,
+      service_id: null,
+      order_kind: "ai_agent",
+      billing_mode: "paid",
+      product_key: aiService.id,
+      payment_id: paymentId,
+      amount_krw: amounts.grossAmountKrw,
+      supply_amount_krw: amounts.supplyAmountKrw,
+      vat_amount_krw: amounts.vatAmountKrw,
+      platform_fee_krw: amounts.platformFeeKrw,
+      provider_amount_krw: amounts.providerAmountKrw,
+      service_snapshot: serviceSnapshot,
+      terms_snapshot: termsSnapshot,
       terms_accepted_at: now
     });
     if (error) {
@@ -147,7 +198,7 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-    return NextResponse.json({ orderId, paymentId, amount: amounts.grossAmountKrw });
+    return NextResponse.json({ orderId, paymentId, amount: amounts.grossAmountKrw, requiresPayment: true });
   }
 
   const { data: service } = await supabase
