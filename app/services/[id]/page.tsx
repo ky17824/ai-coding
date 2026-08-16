@@ -39,7 +39,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
           </div>
           <div className="detail-block"><h2>{en ? "Deliverables" : "결과물"}</h2><ul>{service.deliverables.map((item) => <li key={item}>{item}</li>)}</ul></div>
           <div className="detail-block"><h2>{en ? "How it works" : "진행 방식"}</h2>{isAi ? <ol>
-            <li>{en ? "Your saved readiness answers are loaded and you add the target country, customer, offering, evidence, and constraints." : "저장된 준비도 답변을 불러오고 목표국가·고객·제품·증거·제약을 보완합니다."}</li>
+            <li>{en ? "Your saved readiness answers are loaded, then you add only the country, customer, offering, evidence, and constraints needed for this task." : "저장된 준비도 진단 답변을 불러온 뒤, 이번 업무에 필요한 국가·고객·제품·근거·제약 조건만 보완합니다."}</li>
             <li>{en ? "The AI asks up to two material follow-up rounds. Unknown answers become labelled analog assumptions, not facts." : "AI는 결과를 바꾸는 질문만 최대 2회 묻습니다. 모름 응답은 사실이 아니라 유사사례 가정으로 표시합니다."}</li>
             <li>{en ? "After you review assumptions, the frontier model produces a report and action plan with traceable sources." : "가정을 확인하면 프론티어 모델이 출처가 연결된 보고서와 실행계획을 만듭니다."}</li>
           </ol> : <ol><li>{en ? "After payment, goals and materials are organized in a questionnaire." : "결제 후 목표와 보유 자료를 사전 질문지로 정리합니다."}</li><li>{service.type === "mentoring" ? (en ? `A ${service.durationLabel} video session is held.` : `${service.durationLabel} 화상 세션을 진행합니다.`) : (en ? `Agreed milestones are delivered over ${service.durationLabel}.` : `${service.durationLabel} 동안 합의된 단계별 실행목표를 수행합니다.`)}</li><li>{en ? "The engagement closes after deliverable confirmation." : "결과물을 확인한 뒤 거래를 마칩니다."}</li></ol>}</div>

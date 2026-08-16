@@ -20,16 +20,23 @@ export function ServiceCard({ service, locale = "ko" }: { service: ServiceOfferi
       </div>
       <h3>{service.title}</h3>
       <p>{service.description}</p>
-      <div className="provider-line">
-        <span className="avatar">{service.providerName.slice(0, 1)}</span>
-        <span>
-          <strong>{service.providerName}</strong>
-          <small>{service.providerTitle}</small>
-        </span>
-      </div>
+      {service.type === "ai_agent" ? (
+        <ul className="service-card__deliverables" aria-label={locale === "en" ? "Key deliverables" : "주요 결과물"}>
+          {service.deliverables.slice(0, 2).map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      ) : (
+        <div className="provider-line">
+          <span className="avatar">{service.providerName.slice(0, 1)}</span>
+          <span>
+            <strong>{service.providerName}</strong>
+            <small>{service.providerTitle}</small>
+          </span>
+        </div>
+      )}
       <div className="service-card__footer">
         <span>
           <strong>{locale === "en" ? `₩${won.format(service.price)}` : `${won.format(service.price)}원`}</strong>
+          {service.type === "ai_agent" ? <small>{locale === "en" ? "VAT excluded" : "부가세 별도"}</small> : null}
           <small>{service.durationLabel}</small>
         </span>
         <Link

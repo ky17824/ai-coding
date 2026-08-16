@@ -18,6 +18,8 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
   const visibleServices = matched.length ? matched : services;
   const en = locale === "en";
   const aiEnabled = aiExpertServicesEnabled();
+  const specialists = visibleServices.filter((service) => service.productKind === "specialist");
+  const packages = visibleServices.filter((service) => service.productKind === "package");
 
   return (
     <main className="app-page">
@@ -26,21 +28,28 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         <span className="page-kicker">{aiEnabled ? "AI EXPERT SERVICES" : "VERIFIED EXPERTS"}</span>
         <h1 className="page-title">{requestedTag && matched.length
           ? aiEnabled ? (en ? "AI experts matched to this action" : "이 실행에 맞는 AI 전문가") : (en ? "Vetted experts for this action" : "이 실행에 맞는 검증된 전문가")
-          : aiEnabled ? (en ? "Close readiness gaps with AI experts" : "준비도의 격차를 AI 전문가와 함께 줄여보세요") : (en ? "Take your next action with vetted experts" : "검증된 전문가와 다음 액션을 실행하세요")}</h1>
+          : aiEnabled ? (en ? "AI experts fill the gaps found in your assessment" : "진단에서 부족했던 부분을 AI 전문가가 채웁니다") : (en ? "Take your next action with vetted experts" : "검증된 전문가와 다음 액션을 실행하세요")}</h1>
         <p className="page-description">
-          {aiEnabled ? (en ? "After payment, a frontier model reuses your readiness answers, asks only material follow-ups, and produces an evidence-led report and action plan." : "결제 후 프론티어 모델이 준비도 답변을 재사용하고 결과를 바꾸는 정보만 추가로 확인한 뒤 근거 기반 보고서와 실행계획을 만듭니다.") : (en ? "Only standardized services from admin-approved mentors and consultants are listed." : "관리자 승인을 거친 멘토·컨설턴트의 표준화된 서비스만 공개됩니다.")}
+          {aiEnabled ? (en ? "Your saved readiness answers carry over. After a few material follow-ups, a frontier model produces a sourced report and action plan." : "이미 입력한 준비도 진단 답변을 그대로 이어받습니다. 결론이 달라질 내용만 몇 가지 더 확인한 뒤, 출처를 밝힌 보고서와 실행계획을 만들어 드립니다.") : (en ? "Only standardized services from admin-approved mentors and consultants are listed." : "관리자 승인을 거친 멘토·컨설턴트의 표준화된 서비스만 공개됩니다.")}
         </p>
         {aiEnabled && <div className="ai-service-boundary notice-banner">
-          <strong>{en ? "AI completes research, calculations, drafts and plans." : "AI가 조사·계산·초안·계획을 완성합니다."}</strong>
-          <span>{en ? "Legal, tax, regulatory, contract effectiveness, actual interviews and partner intent remain marked for human verification." : "법률·세무·규제·계약 효력, 실제 인터뷰와 파트너 의향은 사람 검증 필요로 표시합니다."}</span>
+          <strong>{en ? "AI handles research, calculations, and first drafts." : "조사와 계산, 초안 작성까지는 AI가 맡습니다."}</strong>
+          <span>{en ? "Legal, tax and regulatory interpretation, contract effectiveness, actual interviews, and partner intent are marked for expert verification." : "법률·세무·규제 해석과 계약의 효력, 실제 인터뷰와 파트너 의향은 사람이 확인해야 할 항목으로 따로 표시합니다."}</span>
         </div>}
         {requestedTag && <p className="notice-banner" role="status">{matched.length
           ? en ? `${matched.length} matching service${matched.length === 1 ? "" : "s"} found.` : `관련 ${aiEnabled ? "AI 전문가 " : ""}서비스 ${matched.length}개를 찾았습니다.`
-          : en ? "No exact match is available, so the full catalog is shown." : "정확히 일치하는 상품이 없어 전체 AI 전문가 서비스를 안내합니다."}</p>}
+          : en ? "No exact match is available, so the full catalog is shown." : "딱 맞는 서비스가 없어 전체 목록을 보여 드립니다."}</p>}
         {!aiEnabled && <div className="filter-row"><button className="active" type="button">{en ? "All" : "전체"}</button><button type="button">{en ? "1:1 Mentoring" : "1:1 멘토링"}</button><button type="button">{en ? "Consulting Package" : "컨설팅 패키지"}</button></div>}
-        <div className="service-grid">
-          {visibleServices.map((service) => <ServiceCard key={service.id} service={service} locale={locale} />)}
-        </div>
+        {aiEnabled ? <>
+          {specialists.length > 0 && <section className="service-catalog-section" aria-labelledby="specialist-services-title">
+            <h2 id="specialist-services-title">{en ? "Choose only what you need" : "필요한 항목만 골라 진행하세요"}</h2>
+            <div className="service-grid">{specialists.map((service) => <ServiceCard key={service.id} service={service} locale={locale} />)}</div>
+          </section>}
+          {packages.length > 0 && <section className="service-catalog-section" aria-labelledby="package-services-title">
+            <h2 id="package-services-title">{en ? "Handle several needs together" : "여러 항목을 묶어 한 번에 진행하세요"}</h2>
+            <div className="service-grid">{packages.map((service) => <ServiceCard key={service.id} service={service} locale={locale} />)}</div>
+          </section>}
+        </> : <div className="service-grid">{visibleServices.map((service) => <ServiceCard key={service.id} service={service} locale={locale} />)}</div>}
       </div>
     </main>
   );

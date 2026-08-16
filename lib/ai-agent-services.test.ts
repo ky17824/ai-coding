@@ -9,7 +9,19 @@ import {
 
 describe("AI expert service catalog", () => {
   it("publishes seven specialists and four packages with unique stable ids", () => {
-    expect(AI_AGENT_SERVICES).toHaveLength(11);
+    expect(AI_AGENT_SERVICES.map(({ id, price, tags, includedAgentIds }) => ({ id, price, tags, includedAgentIds }))).toEqual([
+      { id: "ai-market-intelligence", price: 199000, tags: ["market-sizing", "target-market", "competition", "market-validation"], includedAgentIds: ["ai-market-intelligence"] },
+      { id: "ai-customer-validation", price: 129000, tags: ["home-pmf", "market-testing", "customer-validation", "market-validation"], includedAgentIds: ["ai-customer-validation"] },
+      { id: "ai-local-bmc", price: 199000, tags: ["localization", "local-bmc", "bmlc", "lpa"], includedAgentIds: ["ai-local-bmc"] },
+      { id: "ai-market-entry-requirements", price: 249000, tags: ["regulation", "compliance", "certification", "market-entry", "legal"], includedAgentIds: ["ai-market-entry-requirements"] },
+      { id: "ai-local-ecosystem", price: 249000, tags: ["partner", "local-network", "ecosystem", "distribution"], includedAgentIds: ["ai-local-ecosystem"] },
+      { id: "ai-tce-finance", price: 149000, tags: ["resources", "tce", "finance", "resource-allocation", "unit-economics"], includedAgentIds: ["ai-tce-finance"] },
+      { id: "ai-gtm-operations", price: 149000, tags: ["gtm-plan", "local-plan", "local-team", "global-mindset", "gtm", "leadership", "organization"], includedAgentIds: ["ai-gtm-operations"] },
+      { id: "ai-market-opportunity", price: 349000, tags: ["package", "market-sizing", "target-market", "competition", "market-validation", "home-pmf", "market-testing", "customer-validation", "market-validation"], includedAgentIds: ["ai-market-intelligence", "ai-customer-validation"] },
+      { id: "ai-local-entry", price: 649000, tags: ["package", "localization", "local-bmc", "bmlc", "lpa", "regulation", "compliance", "certification", "market-entry", "legal", "partner", "local-network", "ecosystem", "distribution"], includedAgentIds: ["ai-local-bmc", "ai-market-entry-requirements", "ai-local-ecosystem"] },
+      { id: "ai-execution-plan", price: 349000, tags: ["package", "resources", "tce", "finance", "resource-allocation", "unit-economics", "gtm-plan", "local-plan", "local-team", "global-mindset", "gtm", "leadership", "organization"], includedAgentIds: ["ai-tce-finance", "ai-gtm-operations"] },
+      { id: "ai-comprehensive-entry", price: 1190000, tags: ["package", "market-sizing", "target-market", "competition", "market-validation", "home-pmf", "market-testing", "customer-validation", "market-validation", "localization", "local-bmc", "bmlc", "lpa", "regulation", "compliance", "certification", "market-entry", "legal", "partner", "local-network", "ecosystem", "distribution", "resources", "tce", "finance", "resource-allocation", "unit-economics", "gtm-plan", "local-plan", "local-team", "global-mindset", "gtm", "leadership", "organization"], includedAgentIds: ["ai-market-intelligence", "ai-customer-validation", "ai-local-bmc", "ai-market-entry-requirements", "ai-local-ecosystem", "ai-tce-finance", "ai-gtm-operations"] }
+    ]);
     expect(new Set(AI_AGENT_SERVICES.map((service) => service.id)).size).toBe(11);
     expect(AI_AGENT_SERVICES.filter((service) => service.productKind === "specialist")).toHaveLength(7);
     expect(AI_AGENT_SERVICES.filter((service) => service.productKind === "package")).toHaveLength(4);
@@ -36,6 +48,24 @@ describe("AI expert service catalog", () => {
     expect(new Set(v4).size).toBe(55);
     expect(v5).toHaveLength(46);
     expect(new Set(v5).size).toBe(46);
+    expect(Object.fromEntries(getAiAgentServices("ko", "4.0").filter((service) => service.productKind === "specialist").map((service) => [service.id, service.questionIds]))).toEqual({
+      "ai-market-intelligence": ["mkt-icp-count", "mkt-icp-source", "mkt-inbound-signal", "mkt-country-compare", "mkt-bias-check"],
+      "ai-customer-validation": ["pmf-paid-conversion", "pmf-churn-cases", "pmf-buying-roles", "pmf-customer-words", "test-environment", "test-defects", "test-message-worked", "test-no-discount", "test-counter-evidence"],
+      "ai-local-bmc": ["bmlc-local-practice", "bmlc-hq-gap", "lpa-pricing-payment", "lpa-journey-blocker"],
+      "ai-market-entry-requirements": ["bmlc-classification", "bmlc-preconditions", "bmlc-na-basis"],
+      "ai-local-ecosystem": ["lpa-infra-partner", "lpa-bridge-person", "partner-actual-work", "partner-economics", "partner-ecosystem-interviews", "partner-shortfall", "partner-cold-check", "contract-control", "contract-exit", "contract-switch-cost", "contract-dependency-limit"],
+      "ai-tce-finance": ["res-tce", "res-cash-runway", "res-no-grant-scope", "res-owner-time", "res-key-person-risk", "lpa-net-price", "alloc-milestone-budget", "alloc-capacity", "alloc-conditional-limit", "alloc-concentration"],
+      "ai-gtm-operations": ["mvc-purpose-alignment", "mvc-stop-criteria", "mvc-resource-priority", "mvc-reference-market", "plan-hypothesis-kpi", "plan-stop-rule", "plan-single-tracker", "plan-change-control", "org-single-owner", "org-continuity", "org-decision-cases", "org-local-authority", "org-escalation"]
+    });
+    expect(Object.fromEntries(getAiAgentServices("ko", "5.0").filter((service) => service.productKind === "specialist").map((service) => [service.id, service.questionIds]))).toEqual({
+      "ai-market-intelligence": ["mkt-icp-count", "mkt-country-compare"],
+      "ai-customer-validation": ["pmf-paid-conversion", "pmf-churn-cases", "pmf-buying-roles", "pmf-customer-words", "test-environment", "test-defects", "test-message-worked", "test-no-discount", "test-counter-evidence"],
+      "ai-local-bmc": ["bmlc-local-practice", "lpa-journey-blocker"],
+      "ai-market-entry-requirements": ["bmlc-classification", "bmlc-preconditions", "bmlc-na-basis"],
+      "ai-local-ecosystem": ["lpa-infra-partner", "lpa-bridge-person", "partner-actual-work", "partner-economics", "partner-ecosystem-interviews", "partner-shortfall", "partner-cold-check", "contract-control", "contract-exit", "contract-switch-cost", "contract-dependency-limit"],
+      "ai-tce-finance": ["res-tce", "res-cash-runway", "res-no-grant-scope", "res-owner-time", "lpa-net-price", "alloc-milestone-budget", "alloc-capacity", "alloc-concentration"],
+      "ai-gtm-operations": ["mvc-purpose-alignment", "mvc-resource-priority", "mvc-reference-market", "plan-hypothesis-kpi", "plan-stop-rule", "plan-single-tracker", "plan-change-control", "org-single-owner", "org-continuity", "org-local-authority", "org-escalation"]
+    });
   });
 
   it("uses the rollout catalog when a new order has no assessment", () => {
@@ -52,14 +82,26 @@ describe("AI expert service catalog", () => {
     const ko = getAiAgentService("ai-market-intelligence", "ko");
     const en = getAiAgentService("ai-market-intelligence", "en");
 
-    expect(ko?.title).toBe("심층시장조사");
+    expect(ko?.title).toBe("심층 시장조사");
     expect(ko?.deliverables).toEqual([
-      "후보국·ICP 비교",
-      "시장규모 Top-Down 및 Bottom-Up 심화 TAM, SAM, SOM, Beachhead Market (low/base/high)",
-      "경쟁구도·근거 원장"
+      "후보 국가와 목표 고객 비교",
+      "시장규모 추정: 하향식·상향식 TAM·SAM·SOM과 교두보 시장 (최소·기준·최대)",
+      "경쟁 구도와 근거 목록"
     ]);
     expect(en?.title).toBe("In-depth Market Research");
     expect(en?.deliverables?.[1]).toBe("In-depth Top-Down and Bottom-Up TAM, SAM, SOM, and Beachhead Market sizing (low/base/high)");
     expect(ko?.completionInstructions?.[0]).toContain("Top-Down과 Bottom-Up을 각각 산정");
+  });
+
+  it("uses plain Korean service names and shared input boundaries", () => {
+    expect(getAiAgentService("ai-local-bmc", "ko")?.title).toBe("현지화 사업모델 설계");
+    expect(getAiAgentService("ai-local-bmc", "en")?.title).toBe("Local Business Model Design");
+    expect(getAiAgentService("ai-tce-finance", "ko")?.title).toBe("진입 비용·자금 계획");
+    expect(getAiAgentService("ai-tce-finance", "en")?.title).toBe("Entry Cost & Funding Plan");
+    expect(getAiAgentService("ai-market-opportunity", "ko")?.requiredInputs).toEqual([
+      "목표 국가와 고객, 판매할 제품 또는 서비스",
+      "관련 준비도 진단 답변과 지금 가진 근거",
+      "제약 조건과 쓸 수 있는 자원, 목표 기한"
+    ]);
   });
 });
