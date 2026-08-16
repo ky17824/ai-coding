@@ -20,6 +20,7 @@ import {
   publicTargetCountryCode,
   publicCustomerSegments,
   publicOfferingCategories,
+  normalizeReportTitles,
   validateAiAgentReport,
   validateAiAgentSources
 } from "@/lib/ai-agent-report";
@@ -384,7 +385,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     });
     addUsage(usage, usageOf(reportResponse));
     await markStage("finalize");
-    const report = aiAgentReportSchema.parse(reportResponse.output_parsed);
+    const report = normalizeReportTitles(aiAgentReportSchema.parse(reportResponse.output_parsed));
     validateAiAgentSources([...collectCitedUrls(report)], allowedUrls);
     validateAiAgentReport(report, {
       questionIds: contractQuestionIds,

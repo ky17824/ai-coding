@@ -3283,7 +3283,59 @@ main[lang="en"] .hero h1 {
 
 .ai-report__status {
   font-size: 12px;
-  text-transform: uppercase;
+  /* 한글 라벨을 쓰므로 대문자 변환은 의미가 없다. */
+}
+
+/* 실행계획 항목. 담당·시기·성공 기준·중단 기준을 한 줄에 점으로 이어 붙이지 않고
+   라벨이 있는 표로 보여 준다. 네 값의 성격이 서로 달라 구분자만으로는 읽히지 않았다. */
+.ai-report__plan ol > li {
+  margin-bottom: 22px;
+}
+
+.ai-report__plan ol > li > strong {
+  display: block;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.ai-report__plan ol > li > p {
+  margin: 4px 0 8px;
+  color: var(--muted);
+}
+
+.ai-report__plan dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.ai-report__plan dl > div {
+  display: contents;
+}
+
+.ai-report__plan dt {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.ai-report__plan dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+/* 발견 카드 안의 관련 문항 목록. 카드 본문보다 한 단계 눌러 둔다. */
+.ai-report__grid > article .ai-report__questions {
+  margin-top: 10px;
+  padding: 10px 0 0;
+  font-size: 13px;
+}
+
+.ai-report__grid > article .ai-report__questions summary {
+  color: var(--muted);
+  cursor: pointer;
 }
 
 .ai-report__columns small,

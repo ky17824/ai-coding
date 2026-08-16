@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { OrderActions } from "@/components/order-actions";
 import { AiAgentWorkspace } from "@/components/ai-agent-workspace";
 import { getRequestLocale } from "@/lib/i18n-server";
+import { getIntakeQuestions } from "@/lib/intake-questions";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -144,6 +145,8 @@ export default async function OrderPage({
           <AiAgentWorkspace
             locale={locale}
             initialRun={hydratedAiRun as never}
+            // 보고서는 준비도 문항 ID로 근거를 추적한다. 화면에는 ID 대신 문항 문장을 보여 준다.
+            questionLabels={Object.fromEntries(getIntakeQuestions(locale, "5.0").map((question) => [question.id, question.question]))}
           />
         )}
         {isAiOrder && shownOrder.status === "paid" && !aiRun && <p className="notice-banner">{en ? "Payment confirmation is still being processed. Refresh in a moment." : "결제 확인을 처리 중입니다. 잠시 후 새로고침해 주세요."}</p>}

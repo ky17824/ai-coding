@@ -36,12 +36,44 @@ const copy = {
   }
 };
 
+/**
+ * 보고서 안의 영문 열거값을 화면 언어로 바꾼다. 스키마 값(fact, analog_assumption…)은
+ * 계약이라 바꾸지 않고, 표시만 바꾼다.
+ */
+/** 제목 앞 번호를 뗀다. lib/ai-agent-report에 같은 함수가 있지만 그 모듈은 문항 데이터
+ *  2천 줄을 끌고 오므로 클라이언트에서는 여기 사본을 쓴다. 저장 시점에 이미 정리되고,
+ *  이것은 예전에 저장된 보고서를 위한 표시용 보정이다. */
+function stripLeadingNumber(title: string) {
+  return title.replace(/^\s*(?:\d+\s*[.)、]|[①-⑳])\s*/, "");
+}
+
+const reportLabels = {
+  ko: {
+    status: { fact: "확인된 사실", estimate: "추정", analog_assumption: "유사사례 가정", human_verification: "사람 검증 필요" },
+    confidence: { high: "신뢰도 높음", medium: "신뢰도 보통", low: "신뢰도 낮음" },
+    priority: { critical: "핵심", current_gate: "현재 관문", low_score: "낮은 점수", other: "기타" },
+    disposition: { used: "반영", excluded: "제외" },
+    owner: "담당", timing: "시기", successMetric: "성공 기준", stopCondition: "중단 기준",
+    basis: "근거", impact: "영향", relatedQuestions: "관련 준비도 문항"
+  },
+  en: {
+    status: { fact: "Confirmed fact", estimate: "Estimate", analog_assumption: "Analog assumption", human_verification: "Needs human verification" },
+    confidence: { high: "High confidence", medium: "Medium confidence", low: "Low confidence" },
+    priority: { critical: "Critical", current_gate: "Current gate", low_score: "Low score", other: "Other" },
+    disposition: { used: "Used", excluded: "Excluded" },
+    owner: "Owner", timing: "Timing", successMetric: "Success metric", stopCondition: "Stop condition",
+    basis: "Basis", impact: "Impact", relatedQuestions: "Related readiness questions"
+  }
+} as const;
+
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
 }
 
-export function AiAgentWorkspace({ initialRun, locale = "ko" }: { initialRun: Run; locale?: "ko" | "en" }) {
+export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {} }: { initialRun: Run; locale?: "ko" | "en"; questionLabels?: Record<string, string> }) {
   const c = copy[locale];
+  const L = reportLabels[locale];
+  const questionLabel = (id: string) => questionLabels[id] ?? id;
   const [run, setRun] = useState(initialRun);
   const [intake, setIntake] = useState<Record<string, string>>(() => Object.fromEntries(fieldNames.map((field) => [field, String(initialRun.intake?.[field] ?? "")])));
   const [unknownFields, setUnknownFields] = useState<string[]>(() => Array.isArray(initialRun.intake?.unknownFields) ? initialRun.intake.unknownFields as string[] : []);
@@ -147,7 +179,7 @@ export function AiAgentWorkspace({ initialRun, locale = "ko" }: { initialRun: Ru
   function downloadReport() {
     if (!run.report) return;
     const report = run.report;
-    const html = `<!doctype html><html lang="${locale}"><meta charset="utf-8"><title>${escapeHtml(report.title)}</title><style>body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 24px;color:#09271d;line-height:1.65}h1,h2{color:#07513d}section{margin:32px 0;padding:24px;border:1px solid #d9e2dd;border-radius:12px}small{color:#60726a}a{color:#087f5b}</style><h1>${escapeHtml(report.title)}</h1><p>${escapeHtml(report.executiveSummary)}</p><section><h2>${escapeHtml(c.report)}</h2>${report.findings.map((item) => `<h3>${escapeHtml(item.title)}</h3><small>${escapeHtml(item.status)} · ${escapeHtml(item.confidence)}</small><p>${escapeHtml(item.summary)}</p><p>${item.questionIds.map(escapeHtml).join(" · ")}</p>`).join("")}</section>${report.marketSizing ? `<section><h2>${escapeHtml(c.sizing)}</h2><p>${escapeHtml(report.marketSizing.currency)} · ${report.marketSizing.referenceYear}</p><p>TAM ${report.marketSizing.tam.low} / ${report.marketSizing.tam.base} / ${report.marketSizing.tam.high}<br>SAM ${report.marketSizing.sam.low} / ${report.marketSizing.sam.base} / ${report.marketSizing.sam.high}<br>SOM ${report.marketSizing.som.low} / ${report.marketSizing.som.base} / ${report.marketSizing.som.high}</p><p>${escapeHtml(report.marketSizing.formula)}</p></section>` : ""}<section><h2>${escapeHtml(c.actions)}</h2><ol>${report.actionPlan.map((item) => `<li><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.why)} (${escapeHtml(item.owner)} · ${escapeHtml(item.timing)})</li>`).join("")}</ol></section><section><h2>${escapeHtml(c.source)}</h2><ul>${report.sources.map((source) => `<li><a href="${escapeHtml(source.url)}">${escapeHtml(source.title)}</a> — ${escapeHtml(source.publisher)} · ${escapeHtml(source.publishedAt)}</li>`).join("")}</ul></section><section><h2>${escapeHtml(c.human)}</h2><ul>${report.humanVerification.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section><section><h2>${escapeHtml(c.limitations)}</h2><ul>${report.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section></html>`;
+    const html = `<!doctype html><html lang="${locale}"><meta charset="utf-8"><title>${escapeHtml(report.title)}</title><style>body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 24px;color:#09271d;line-height:1.65}h1,h2{color:#07513d}section{margin:32px 0;padding:24px;border:1px solid #d9e2dd;border-radius:12px}small{color:#60726a}a{color:#087f5b}dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:8px 0 0;font-size:14px}dt{color:#60726a}dd{margin:0}ol>li{margin:0 0 18px}details{margin:6px 0}</style><h1>${escapeHtml(report.title)}</h1><p>${escapeHtml(report.executiveSummary)}</p><section><h2>${escapeHtml(c.report)}</h2>${report.findings.map((item) => `<h3>${escapeHtml(stripLeadingNumber(item.title))}</h3><small>${escapeHtml(L.status[item.status])} · ${escapeHtml(L.confidence[item.confidence])}</small><p>${escapeHtml(item.summary)}</p>${item.actions.length ? `<ul>${item.actions.map((action) => `<li>${escapeHtml(action)}</li>`).join("")}</ul>` : ""}${item.questionIds.length ? `<details><summary>${escapeHtml(L.relatedQuestions)} · ${item.questionIds.length}</summary><ul>${item.questionIds.map((id) => `<li>${escapeHtml(questionLabel(id))}</li>`).join("")}</ul></details>` : ""}`).join("")}</section>${report.marketSizing ? `<section><h2>${escapeHtml(c.sizing)}</h2><p>${escapeHtml(report.marketSizing.currency)} · ${report.marketSizing.referenceYear}</p><p>TAM ${report.marketSizing.tam.low} / ${report.marketSizing.tam.base} / ${report.marketSizing.tam.high}<br>SAM ${report.marketSizing.sam.low} / ${report.marketSizing.sam.base} / ${report.marketSizing.sam.high}<br>SOM ${report.marketSizing.som.low} / ${report.marketSizing.som.base} / ${report.marketSizing.som.high}</p><p>${escapeHtml(report.marketSizing.formula)}</p></section>` : ""}<section><h2>${escapeHtml(c.actions)}</h2><ol>${report.actionPlan.map((item) => `<li><strong>${escapeHtml(stripLeadingNumber(item.title))}</strong><p>${escapeHtml(item.why)}</p><dl><dt>${escapeHtml(L.owner)}</dt><dd>${escapeHtml(item.owner)}</dd><dt>${escapeHtml(L.timing)}</dt><dd>${escapeHtml(item.timing)}</dd><dt>${escapeHtml(L.successMetric)}</dt><dd>${escapeHtml(item.successMetric)}</dd><dt>${escapeHtml(L.stopCondition)}</dt><dd>${escapeHtml(item.stopCondition)}</dd></dl></li>`).join("")}</ol></section><section><h2>${escapeHtml(c.source)}</h2><ul>${report.sources.map((source) => `<li><a href="${escapeHtml(source.url)}">${escapeHtml(source.title)}</a> — ${escapeHtml(source.publisher)} · ${escapeHtml(source.publishedAt)}</li>`).join("")}</ul></section><section><h2>${escapeHtml(c.human)}</h2><ul>${report.humanVerification.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section><section><h2>${escapeHtml(c.limitations)}</h2><ul>${report.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section></html>`;
     const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -180,14 +212,30 @@ export function AiAgentWorkspace({ initialRun, locale = "ko" }: { initialRun: Ru
       {message && <p className="notice-banner" role="alert">{message}</p>}
       <header className="ai-workspace__header"><span><small>{locale === "en" ? "FRONTIER MODEL" : "프론티어 모델"}</small><h2>{run.report.title}</h2></span><div><button type="button" className="button button--ghost button--small" onClick={downloadReport}>{c.download}</button>{run.generation_count < 2 && <button type="button" className="button button--small" onClick={() => setEditing(true)}>{c.correction}</button>}</div></header>
       <p className="ai-report__summary">{run.report.executiveSummary}</p>
-      <div className="ai-report__grid">{run.report.findings.map((finding) => <article key={finding.title}><span className={`pill ai-report__status ai-report__status--${finding.status}`}>{finding.status} · {finding.confidence}</span><h3>{finding.title}</h3><p>{finding.summary}</p><small>{finding.questionIds.join(" · ")}</small>{finding.counterEvidence.length > 0 && <details><summary>{locale === "en" ? "Counter-evidence" : "반대 근거"}</summary><ul>{finding.counterEvidence.map((item) => <li key={item}>{item}</li>)}</ul></details>}{finding.actions.length > 0 && <ul>{finding.actions.map((action) => <li key={action}>{action}</li>)}</ul>}</article>)}</div>
+      <div className="ai-report__grid">{run.report.findings.map((finding) => <article key={finding.title}>
+        <span className={`pill ai-report__status ai-report__status--${finding.status}`}>{L.status[finding.status]} · {L.confidence[finding.confidence]}</span>
+        <h3>{stripLeadingNumber(finding.title)}</h3>
+        <p>{finding.summary}</p>
+        {finding.actions.length > 0 && <ul>{finding.actions.map((action) => <li key={action}>{action}</li>)}</ul>}
+        {finding.counterEvidence.length > 0 && <details><summary>{locale === "en" ? "Counter-evidence" : "반대 근거"}</summary><ul>{finding.counterEvidence.map((item) => <li key={item}>{item}</li>)}</ul></details>}
+        {finding.questionIds.length > 0 && <details className="ai-report__questions"><summary>{L.relatedQuestions} · {finding.questionIds.length}</summary><ul>{finding.questionIds.map((id) => <li key={id}>{questionLabel(id)}</li>)}</ul></details>}
+      </article>)}</div>
       {run.report.marketSizing && <div className="detail-block"><h3>{c.sizing}</h3><p>{run.report.marketSizing.currency} · {run.report.marketSizing.referenceYear}</p><ul><li>TAM {run.report.marketSizing.tam.low.toLocaleString()} / {run.report.marketSizing.tam.base.toLocaleString()} / {run.report.marketSizing.tam.high.toLocaleString()}</li><li>SAM {run.report.marketSizing.sam.low.toLocaleString()} / {run.report.marketSizing.sam.base.toLocaleString()} / {run.report.marketSizing.sam.high.toLocaleString()}</li><li>SOM {run.report.marketSizing.som.low.toLocaleString()} / {run.report.marketSizing.som.base.toLocaleString()} / {run.report.marketSizing.som.high.toLocaleString()}</li><li>{locale === "en" ? "Beachhead" : "교두보 시장"} {run.report.marketSizing.beachhead.low.toLocaleString()} / {run.report.marketSizing.beachhead.base.toLocaleString()} / {run.report.marketSizing.beachhead.high.toLocaleString()}</li></ul><p>{run.report.marketSizing.formula}</p></div>}
-      <div className="detail-block"><h3>{c.actions}</h3><ol>{run.report.actionPlan.map((item) => <li key={item.title}><strong>{item.title}</strong><p>{item.why}</p><small>{item.owner} · {item.timing} · {item.successMetric} · {item.stopCondition}</small></li>)}</ol></div>
-      <div className="ai-report__columns"><div><h3>{c.assumptions}</h3><ul>{run.report.assumptions.map((item) => <li key={item.statement}><strong>{item.statement}</strong><small>{item.basis} · {item.confidence} · {item.impact}</small></li>)}</ul></div><div><h3>{c.human}</h3><ul>{run.report.humanVerification.map((item) => <li key={item}>{item}</li>)}</ul></div></div>
+      <div className="detail-block ai-report__plan"><h3>{c.actions}</h3><ol>{run.report.actionPlan.map((item) => <li key={item.title}>
+        <strong>{stripLeadingNumber(item.title)}</strong>
+        <p>{item.why}</p>
+        <dl>
+          <div><dt>{L.owner}</dt><dd>{item.owner}</dd></div>
+          <div><dt>{L.timing}</dt><dd>{item.timing}</dd></div>
+          <div><dt>{L.successMetric}</dt><dd>{item.successMetric}</dd></div>
+          <div><dt>{L.stopCondition}</dt><dd>{item.stopCondition}</dd></div>
+        </dl>
+      </li>)}</ol></div>
+      <div className="ai-report__columns"><div><h3>{c.assumptions}</h3><ul>{run.report.assumptions.map((item) => <li key={item.statement}><strong>{item.statement}</strong><small>{L.basis}: {item.basis} · {L.confidence[item.confidence]} · {L.impact}: {item.impact}</small></li>)}</ul></div><div><h3>{c.human}</h3><ul>{run.report.humanVerification.map((item) => <li key={item}>{item}</li>)}</ul></div></div>
       <details><summary>{c.source} · {run.report.sources.length}</summary><ul>{run.report.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a><small>{source.publisher} · {source.checkedAt}</small></li>)}</ul></details>
       <details><summary>{c.gaps} · {run.report.evidenceGaps.length}</summary><ul>{run.report.evidenceGaps.map((item) => <li key={item}>{item}</li>)}</ul></details>
       <details><summary>{c.contradictions} · {run.report.contradictions.length}</summary><ul>{run.report.contradictions.map((item) => <li key={`${item.statementA}-${item.statementB}`}><strong>{item.statementA} ↔ {item.statementB}</strong><small>{item.resolution}</small></li>)}</ul></details>
-      <details><summary>{c.coverage} · {run.report.questionCoverage.length}</summary><ul>{run.report.questionCoverage.map((item) => <li key={item.questionId}><strong>{item.questionId} · {item.priority} · {item.disposition}</strong><small>{item.reason}</small></li>)}</ul></details>
+      <details><summary>{c.coverage} · {run.report.questionCoverage.length}</summary><ul>{run.report.questionCoverage.map((item) => <li key={item.questionId}><strong>{questionLabel(item.questionId)}</strong><small>{L.priority[item.priority]} · {L.disposition[item.disposition]} · {item.reason}</small></li>)}</ul></details>
       <details><summary>{c.limitations}</summary><ul>{run.report.limitations.map((item) => <li key={item}>{item}</li>)}</ul></details>
     </section>;
   }
