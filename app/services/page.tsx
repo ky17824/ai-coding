@@ -26,9 +26,9 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         <span className="page-kicker">{aiEnabled ? "AI EXPERT SERVICES" : "VERIFIED EXPERTS"}</span>
         <h1 className="page-title">{requestedTag && matched.length
           ? aiEnabled ? (en ? "AI experts matched to this action" : "이 실행에 맞는 AI 전문가") : (en ? "Vetted experts for this action" : "이 실행에 맞는 검증된 전문가")
-          : aiEnabled ? (en ? "Turn readiness gaps into expert work" : "준비도 격차를 AI 전문가 업무로 전환하세요") : (en ? "Take your next action with vetted experts" : "검증된 전문가와 다음 액션을 실행하세요")}</h1>
+          : aiEnabled ? (en ? "Close readiness gaps with AI experts" : "준비도의 격차를 AI 전문가와 함께 줄여보세요") : (en ? "Take your next action with vetted experts" : "검증된 전문가와 다음 액션을 실행하세요")}</h1>
         <p className="page-description">
-          {aiEnabled ? (en ? "After payment, GPT-5.6 Sol reuses your readiness answers, asks only material follow-ups, and produces an evidence-led report and action plan." : "결제 후 GPT-5.6 Sol이 준비도 답변을 재사용하고 결과를 바꾸는 정보만 추가로 확인한 뒤 근거 기반 보고서와 실행계획을 만듭니다.") : (en ? "Only standardized services from admin-approved mentors and consultants are listed." : "관리자 승인을 거친 멘토·컨설턴트의 표준화된 서비스만 공개됩니다.")}
+          {aiEnabled ? (en ? "After payment, a frontier model reuses your readiness answers, asks only material follow-ups, and produces an evidence-led report and action plan." : "결제 후 프론티어 모델이 준비도 답변을 재사용하고 결과를 바꾸는 정보만 추가로 확인한 뒤 근거 기반 보고서와 실행계획을 만듭니다.") : (en ? "Only standardized services from admin-approved mentors and consultants are listed." : "관리자 승인을 거친 멘토·컨설턴트의 표준화된 서비스만 공개됩니다.")}
         </p>
         {aiEnabled && <div className="ai-service-boundary notice-banner">
           <strong>{en ? "AI completes research, calculations, drafts and plans." : "AI가 조사·계산·초안·계획을 완성합니다."}</strong>
