@@ -2,13 +2,13 @@ import type { Locale } from "@/lib/i18n";
 import type { SurveyVersion } from "@/lib/intake-questions";
 import type { ServiceOffering } from "@/lib/types";
 import { CATALOG_PRODUCTS } from "./products";
-import { BOUNDARY_INTRO_BY_TIER, HUMAN_BOUNDARY, PRODUCT_BOUNDARY, PRODUCT_COPY, PRODUCT_REQUIRED_INPUT, PROVIDER, REQUIRED_INPUT_BY_AGENT, SHARED_REQUIRED_INPUT, TIER_BADGE, TIER_FIRST_STEP } from "./copy";
+import { REFUND_POLICY, TIER_DISCLOSURE, HUMAN_BOUNDARY, PRODUCT_BOUNDARY, PRODUCT_COPY, PRODUCT_REQUIRED_INPUT, PROVIDER, REQUIRED_INPUT_BY_AGENT, SHARED_REQUIRED_INPUT, TIER_BADGE, TIER_FIRST_STEP } from "./copy";
 import { buildSpecialistRules, OFFICIAL_SOURCE_AGENT_ID } from "./rules";
 import { LABOR_RATES, PLATFORM_FEE_RATE, type CatalogProduct, type Phase } from "./types";
 
 export type { CatalogProduct, Phase, Tier } from "./types";
 export { CATALOG_PRODUCTS } from "./products";
-export { TIER_BADGE, BOUNDARY_INTRO_BY_TIER, TIER_FIRST_STEP } from "./copy";
+export { TIER_BADGE, TIER_FIRST_STEP, REFUND_POLICY } from "./copy";
 export { buildSpecialistRules, OFFICIAL_SOURCE_AGENT_ID } from "./rules";
 export { LABOR_RATES, PLATFORM_FEE_RATE } from "./types";
 
@@ -98,9 +98,12 @@ export function localizeCatalogProduct(
     completionInstructions: productRules.map((rule) => rule.instructions[locale]),
     // 상품 단위 재정의가 있으면 그것을 쓰고, 없으면 포함 전문가의 경계를 합친다.
     // 전문가 상품은 자기가 파는 검토를 스스로 경계로 표시하면 안 되므로 반드시 재정의가 있어야 한다.
-    humanVerification: (PRODUCT_BOUNDARY[product.id]?.[locale]
-      ?? [...new Set(product.includedAgentIds.map((id) => HUMAN_BOUNDARY[id]?.[locale]).filter(Boolean))]) as string[],
-    boundaryIntro: BOUNDARY_INTRO_BY_TIER[product.tier][locale],
+    humanVerification: [
+      ...(TIER_DISCLOSURE[product.tier] ? [TIER_DISCLOSURE[product.tier]![locale]] : []),
+      ...(PRODUCT_BOUNDARY[product.id]?.[locale]
+        ?? [...new Set(product.includedAgentIds.map((id) => HUMAN_BOUNDARY[id]?.[locale]).filter(Boolean))])
+    ] as string[],
+    refundPolicy: REFUND_POLICY[locale],
     tier: product.tier,
     tierLabel: TIER_BADGE[product.tier][locale],
     area: product.area

@@ -244,33 +244,26 @@ export const PRODUCT_REQUIRED_INPUT: Record<string, CopyList> = {
 };
 
 /**
- * 경계 블록의 도입 문구. 계층마다 다르다 —
- * A·B는 전문가 검토가 포함되지 않은 상품이고, C·D·M은 포함된 상품이므로
- * 같은 문구를 쓰면 후자에서 사실과 어긋난다.
+ * 한계 블록의 첫 항목. A·B에만 둔다 — 전문가 검토가 없다는 사실은 이 두 계층에서만
+ * 알려야 할 정보이고, C·D·M은 각자의 경계 문구가 이미 더 정확하게 말하고 있어
+ * 계층 문구를 덧붙이면 군더더기가 된다.
  */
-export const BOUNDARY_INTRO_BY_TIER: Record<Tier, Copy> = {
-  A: {
-    ko: "아래 항목은 AI가 결론 내리지 않고 ‘사람 확인 필요’로 표시해 드립니다. 이 서비스에 전문가 검토는 포함되어 있지 않습니다.",
-    en: "The AI does not conclude the items below; it marks them for human confirmation. Expert review is not included in this service."
-  },
-  B: {
-    ko: "아래 항목은 AI가 결론 내리지 않고 ‘사람 확인 필요’로 표시해 드립니다. 이 서비스에 전문가 검토는 포함되어 있지 않습니다.",
-    en: "The AI does not conclude the items below; it marks them for human confirmation. Expert review is not included in this service."
-  },
-  C: {
-    ko: "이 서비스에는 자격자의 검토가 포함됩니다. 다만 아래는 그 검토로도 확정되지 않는 범위입니다.",
-    en: "A licensed expert's review is included. Even so, the items below fall outside what that review can settle."
-  },
-  D: {
-    ko: "이 서비스에는 담당 전문가의 직접 수행이 포함됩니다. 다만 아래는 제공 범위 밖입니다.",
-    en: "An expert carries this out for you. Even so, the items below fall outside the scope."
-  },
-  M: {
-    ko: "이 서비스는 멘토와의 상담입니다. 아래는 상담으로 대신할 수 없는 범위입니다.",
-    en: "This service is a mentor session. The items below are outside what a session can replace."
-  }
+export const TIER_DISCLOSURE: Partial<Record<Tier, Copy>> = {
+  A: { ko: "전문가 검토는 포함되지 않습니다.", en: "Expert review is not included." },
+  B: { ko: "전문가 검토는 포함되지 않습니다.", en: "Expert review is not included." }
 };
 
+/** 취소·환불 정책. 다른 블록과 같이 불릿으로 나간다. */
+export const REFUND_POLICY: CopyList = {
+  ko: [
+    "보고서 생성 시작 전에는 전액 환불됩니다.",
+    "생성 시작 후 요청은 주문·생성 기록을 기준으로 검토합니다."
+  ],
+  en: [
+    "A full refund is available before report generation begins.",
+    "Requests after generation starts are reviewed using the order and generation record."
+  ]
+};
 export const PROVIDER: { name: Copy; title: Copy; duration: Copy } = {
   name: { ko: "Borderless AI 전문가", en: "Borderless AI Expert" },
   title: { ko: "근거 기반 분석", en: "Evidence-led analysis" },

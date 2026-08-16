@@ -132,8 +132,8 @@ export interface ServiceOffering {
   /** 개입 계층. AI 전용(A·B)과 전문가 결합(C·D·M)을 화면에서 구분한다. */
   tier?: "A" | "B" | "C" | "D" | "M";
   tierLabel?: string;
-  /** 경계 블록 도입 문구. 계층마다 다르다. */
-  boundaryIntro?: string;
+  /** 취소·환불 정책. 다른 블록과 같이 불릿으로 표시한다. */
+  refundPolicy?: string[];
   /** 화면 필터용 준비도 영역. 라우팅 키인 tags와 별개다. */
   area?: string;
 }

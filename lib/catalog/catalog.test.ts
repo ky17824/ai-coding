@@ -117,7 +117,8 @@ describe("scope boundary", () => {
     expect(getCatalogService("ai-entry-requirements")?.humanVerification?.join(" ")).toContain("관세사");
     // 패키지는 포함 상품의 경계를 모두 보여준다.
     const pkg = getCatalogService("pkg-feasibility")?.humanVerification ?? [];
-    expect(pkg.length).toBe(3);
+    // 미포함 고지 1개 + 포함 상품 3종의 경계 3개
+    expect(pkg.length).toBe(4);
     expect(pkg.join(" ")).toContain("파트너");
   });
 });
@@ -136,7 +137,7 @@ describe("phase-2 products are complete before they are ever exposed", () => {
         expect(service.deliverables.length, `${product.id} deliverables`).toBeGreaterThan(0);
         expect(service.requiredInputs?.length, `${product.id} requiredInputs`).toBeGreaterThan(1);
         expect(service.humanVerification?.length, `${product.id} boundary`).toBeGreaterThan(0);
-        expect(service.boundaryIntro, `${product.id} boundaryIntro`).toBeTruthy();
+        expect(service.refundPolicy?.length, `${product.id} refundPolicy`).toBeGreaterThan(0);
         expect(service.tierLabel, `${product.id} tierLabel`).toBeTruthy();
       }
     });
@@ -148,14 +149,16 @@ describe("phase-2 products are complete before they are ever exposed", () => {
       const boundary = (service.humanVerification ?? []).join(" ");
       // hx-classification이 "관세사 확인이 필요합니다"를 경계로 내걸면 자기모순이다.
       expect(boundary, `${product.id}`).not.toMatch(/확인이 필요합니다\.$/);
-      expect(service.boundaryIntro, `${product.id} intro`).not.toContain("전문가 검토는 포함되어 있지 않습니다");
+      // 전문가 검토를 파는 상품이 "검토는 포함되지 않습니다"를 내걸면 안 된다.
+      expect(boundary, `${product.id}`).not.toContain("전문가 검토는 포함되지 않습니다");
     }
   });
 
   it("tells A and B buyers plainly that no expert review is included", () => {
     for (const [product, service] of every("ko")) {
       if (product.tier !== "A" && product.tier !== "B") continue;
-      expect(service.boundaryIntro).toContain("전문가 검토는 포함되어 있지 않습니다");
+      // 첫 불릿이 전문가 검토 미포함을 알린다. 문단이 아니라 다른 블록과 같은 불릿 형식이다.
+      expect(service.humanVerification?.[0]).toBe("전문가 검토는 포함되지 않습니다.");
     }
   });
 });
