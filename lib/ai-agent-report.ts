@@ -11,7 +11,19 @@ export const publicOfferingCategories = ["consumer_goods", "beauty_personal_care
 export const publicCustomerSegments = ["consumer", "small_business", "mid_market", "enterprise", "public_sector", "channel_partner", "mixed", "other"] as const;
 
 const reportText = z.string().trim().min(1).max(6000);
-const httpUrl = z.string().url().refine((value) => /^https?:\/\//i.test(value), "HTTP(S) URL만 허용됩니다.");
+// 모델에 보내는 스키마이므로 JSON Schema로 새어 나가는 제약을 쓰지 않는다.
+//
+// z.string().url()은 format: "uri"를 내보내는데 OpenAI 구조화 출력이 모르는 값이라
+// 호출 전체가 400으로 거절된다. 공개 조사 단계가 이것 때문에 통째로 실패했다.
+//
+// pattern으로 바꾸는 안은 호출은 통과하지만 더 나쁘다. 제약 디코딩이 URL을
+// 망가뜨려 "https://\" 같은 값을 만들어 낸다(2026-08-17 실측). 조용히 틀린 출처가
+// 보고서에 실리는 쪽이 400보다 위험하다.
+//
+// 그래서 모델에는 제약을 걸지 않고, 검증은 파싱 뒤에 한다. 인용 URL이 실제 검색
+// 결과인지는 validateAiAgentSources가 별도로 대조한다. refine은 JSON Schema에
+// 아무것도 남기지 않는다.
+const httpUrl = z.string().refine((value) => /^https?:\/\/\S+$/i.test(value), "HTTP(S) URL만 허용됩니다.");
 const sourceSchema = z.object({
   title: z.string().trim().min(1).max(300),
   url: httpUrl,
