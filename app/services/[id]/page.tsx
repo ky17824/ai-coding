@@ -6,6 +6,8 @@ import { getPublishedService } from "@/lib/services";
 import { getAiPriceWithVat } from "@/lib/ai-agent-report";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { TIER_FIRST_STEP } from "@/lib/catalog";
+import { checkAdminBetaAccess } from "@/lib/admin-ai-beta";
+import { createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
 
 const won = new Intl.NumberFormat("ko-KR");
 
@@ -24,6 +26,17 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
   if (!service || !service.approved) notFound();
   const isAi = service.type === "ai_agent";
   const amounts = isAi ? getAiPriceWithVat(service.price) : null;
+  // 자격 판정은 서버에서만 한다. 허용 목록은 클라이언트로 나가지 않고, 결과 boolean만 전달한다.
+  const user = await requireUser();
+  const supabase = await createSupabaseServerClient();
+  const { data: viewer } = user && supabase
+    ? await supabase.from("profiles").select("role,deleted_at").eq("id", user.id).maybeSingle()
+    : { data: null };
+  const isBeta = Boolean(user) && checkAdminBetaAccess({
+    userId: user!.id,
+    profile: viewer ? { role: viewer.role, deletedAt: viewer.deleted_at } : null,
+    isAiProduct: isAi
+  }).eligible;
 
   return (
     <main className="app-page">
@@ -50,15 +63,21 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             : ["서비스 시작 전에는 전액 환불됩니다.", "시작 후 요청은 관리자가 주문 기록을 확인합니다."])).map((item) => <li key={item}>{item}</li>)}</ul></div>
         </section>
         <aside className="purchase-panel panel">
-          <span>{en ? "Service price" : "서비스 금액"}</span>
-          <strong>{en ? `₩${won.format(service.price)}` : `${won.format(service.price)}원`}</strong>
-          <small>{isAi && amounts ? (en ? `VAT ₩${won.format(amounts.vatAmountKrw)} · Total ₩${won.format(amounts.grossAmountKrw)}` : `부가세 ${won.format(amounts.vatAmountKrw)}원 · 결제금액 ${won.format(amounts.grossAmountKrw)}원`) : service.durationLabel}</small>
+          {isBeta && <p className="notice-banner" role="status">
+            <strong>{en ? "Admin beta test" : "관리자 베타 테스트"}</strong>
+            <span>{en ? "This runs the real AI service without payment. The model, research, files, clarifications, report, and cost recording are identical to a paid order." : "결제 없이 실제 AI 실행 환경을 테스트합니다. 모델·검색·파일·추가질문·보고서·비용 기록은 운영과 동일합니다."}</span>
+          </p>}
+          <span>{isBeta ? (en ? "Charged to you" : "관리자 테스트 청구액") : (en ? "Service price" : "서비스 금액")}</span>
+          <strong>{isBeta ? (en ? "₩0" : "0원") : en ? `₩${won.format(service.price)}` : `${won.format(service.price)}원`}</strong>
+          <small>{isBeta
+            ? (en ? `List price ₩${won.format(service.price)} · no checkout window opens` : `서비스 기준가 ${won.format(service.price)}원 · 결제창은 열리지 않습니다`)
+            : isAi && amounts ? (en ? `VAT ₩${won.format(amounts.vatAmountKrw)} · Total ₩${won.format(amounts.grossAmountKrw)}` : `부가세 ${won.format(amounts.vatAmountKrw)}원 · 결제금액 ${won.format(amounts.grossAmountKrw)}원`) : service.durationLabel}</small>
           <div className="purchase-summary">
             <span><small>{en ? "Provider" : "제공자"}</small><strong>{service.providerName}</strong></span>
             <span><small>{en ? "Type" : "유형"}</small><strong>{isAi ? (service.productKind === "package" ? (en ? "AI package" : "AI 패키지") : (en ? "AI specialist" : "AI 전문가")) : service.type === "mentoring" ? (en ? "Mentoring" : "멘토링") : (en ? "Consulting" : "컨설팅")}</strong></span>
             <span><small>{en ? (isAi ? "Included" : "Duration") : (isAi ? "포함" : "제공기간")}</small><strong>{isAi ? (en ? "2 clarifications · 1 correction" : "추가질문 2회 · 사실 정정 1회") : service.durationLabel}</strong></span>
           </div>
-          <CheckoutButton serviceId={service.id} title={service.title} amount={amounts?.grossAmountKrw ?? service.price} type={service.type} availableSlots={service.availableSlots} locale={locale} />
+          <CheckoutButton serviceId={service.id} title={service.title} amount={isBeta ? 0 : amounts?.grossAmountKrw ?? service.price} type={service.type} availableSlots={service.availableSlots} locale={locale} betaMode={isBeta} />
         </aside>
       </div>
     </main>

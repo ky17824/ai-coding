@@ -69,3 +69,27 @@ describe("beta order boundaries", () => {
     expect(webhook).toContain("order_kind,billing_mode");
   });
 });
+
+describe("service detail beta affordance", () => {
+  const detail = readFileSync(new URL("../../services/[id]/page.tsx", import.meta.url), "utf8");
+
+  it("decides eligibility on the server and passes only a boolean to the client", () => {
+    expect(detail).toContain("checkAdminBetaAccess");
+    expect(detail).toContain("betaMode={isBeta}");
+    // 허용 목록이나 UUID가 클라이언트로 나가면 안 된다.
+    expect(detail).not.toContain("ADMIN_AI_BETA_USER_IDS");
+  });
+
+  it("shows a zero charge and says no checkout window opens", () => {
+    // 플래그가 켜졌는데 화면이 55,000원 결제 버튼이면 관리자가 실수로 결제를 시도한다.
+    expect(detail).toContain("관리자 테스트 청구액");
+    expect(detail).toContain("결제창은 열리지 않습니다");
+    expect(detail).toContain("관리자 베타 테스트");
+  });
+
+  it("labels the CTA as a test rather than a payment", () => {
+    expect(checkout).toContain("관리자 베타 테스트 시작");
+    expect(checkout).toContain("Start admin beta test");
+    expect(checkout).toContain("결제·환불 대상이 아닙니다");
+  });
+});
