@@ -57,7 +57,7 @@ describe("AnswerQuestionChart", () => {
     expect(html).toContain("aria-pressed=\"true\"");
     expect(html).toContain("Q02 필수 준비를 완료했나요?");
     expect(html).toContain("담당자와 기한을 정합니다.");
-    expect(html).toContain("점수 인정 3단계 · 필수 근거 별도 확인");
+    expect(html).toContain("점수 인정 3단계 · 테두리: 게이트 상태");
     expect(html).toContain("aria-live=\"polite\"");
     expect(html).not.toContain("반복 가능한 실행 체계가 있나요?</h3>");
   });

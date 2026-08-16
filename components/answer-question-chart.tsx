@@ -47,7 +47,7 @@ export function AnswerQuestionChart({
           <strong>{en ? "Responses by question" : "문항별 응답 수준"}</strong>
           <small>{en ? "Select a bar to review the answer and next step." : "막대를 선택하면 답변과 다음 행동을 확인할 수 있습니다."}</small>
         </span>
-        <small>{en ? "Bar height: Level 1–4 · line: score-eligible Level 3 · required evidence checked separately" : "막대 높이: 응답 1~4단계 · 선: 점수 인정 3단계 · 필수 근거 별도 확인"}</small>
+        <small>{en ? "Height and shade: Level 1–4 · line: score-eligible Level 3 · outline: gate status" : "높이와 색 농도: 응답 1~4단계 · 선: 점수 인정 3단계 · 테두리: 게이트 상태"}</small>
       </div>
 
       <div
@@ -85,12 +85,18 @@ export function AnswerQuestionChart({
         </div>
       </div>
 
-      <div className="answer-chart-legend" aria-label={en ? "Response status legend" : "문항 상태 범례"}>
+      {/* 범례도 두 채널을 나눠 읽힌다: 명도는 응답 수준, 테두리는 게이트 상태. */}
+      <div className="answer-chart-legend" aria-label={en ? "Chart legend" : "차트 범례"}>
+        <span className="answer-chart-legend__scale">
+          {en ? "Level 1" : "1단계"}
+          <i className="answer-question-legend--level-1" />
+          <i className="answer-question-legend--level-2" />
+          <i className="answer-question-legend--level-3" />
+          <i className="answer-question-legend--level-4" />
+          {en ? "4" : "4단계"}
+        </span>
         <span><i className="answer-question-legend--blocker" />{en ? "Required" : "필수 선결 조건"}</span>
         <span><i className="answer-question-legend--deferred" />{en ? "90-day task" : "90일 검증"}</span>
-        <span><i className="answer-question-legend--needs-work" />{en ? "Needs work" : "보완 필요"}</span>
-        <span><i className="answer-question-legend--passed" />{en ? "Passed" : "통과"}</span>
-        <span><i className="answer-question-legend--strength" />{en ? "Strength" : "강점"}</span>
       </div>
 
       <article

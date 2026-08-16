@@ -19,6 +19,12 @@
   --green: #1d7b4c;
   --green-dark: #0e3b2b;
   --green-uplift: #2b5148;
+  /* 응답 수준 1~4 명도. 연함 → 진함이 곧 수준이며, 이 순서를 깨지 않는다.
+     게이트 상태(필수 선결 조건·90일 검증)는 색이 아니라 테두리로 표시한다. */
+  --chart-level-1: #cfe4d8;
+  --chart-level-2: #a8cdb9;
+  --chart-level-3: #72bd91;
+  --chart-level-4: #1d7b4c;
   --chart-blocker: #0e3b2b;
   --chart-deferred: #5d756c;
   --chart-needs-work: #a8cdb9;
@@ -1992,15 +1998,24 @@ main[lang="en"] .hero h1 {
   transition: filter 160ms ease;
 }
 
-.answer-question-bar--level-1 .answer-question-bar__track > span { height: 25%; }
-.answer-question-bar--level-2 .answer-question-bar__track > span { height: 50%; }
-.answer-question-bar--level-3 .answer-question-bar__track > span { height: 75%; }
-.answer-question-bar--level-4 .answer-question-bar__track > span { height: 100%; }
-.answer-question-bar--blocker .answer-question-bar__track > span { border-top: 4px solid var(--chart-blocker); background: repeating-linear-gradient(135deg, var(--chart-blocker) 0 6px, var(--green-uplift) 6px 9px); }
-.answer-question-bar--deferred .answer-question-bar__track > span { border-top: 4px dashed var(--green-dark); background: repeating-linear-gradient(90deg, var(--chart-deferred) 0 5px, var(--mint) 5px 7px); }
-.answer-question-bar--needs_work .answer-question-bar__track > span { border-top: 4px dotted var(--green-uplift); background: var(--chart-needs-work); }
-.answer-question-bar--passed .answer-question-bar__track > span { background: var(--chart-passed); }
-.answer-question-bar--strength .answer-question-bar__track > span { background: var(--chart-strength); }
+/* 높이와 명도가 함께 응답 수준을 나타낸다. 중복이지만 짧은 막대도 읽히고,
+   색을 구분하기 어려운 환경에서는 높이가 같은 정보를 대신한다. */
+.answer-question-bar--level-1 .answer-question-bar__track > span { height: 25%; background: var(--chart-level-1); }
+.answer-question-bar--level-2 .answer-question-bar__track > span { height: 50%; background: var(--chart-level-2); }
+.answer-question-bar--level-3 .answer-question-bar__track > span { height: 75%; background: var(--chart-level-3); }
+.answer-question-bar--level-4 .answer-question-bar__track > span { height: 100%; background: var(--chart-level-4); }
+
+/* 게이트 상태는 명도를 쓰지 않는다. 낮은 수준의 문항이 가장 진해지면
+   '진할수록 좋다'는 읽기와 정반대가 된다. 테두리로만 표시한다. */
+.answer-question-bar--blocker .answer-question-bar__track > span {
+  border: 2px solid var(--chart-blocker);
+  box-shadow: none;
+}
+
+.answer-question-bar--deferred .answer-question-bar__track > span {
+  border: 2px dashed var(--chart-deferred);
+  box-shadow: none;
+}
 
 .answer-question-bar strong,
 .answer-question-bar small {
@@ -2049,11 +2064,20 @@ main[lang="en"] .hero h1 {
   display: inline-block;
 }
 
-.answer-question-legend--blocker { background: repeating-linear-gradient(135deg, var(--chart-blocker) 0 4px, var(--green-uplift) 4px 6px); }
-.answer-question-legend--deferred { background: repeating-linear-gradient(90deg, var(--chart-deferred) 0 3px, var(--mint) 3px 5px); }
-.answer-question-legend--needs-work { border: 2px dotted var(--green-uplift); background: var(--chart-needs-work); }
-.answer-question-legend--passed { background: var(--chart-passed); }
-.answer-question-legend--strength { background: var(--chart-strength); }
+.answer-question-legend--level-1 { background: var(--chart-level-1); }
+.answer-question-legend--level-2 { background: var(--chart-level-2); }
+.answer-question-legend--level-3 { background: var(--chart-level-3); }
+.answer-question-legend--level-4 { background: var(--chart-level-4); }
+.answer-question-legend--blocker { border: 2px solid var(--chart-blocker); background: var(--chart-level-2); }
+.answer-question-legend--deferred { border: 2px dashed var(--chart-deferred); background: var(--chart-level-2); }
+
+.answer-chart-legend__scale {
+  gap: 4px;
+}
+
+.answer-chart-legend__scale i + i {
+  margin-left: -1px;
+}
 
 .answer-question-detail {
   margin-top: 18px;
