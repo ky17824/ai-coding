@@ -23,7 +23,7 @@ import {
   validateAiAgentReport,
   validateAiAgentSources
 } from "@/lib/ai-agent-report";
-import { collectAllowedResearchUrls, collectCitedUrls } from "@/lib/research-sources";
+import { collectAllowedResearchUrls, collectCitedUrls, stripUnverifiedSources } from "@/lib/research-sources";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { getIntakeQuestions, INTAKE_ITEMS, INTAKE_STAGES } from "@/lib/intake-questions";
 
@@ -359,6 +359,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     const publicEvidence = aiPublicResearchSchema.parse(researchResponse.output_parsed);
     await markStage("verify");
     allowedUrls = collectAllowedResearchUrls([researchResponse.output], []);
+    // 검색으로 확인되지 않은 출처는 버리고 진행한다. 전체를 실패시키던 예전 방식은
+    // 모델이 URL 하나만 잘못 적어도 4분짜리 실행을 통째로 날렸다(주문 6d76942a).
+    // 다만 남는 것이 없으면 조사가 무의미하므로 그때는 실패한다.
+    const droppedUrls: string[] = [];
+    stripUnverifiedSources(publicEvidence, allowedUrls, droppedUrls);
+    if (droppedUrls.length) console.warn("[ai-agent-run] unverified sources dropped", { orderId, dropped: droppedUrls });
+    if (publicEvidence.sources.length === 0) throw new Error("검색 도구로 확인된 출처가 하나도 없습니다.");
+    // 개별 발견 항목의 출처가 전부 걸러졌을 수 있다. 근거 없는 발견은 남기지 않는다.
+    publicEvidence.findings = publicEvidence.findings.filter((finding) => finding.sourceUrls.length > 0);
+    if (publicEvidence.findings.length === 0) throw new Error("검색 도구로 확인된 출처를 가진 발견이 없습니다.");
     validateAiAgentSources([...collectCitedUrls(publicEvidence)], allowedUrls);
 
     await markStage("report");

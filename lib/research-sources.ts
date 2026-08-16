@@ -7,11 +7,24 @@ export function canonicalResearchUrl(value: string) {
   return url.toString().replace(/\/$/, "");
 }
 
-export function collectCitedUrls(value: unknown, result = new Set<string>()): Set<string> {
-  if (Array.isArray(value)) value.forEach((entry) => collectCitedUrls(entry, result));
+/**
+ * 값이 객체가 아니라 URL 문자열 자체인 인용 자리.
+ *
+ * aiPublicResearchSchema.findings[].sourceUrls와 aiAgentReportSchema.findings[].sourceUrls는
+ * 문자열 배열이다. 예전 구현은 `url` 키를 가진 객체만 모았기 때문에 이 배열을 통째로
+ * 놓쳤고, 결과적으로 각 발견 항목에 붙는 출처는 검증 대상이 아니었다.
+ */
+const URL_STRING_ARRAY_KEYS = new Set(["sourceUrls"]);
+
+export function collectCitedUrls(value: unknown, result = new Set<string>(), parentKey?: string): Set<string> {
+  // 배열 안으로 들어가도 부모 키를 유지한다. sourceUrls의 항목인지 알아야 하기 때문이다.
+  if (Array.isArray(value)) value.forEach((entry) => collectCitedUrls(entry, result, parentKey));
+  else if (typeof value === "string") {
+    if (parentKey && URL_STRING_ARRAY_KEYS.has(parentKey) && /^https?:\/\//i.test(value)) result.add(canonicalResearchUrl(value));
+  }
   else if (value && typeof value === "object") Object.entries(value).forEach(([key, entry]) => {
     if (key === "url" && typeof entry === "string" && /^https?:\/\//i.test(entry)) result.add(canonicalResearchUrl(entry));
-    else collectCitedUrls(entry, result);
+    else collectCitedUrls(entry, result, key);
   });
   return result;
 }
@@ -64,7 +77,9 @@ export function researchQuotaDecision(
 export function stripUnverifiedSources<T>(value: T, allowed: Set<string>, dropped: string[] = []): T {
   if (Array.isArray(value)) {
     const kept = value.filter((entry) => {
-      const url = entry && typeof entry === "object" ? (entry as { url?: unknown }).url : null;
+      // 항목이 URL 문자열 자체인 경우(sourceUrls)와 url 키를 가진 객체인 경우를 모두 본다.
+      const url = typeof entry === "string" ? entry
+        : entry && typeof entry === "object" ? (entry as { url?: unknown }).url : null;
       if (typeof url === "string" && /^https?:\/\//i.test(url) && !allowed.has(canonicalResearchUrl(url))) {
         dropped.push(url);
         return false;

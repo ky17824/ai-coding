@@ -54,4 +54,32 @@ describe("market research source verification", () => {
     expect(result.scenario.filters[0].sources).toEqual([{ url: null }]);
     expect(dropped).toEqual(["https://bad.example/x", "https://bad.example/y", "https://bad.example/z"]);
   });
+
+  it("collects and strips URL strings inside sourceUrls, not only {url} objects", () => {
+    // AI 전문가 스키마의 findings[].sourceUrls는 문자열 배열이다. 예전 구현은 이 자리를
+    // 통째로 놓쳐서, 발견 항목에 붙은 출처는 검증도 제거도 되지 않았다(주문 6d76942a).
+    const evidence = {
+      summary: "s",
+      findings: [
+        { title: "a", sourceUrls: ["https://ok.example/1", "https://bad.example/f"] },
+        { title: "b", sourceUrls: ["https://bad.example/g"] }
+      ],
+      sources: [{ title: "t", url: "https://ok.example/1" }, { title: "u", url: "https://bad.example/s" }]
+    };
+    expect([...collectCitedUrls(evidence)].sort()).toEqual([
+      "https://bad.example/f", "https://bad.example/g", "https://bad.example/s", "https://ok.example/1"
+    ]);
+
+    const dropped: string[] = [];
+    stripUnverifiedSources(evidence, new Set(["https://ok.example/1"]), dropped);
+    expect(evidence.findings[0].sourceUrls).toEqual(["https://ok.example/1"]);
+    expect(evidence.findings[1].sourceUrls).toEqual([]);
+    expect(evidence.sources).toEqual([{ title: "t", url: "https://ok.example/1" }]);
+    expect(dropped.sort()).toEqual(["https://bad.example/f", "https://bad.example/g", "https://bad.example/s"]);
+  });
+
+  it("does not treat arbitrary string arrays as citations", () => {
+    // deliverables 같은 일반 문자열 배열에 URL이 섞여 있어도 출처로 세지 않는다.
+    expect([...collectCitedUrls({ deliverables: ["https://not-a-citation.example"] })]).toEqual([]);
+  });
 });
