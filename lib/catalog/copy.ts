@@ -32,16 +32,16 @@ export const PRODUCT_COPY: Record<string, ProductCopy> = {
       en: ["Nine-block local BMC", "BMLC and six LPA axes", "Keep/change/test backlog"]
     }
   },
-  "ai-market-entry-requirements": {
-    title: { ko: "규제·진입 요건", en: "Regulatory & Entry Requirements" },
-    description: { ko: "정부·기관의 공식 자료를 근거로 제품이 어떤 품목으로 분류될지, 어떤 인허가·인증·표시가 필요한지, 아직 확인되지 않은 위험은 무엇인지 정리합니다.", en: "Use official sources to map classification hypotheses, approvals, certification, labelling, and unresolved risks." },
+  "ai-entry-requirements": {
+    title: { ko: "규제 요건 조사", en: "Regulatory Requirements Research" },
+    description: { ko: "정부·기관의 공식 자료를 근거로 어떤 인허가·인증·표시가 필요한지, 아직 확인되지 않은 위험은 무엇인지 정리합니다. 품목 분류의 확정은 자격자 검토가 필요합니다.", en: "Use official sources to map required approvals, certification, labelling, and unresolved risks. Confirming the product classification itself requires a licensed expert." },
     deliverables: {
-      ko: ["제품 분류 가설", "공식 자료 기준 요건표", "미확인 위험과 재확인 시점"],
-      en: ["Classification hypothesis", "Official-source requirements", "Open risks and review dates"]
+      ko: ["공식 자료 기준 요건표", "미확인 위험과 재확인 시점", "분류 확정에 필요한 확인 항목"],
+      en: ["Official-source requirements", "Open risks and review dates", "What a licensed expert still needs to confirm"]
     }
   },
-  "ai-local-ecosystem": {
-    title: { ko: "현지 생태계·네트워크", en: "Local Ecosystem & Network" },
+  "ai-partner-research": {
+    title: { ko: "파트너·생태계 조사", en: "Partner & Ecosystem Research" },
     description: { ko: "도시와 산업 거점별로 만나야 할 곳과 파트너 후보를 찾고, 무엇을 확인해야 하는지, 한 곳에 의존하면 어떤 위험이 있는지까지 정리합니다.", en: "Map city and cluster stakeholders, partner candidates, validation questions, and dependency risks." },
     deliverables: {
       ko: ["생태계 지도", "파트너 후보와 검증 항목", "접촉 시 질문과 대체 경로"],
@@ -64,37 +64,61 @@ export const PRODUCT_COPY: Record<string, ProductCopy> = {
       en: ["One-page GTM and KPI tree", "RACI and authority map", "30/60/90-day plan"]
     }
   },
-  "ai-market-opportunity": {
-    title: { ko: "시장 가능성 패키지", en: "Market Opportunity Package" },
-    description: { ko: "시장 조사와 고객 검증을 묶어, 어디서 누구에게 무엇부터 검증할지 정합니다.", en: "Combine market intelligence and customer validation to decide where, for whom, and what to test." },
+  "pkg-feasibility": {
+    title: { ko: "진출 가능성 진단", en: "Market Entry Feasibility" },
+    description: { ko: "시장 규모와 규제 요건, 파트너 후보를 한 번에 조사해 이 나라에 들어갈 만한지부터 판단합니다.", en: "Research market size, regulatory requirements, and partner candidates together to judge whether this market is worth entering." },
     deliverables: {
-      ko: ["시장·경쟁 보고서", "목표 고객과 시장규모", "고객 검증 계획"],
-      en: ["Market and competition report", "ICP and market sizing", "Customer validation plan"]
+      ko: ["시장규모와 경쟁 구도", "공식 자료 기준 규제 요건", "파트너 후보와 접촉 질문"],
+      en: ["Market sizing and competition", "Official-source regulatory requirements", "Partner candidates and outreach questions"]
     }
   },
-  "ai-local-entry": {
-    title: { ko: "현지화·진입 패키지", en: "Localization & Entry Package" },
-    description: { ko: "현지화와 규제 대응, 파트너 네트워크를 하나의 진출 설계로 묶어 드립니다.", en: "Integrate localization, regulatory requirements, and local networks into one entry design." },
+  "pkg-entry-design": {
+    title: { ko: "진출 설계", en: "Market Entry Design" },
+    description: { ko: "AI가 할 수 있는 조사와 설계를 모두 묶어, 어디에 무엇을 가지고 들어가 어떻게 팔지까지 한 번에 정리합니다.", en: "Bundle every AI-completable research and design step into one plan: where to enter, with what, and how to sell." },
     deliverables: {
-      ko: ["현지 사업모델(Local BMC)", "진입 요건표", "생태계·파트너 지도"],
-      en: ["Local BMC", "Entry requirements", "Ecosystem and partner map"]
+      ko: ["시장·규제·파트너 조사 일체", "현지 사업모델과 고객 검증 설계", "진입 비용과 30·60·90일 실행계획"],
+      en: ["Market, regulatory, and partner research", "Local business model and validation design", "Entry cost and a 30/60/90-day plan"]
     }
   },
-  "ai-execution-plan": {
-    title: { ko: "실행계획 패키지", en: "Execution Planning Package" },
-    description: { ko: "자금과 인력 계획, 현지 운영 방식을 내부 보고와 결재에 바로 쓸 수 있는 실행계획으로 만듭니다.", en: "Turn financial capacity and local operations into an approvable execution plan." },
-    deliverables: {
-      ko: ["총 진입비용과 예산 재검토 시점", "역할·책임 분담표와 성과 지표", "30·60·90일 계획"],
-      en: ["TCE and budget gates", "RACI and KPIs", "30/60/90-day plan"]
-    }
+  "hx-classification": {
+    title: { ko: "제품 분류·인허가 확정", en: "Product Classification & Approval Sign-off" },
+    description: { ko: "관세사·변리사가 AI 조사 결과를 검토해 품목 분류와 필요한 인허가를 확정합니다.", en: "A licensed customs or patent attorney reviews the AI research and confirms the classification and required approvals." },
+    deliverables: { ko: ["확정된 품목 분류", "필요 인허가 목록과 근거", "자격자 검토 의견"], en: ["Confirmed classification", "Required approvals with basis", "Licensed expert opinion"] }
   },
-  "ai-comprehensive-entry": {
-    title: { ko: "종합 진출 설계 패키지", en: "Comprehensive Market Entry Package" },
-    description: { ko: "7개 AI 전문가의 결과를 서로 어긋나지 않게 맞춰, 경영진에게 보고할 하나의 실행 보고서로 정리합니다.", en: "Integrate all seven AI specialists into one consistent executive market-entry report." },
-    deliverables: {
-      ko: ["종합 진출 설계 보고서", "근거·가정·위험 목록", "통합 30·60·90일 계획"],
-      en: ["Comprehensive entry report", "Evidence, assumptions, and risk ledger", "Integrated 30/60/90-day plan"]
-    }
+  "hx-classification-plus": {
+    title: { ko: "제품 분류·인허가 확정 (심화)", en: "Product Classification & Approval Sign-off (Extended)" },
+    description: { ko: "품목이 여러 갈래이거나 규제가 겹치는 경우, 자격자가 시간을 더 들여 대안까지 검토합니다.", en: "For products with competing classifications or overlapping rules, the expert spends more time and reviews alternatives." },
+    deliverables: { ko: ["확정된 품목 분류와 대안 검토", "필요 인허가 목록과 근거", "자격자 검토 의견"], en: ["Confirmed classification with alternatives", "Required approvals with basis", "Licensed expert opinion"] }
+  },
+  "hx-gtm-review": {
+    title: { ko: "GTM 실행계획 검토·코칭", en: "GTM Plan Review & Coaching" },
+    description: { ko: "현장에서 GTM을 실행해 본 전문가가 계획의 현실성을 점검하고 무엇을 먼저 할지 함께 정합니다.", en: "An operator who has run GTM in the field checks whether the plan is realistic and helps set the first moves." },
+    deliverables: { ko: ["실행 가능성 검토 의견", "우선순위 조정안", "1시간 코칭 세션"], en: ["Feasibility review", "Reprioritized plan", "One-hour coaching session"] }
+  },
+  "hx-partner-verify": {
+    title: { ko: "파트너 실재·평판 검증", en: "Partner Verification" },
+    description: { ko: "현지 전문가가 후보 파트너가 실제로 존재하고 거래할 만한 곳인지 직접 확인합니다.", en: "A local expert verifies that candidate partners actually exist and are worth dealing with." },
+    deliverables: { ko: ["후보별 실재 확인 결과", "평판·거래 이력", "거래 시 유의사항"], en: ["Existence check per candidate", "Reputation and track record", "What to watch for"] }
+  },
+  "hx-partner-intro": {
+    title: { ko: "파트너 접촉·소개", en: "Partner Outreach & Introduction" },
+    description: { ko: "현지 전문가가 후보 파트너에게 직접 접촉해 의향을 확인하고 자리를 연결합니다.", en: "A local expert contacts candidate partners directly, checks their intent, and makes the introduction." },
+    deliverables: { ko: ["접촉 결과와 반응", "의향 확인된 후보", "첫 미팅 연결"], en: ["Outreach results", "Candidates with confirmed intent", "First meeting arranged"] }
+  },
+  "hx-interview": {
+    title: { ko: "현지 고객 인터뷰 대행", en: "Local Customer Interviews" },
+    description: { ko: "현지 전문가가 목표 고객을 직접 인터뷰하고 원문 그대로의 반응을 전달합니다.", en: "A local expert interviews target customers directly and reports what they actually said." },
+    deliverables: { ko: ["인터뷰 기록", "고객 표현 그대로의 반응", "가설 검증 결과"], en: ["Interview transcripts", "Verbatim customer language", "Hypothesis results"] }
+  },
+  "hx-mentor-1h": {
+    title: { ko: "멘토 상담 (1시간)", en: "Mentor Session (1 hour)" },
+    description: { ko: "먼저 해외에 나가 본 창업자·실무자와 1시간 동안 지금 막힌 지점을 이야기합니다.", en: "One hour with a founder or operator who has already gone abroad, on whatever is blocking you now." },
+    deliverables: { ko: ["1시간 상담", "논의 요약", "다음 액션 제안"], en: ["One-hour session", "Discussion summary", "Suggested next actions"] }
+  },
+  "hx-mentor-2h": {
+    title: { ko: "멘토 상담 (2시간)", en: "Mentor Session (2 hours)" },
+    description: { ko: "자료를 함께 보며 깊이 논의해야 할 때 쓰는 2시간 상담입니다.", en: "A two-hour session for when you need to go through documents together." },
+    deliverables: { ko: ["2시간 상담", "자료 검토 의견", "다음 액션 제안"], en: ["Two-hour session", "Review of your materials", "Suggested next actions"] }
   }
 };
 
