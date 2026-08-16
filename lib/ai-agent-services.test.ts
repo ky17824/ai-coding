@@ -77,15 +77,12 @@ describe("AI expert service catalog", () => {
     expect(ko?.completionInstructions?.[0]).toContain("Top-Down과 Bottom-Up을 각각 산정");
   });
 
-  it("uses plain Korean service names and shared input boundaries", () => {
+  it("uses plain Korean service names", () => {
     expect(getAiAgentService("ai-local-bmc", "ko")?.title).toBe("현지화 사업모델 설계");
     expect(getAiAgentService("ai-local-bmc", "en")?.title).toBe("Local Business Model Design");
     expect(getAiAgentService("ai-tce-finance", "ko")?.title).toBe("진입 비용·자금 계획");
     expect(getAiAgentService("ai-tce-finance", "en")?.title).toBe("Entry Cost & Funding Plan");
-    expect(getAiAgentService("pkg-entry-design", "ko")?.requiredInputs).toEqual([
-      "목표 국가와 고객, 판매할 제품 또는 서비스",
-      "관련 준비도 진단 답변과 지금 가진 근거",
-      "제약 조건과 쓸 수 있는 자원, 목표 기한"
-    ]);
+    // 필요정보는 상품별로 달라졌다. 상세 계약은 lib/catalog/catalog.test.ts가 검증한다.
+    expect(getAiAgentService("pkg-entry-design", "ko")?.requiredInputs?.[0]).toContain("목표 국가와 고객");
   });
 });
