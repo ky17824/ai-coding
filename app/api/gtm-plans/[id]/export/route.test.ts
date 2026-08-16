@@ -12,6 +12,7 @@ const createQuery = (result: { data: unknown; error: unknown }) => {
 
 let failureTable = "";
 let planData: Record<string, unknown> = { id: "plan-1", organization_id: "org-1", assessment_id: "assessment-1" };
+let assessmentData: Record<string, unknown> = { survey_version: "5.0", sales_motion: "direct" };
 const admin = {
   from(table: string) {
     const data = table === "profiles"
@@ -21,7 +22,7 @@ const admin = {
         : table === "gtm_plan_items"
           ? []
           : table === "assessments"
-            ? { survey_version: "5.0", sales_motion: "direct" }
+            ? assessmentData
             : [];
     return createQuery({ data, error: table === failureTable ? { message: "database unavailable" } : null });
   }
@@ -60,11 +61,23 @@ describe("market report readiness coverage", () => {
   beforeEach(() => {
     failureTable = "";
     planData = { id: "plan-1", organization_id: "org-1", assessment_id: "assessment-1" };
+    assessmentData = { survey_version: "5.0", sales_motion: "direct" };
   });
 
   it.each(["assessments", "readiness_answers"])("fails closed when %s cannot be loaded", async (table) => {
     failureTable = table;
     expect((await get()).status).toBe(500);
+  });
+
+  it("combines repeated applicability reasons into one readable item", async () => {
+    setReportPlan({});
+    planData.assessment_id = "assessment-1";
+    assessmentData = { survey_version: "5.0", sales_motion: "direct", target_country: "US" };
+
+    const html = await (await get()).text();
+
+    expect(html.match(/유료 고객 증거가 없어 매출 집중도 문항은 해당 없음/g)).toHaveLength(1);
+    expect(html).toContain('class="readiness-stats"');
   });
 });
 
@@ -153,6 +166,52 @@ describe("market report citations", () => {
     }] });
 
     expect(await (await get()).text()).toContain("Top-Down · 공개자료 기반 하향식 추정");
+  });
+
+  it("renders compact market details and readable competitor cards without raw body URLs", async () => {
+    const source = {
+      title: "Source",
+      url: "https://example.com/very/long/source?utm_source=openai",
+      publisher: "Example",
+      publishedAt: "2026-01-01",
+      checkedAt: "2026-01-02",
+      kind: "industry"
+    };
+    setReportPlan({
+      marketSizing: [{
+        key: "tam", label: "TAM", status: "estimated", estimate: "US$1B", range: null,
+        method: "top_down", formula: "공개자료 경로 평균", calculationInputs: [], assumptions: ["proxy_assumption"],
+        sources: [source], confidence: "medium", evidenceGaps: ["공개 세부자료 부족"], sensitivityDrivers: [], validation: [], cohesion: null, expansionPath: []
+      }],
+      trends: [{
+        title: "시장 변화", category: "demand",
+        finding: "수요가 증가한다. ([example.com](https://example.com/very/long/source?utm_source=openai))",
+        implication: "진입 시점을 검토한다. https://example.com/very/long/source?utm_source=openai",
+        sourceTitle: source.title, sources: [source], confidence: "high", freshness: "current"
+      }],
+      competitors: [{
+        name: "경쟁사", type: "direct", marketPresence: "global",
+        relevance: "직접 경쟁 후보 ([example.com](https://example.com/very/long/source?utm_source=openai))",
+        targetCustomer: "직장인", valueProposition: "보습", strengths: ["유통"], weaknesses: ["차별화 부족"],
+        pricePositioning: "대중 가격", channels: ["온라인"], differentiationGap: "향기",
+        sourceTitles: [source.title], sources: [source]
+      }],
+      researchCoverage: { lanes: ["demand"], sourceCount: 1, uniqueDomainCount: 1, competitorCount: 1, sourceTypes: { industry: 1 }, coverageGaps: [] }
+    });
+    (planData.founder_context as Record<string, unknown>).offeringType = "product";
+
+    const html = await (await get()).text();
+    const body = html.slice(0, html.indexOf("참고문헌"));
+
+    expect(html).toContain('<div class="market-grid">');
+    expect(html).toContain('<details class="market-details">');
+    expect(html).toContain('class="competitor-grid"');
+    expect(html).not.toContain("<table>");
+    expect(html).toContain("<dd>제품</dd>");
+    expect(body).not.toContain(source.url);
+    expect(body).not.toContain("[example.com]");
+    expect(body).toContain("example.com");
+    expect(html).toContain("grid-template-columns:repeat(2,minmax(0,1fr))");
   });
 
   it("renders 40 unique references without leaking or duplicating source URLs", async () => {
