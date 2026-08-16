@@ -2,13 +2,13 @@ import type { Locale } from "@/lib/i18n";
 import type { SurveyVersion } from "@/lib/intake-questions";
 import type { ServiceOffering } from "@/lib/types";
 import { CATALOG_PRODUCTS } from "./products";
-import { HUMAN_VERIFICATION, PRODUCT_COPY, PROVIDER, REQUIRED_INPUTS, TIER_BADGE } from "./copy";
+import { BOUNDARY_INTRO, HUMAN_BOUNDARY, PRODUCT_COPY, PROVIDER, REQUIRED_INPUTS, TIER_BADGE } from "./copy";
 import { buildSpecialistRules, OFFICIAL_SOURCE_AGENT_ID } from "./rules";
 import { LABOR_RATES, PLATFORM_FEE_RATE, type CatalogProduct, type Phase } from "./types";
 
 export type { CatalogProduct, Phase, Tier } from "./types";
 export { CATALOG_PRODUCTS } from "./products";
-export { TIER_BADGE } from "./copy";
+export { TIER_BADGE, BOUNDARY_INTRO } from "./copy";
 export { buildSpecialistRules, OFFICIAL_SOURCE_AGENT_ID } from "./rules";
 export { LABOR_RATES, PLATFORM_FEE_RATE } from "./types";
 
@@ -91,7 +91,8 @@ export function localizeCatalogProduct(
       ? rules[OFFICIAL_SOURCE_AGENT_ID].questionIds
       : [],
     completionInstructions: productRules.map((rule) => rule.instructions[locale]),
-    humanVerification: HUMAN_VERIFICATION[locale],
+    // 포함된 전문가의 경계만 모은다. 패키지는 합집합, 중복은 제거.
+    humanVerification: [...new Set(product.includedAgentIds.map((id) => HUMAN_BOUNDARY[id]?.[locale]).filter(Boolean))] as string[],
     tier: product.tier,
     tierLabel: TIER_BADGE[product.tier][locale],
     area: product.area

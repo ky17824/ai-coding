@@ -84,3 +84,26 @@ describe("product catalog", () => {
     }
   });
 });
+
+describe("scope boundary", () => {
+  it("never promises expert review while phase 2 is gated", () => {
+    for (const locale of ["ko", "en"] as const) {
+      for (const service of getCatalogServices(locale)) {
+        const text = (service.humanVerification ?? []).join(" ");
+        // "전문가 검증"처럼 포함 서비스로 읽히는 표현이 경계 문구에 들어가면 안 된다.
+        expect(text, `${service.id} ${locale}`).not.toMatch(/전문가 검증|Expert verification/);
+      }
+    }
+  });
+
+  it("lists only the boundaries that apply to what the product includes", () => {
+    // 자금 계획에 파트너 의향이, 시장조사에 세무가 붙던 boilerplate 재발 방지.
+    expect(getCatalogService("ai-tce-finance")?.humanVerification?.join(" ")).not.toContain("파트너");
+    expect(getCatalogService("ai-market-intelligence")?.humanVerification?.join(" ")).not.toContain("세무");
+    expect(getCatalogService("ai-entry-requirements")?.humanVerification?.join(" ")).toContain("관세사");
+    // 패키지는 포함 상품의 경계를 모두 보여준다.
+    const pkg = getCatalogService("pkg-feasibility")?.humanVerification ?? [];
+    expect(pkg.length).toBe(3);
+    expect(pkg.join(" ")).toContain("파트너");
+  });
+});

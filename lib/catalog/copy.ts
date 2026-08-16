@@ -127,9 +127,24 @@ export const REQUIRED_INPUTS: CopyList = {
   en: ["Target country, customer, and offering", "Relevant readiness answers and evidence", "Constraints, resources, and deadline"]
 };
 
-export const HUMAN_VERIFICATION: CopyList = {
-  ko: ["법률·세무·규제 해석과 계약의 효력", "실제 인터뷰와 파트너 의향, 현지 관계"],
-  en: ["Legal, tax, regulatory and contract effectiveness", "Actual interviews, partner intent and local relationships"]
+/**
+ * 이 보고서가 **결론 내리지 않는** 항목. 제공 범위의 경계이지 딜리버리 항목이 아니다.
+ * 상품마다 실제로 걸리는 경계가 다르므로 포함된 전문가별로 선언하고, 패키지는 합집합을 쓴다.
+ * 전 상품에 같은 문구를 붙이면 자금 계획 상품에도 "파트너 의향"이 뜨는 식으로 어긋난다.
+ */
+export const HUMAN_BOUNDARY: Record<string, Copy> = {
+  "ai-market-intelligence": { ko: "추정에 쓰인 가정을 받아들일지 여부는 직접 판단하셔야 합니다.", en: "Whether to accept the assumptions behind the estimates is your call." },
+  "ai-entry-requirements": { ko: "품목 분류와 인허가 가능 여부의 확정 — 관할 기관이나 관세사·변리사 확인이 필요합니다.", en: "Confirming the classification and whether approval is obtainable requires the authority or a licensed expert." },
+  "ai-partner-research": { ko: "파트너의 실재 여부와 거래 의향 — 직접 접촉해 확인하셔야 합니다.", en: "Whether a partner is real and willing to deal requires contacting them yourself." },
+  "ai-customer-validation": { ko: "인터뷰와 시범판매의 실제 수행 — 설계까지 제공하며 실행은 직접 하셔야 합니다.", en: "Running the interviews and pilots themselves; we design them, you execute." },
+  "ai-local-bmc": { ko: "현지 관행에 대한 최종 판단 — 현지에서의 확인이 필요합니다.", en: "The final read on local practice needs confirmation on the ground." },
+  "ai-tce-finance": { ko: "세무 처리와 계약의 효력 — 세무·법률 자문이 필요합니다.", en: "Tax treatment and contract effectiveness need a tax or legal advisor." },
+  "ai-gtm-operations": { ko: "조직 내 역할 배정과 실제 실행 — 계획까지 제공합니다.", en: "Assigning owners inside your organization and executing the plan; we provide the plan." }
+};
+
+export const BOUNDARY_INTRO: Copy = {
+  ko: "아래 항목은 AI가 결론 내리지 않고 ‘사람 확인 필요’로 표시해 드립니다. 이 서비스에 전문가 검토는 포함되어 있지 않습니다.",
+  en: "The AI does not conclude the items below; it marks them for human confirmation. Expert review is not included in this service."
 };
 
 export const PROVIDER: { name: Copy; title: Copy; duration: Copy } = {
