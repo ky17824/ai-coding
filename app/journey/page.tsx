@@ -180,6 +180,18 @@ export default async function JourneyPage() {
                                 {en ? "Use an AI expert" : "AI 전문가 사용"} <span aria-hidden="true">→</span>
                               </Link>
                             )}
+                            {/* 사람이 확정하거나 직접 움직여야 끝나는 액션. AI 상품만 있는 동안 기대를 관리한다. */}
+                            {(expert.reason === "regulated" || expert.reason === "field_execution") && (
+                              <small className="journey-expert-note">
+                                {expert.reason === "regulated"
+                                  ? en
+                                    ? "The AI research gathers official sources; a licensed expert still has to confirm the conclusion."
+                                    : "AI가 공식 자료를 모아 드리지만, 최종 확정은 자격을 갖춘 전문가의 확인이 필요합니다."
+                                  : en
+                                    ? "The AI designs and prepares this step; the interviews and meetings themselves are yours to run."
+                                    : "AI가 설계와 준비를 맡고, 실제 인터뷰와 미팅은 직접 진행하셔야 합니다."}
+                              </small>
+                            )}
                           </div>
                         </article>
                       );

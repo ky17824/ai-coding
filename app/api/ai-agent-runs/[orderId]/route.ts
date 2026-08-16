@@ -50,6 +50,10 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("submit_clarification"), locale: z.enum(["ko", "en"]).default("ko"), answers: z.record(z.string(), z.string().trim().max(3000)) }),
   z.object({ action: z.literal("generate"), locale: z.enum(["ko", "en"]).default("ko"), assumptionsConfirmed: z.literal(true) })
 ]);
+// Vercel Fluid Compute의 Hobby 함수 상한과 같은 값. 선언이 없으면 기본값에서
+// 강제 종료되어 catch가 실행되지 않고 실행 리스가 묶인 채 남는다.
+export const maxDuration = 300;
+
 const paidServiceSchema = z.object({
   contractVersion: z.literal(1),
   questionCatalogVersion: z.enum(["4.0", "5.0"]).optional(),

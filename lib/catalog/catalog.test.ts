@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { INTAKE_ITEMS } from "@/lib/intake-questions";
+import { TAG_ALIASES } from "@/lib/expert-matching";
 import {
   CATALOG_PRODUCTS,
   buildSpecialistRules,
@@ -62,10 +63,15 @@ describe("product catalog", () => {
     expect(getCatalogService("ai-market-intelligence")?.officialSourceQuestionIds).toEqual([]);
   });
 
-  it("resolves every readiness service tag to at least one product", () => {
-    const tags = new Set(INTAKE_ITEMS.map((item) => item.serviceTag).filter(Boolean));
+  it("resolves every readiness service tag and expert-matching alias to a product", () => {
+    // 이 두 어휘가 상품 태그와 어긋나면 진단에서 서비스로 넘어오는 경로가 조용히 끊긴다.
+    // app/services/page.tsx는 전체 목록으로 폴백하고 여정은 빈 목록을 낸다.
+    const tags = new Set([
+      ...INTAKE_ITEMS.map((item) => item.serviceTag),
+      ...TAG_ALIASES.map(([, tag]) => tag)
+    ].filter(Boolean));
     const covered = new Set(CATALOG_PRODUCTS.flatMap((product) => product.tags));
-    for (const tag of tags) expect(covered.has(tag as string), `unrouted serviceTag: ${tag}`).toBe(true);
+    for (const tag of tags) expect(covered.has(tag as string), `unrouted tag: ${tag}`).toBe(true);
   });
 
   it("localizes both locales for every visible product", () => {
