@@ -116,6 +116,19 @@ async function loadOrder(orderId: string, userId: string) {
   return { admin, order, run };
 }
 
+/**
+ * 생성 중 화면이 진행 단계를 읽어 가는 곳. 폴링용이라 가볍게 유지한다.
+ * 생성이 끝나면 클라이언트가 보고서까지 받아야 하므로 실행 레코드 전체를 돌려준다.
+ */
+export async function GET(_request: Request, { params }: { params: Promise<{ orderId: string }> }) {
+  const user = await requireUser();
+  if (!user) return NextResponse.json({ message: "로그인이 필요합니다." }, { status: 401 });
+  const { orderId } = await params;
+  const { order, run } = await loadOrder(orderId, user.id);
+  if (!order || !run) return NextResponse.json({ message: "AI 주문을 찾을 수 없습니다." }, { status: 404 });
+  return NextResponse.json({ run }, { headers: { "cache-control": "no-store" } });
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ orderId: string }> }) {
   const user = await requireUser();
   if (!user) return NextResponse.json({ message: "로그인이 필요합니다." }, { status: 401 });
@@ -289,7 +302,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   };
   const usage = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, webSearchCalls: 0 };
   let allowedUrls = new Set<string>();
+  // 진행 단계 기록. 화면의 플로우차트는 이 값만 그린다.
+  // 실패해도 생성을 막지 않는다 — 진행 표시가 없다고 보고서를 포기할 이유는 없다.
+  const markStage = (stage: "context" | "research" | "verify" | "report" | "finalize") =>
+    admin.rpc("set_ai_agent_generation_stage", { p_order_id: orderId, p_attempt_id: reserved.generation_attempt_id, p_stage: stage })
+      .then(({ error }) => { if (error) console.warn("[ai-agent-run] stage not recorded", { orderId, stage, error }); });
+
   try {
+    await markStage("context");
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const common = { model: MODEL, store: false, safety_identifier: createHash("sha256").update(user.id).digest("hex") } as const;
     const referenceFiles = Array.isArray(reserved.reference_files) ? reserved.reference_files.slice(0, 3) : [];
@@ -325,6 +345,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       ]
     });
 
+    await markStage("research");
     const researchResponse = await client.responses.parse({
       ...common,
       reasoning: { effort: service.productKind === "package" ? "high" : "medium", context: "current_turn" },
@@ -336,9 +357,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     });
     addUsage(usage, usageOf(researchResponse));
     const publicEvidence = aiPublicResearchSchema.parse(researchResponse.output_parsed);
+    await markStage("verify");
     allowedUrls = collectAllowedResearchUrls([researchResponse.output], []);
     validateAiAgentSources([...collectCitedUrls(publicEvidence)], allowedUrls);
 
+    await markStage("report");
     const reportResponse = await client.responses.parse({
       ...common,
       reasoning: { effort: service.productKind === "package" ? "high" : "medium", context: "current_turn" },
@@ -350,6 +373,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       text: { format: zodTextFormat(aiAgentReportSchema, "paid_ai_expert_report") }
     });
     addUsage(usage, usageOf(reportResponse));
+    await markStage("finalize");
     const report = aiAgentReportSchema.parse(reportResponse.output_parsed);
     validateAiAgentSources([...collectCitedUrls(report)], allowedUrls);
     validateAiAgentReport(report, {

@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AiAgentReport } from "@/lib/ai-agent-report";
+import { AiGenerationFlow, type GenerationStage } from "@/components/ai-generation-flow";
+
+/** 리스는 예약 시점에 now() + 15분으로 한 번만 잡힌다(010:168). 갱신되지 않으므로
+ *  여기서 되돌리면 이번 시도의 실제 시작 시각이 나온다. 추정이 아니다. */
+const LEASE_MS = 15 * 60 * 1000;
 
 type Run = {
   order_id: string;
@@ -16,17 +21,18 @@ type Run = {
   generation_count: number;
   error_message?: string | null;
   lease_expires_at?: string | null;
+  generation_stage?: GenerationStage | null;
 };
 
 const fieldNames = ["objective", "offering", "targetCountry", "targetCustomer", "currentEvidence", "constraints", "resources", "deadline"] as const;
 const copy = {
   ko: {
     objective: "이번 업무로 내릴 결정", offering: "제품·서비스", targetCountry: "목표국가·도시", targetCustomer: "목표고객", currentEvidence: "현재 보유한 증거·자료·URL", constraints: "제약·금지사항", resources: "가용 예산·인력·기간", deadline: "계획기한",
-    unknown: "모름 — 유사사례로 추론", save: "필요정보 확인하기", saving: "저장 중…", clarify: "추가정보 제출", ready: "입력 감사 완료", readyBody: "아래 정보와 유사사례 가정을 확인하면 조사와 보고서 생성을 시작합니다.", generate: "가정 확인 후 보고서 만들기", generating: "프론티어 모델이 조사·분석 중입니다. 중단되었으면 작업 이어가기를 눌러 복구할 수 있습니다.", resume: "작업 이어가기", retry: "보고서 다시 시도", correction: "사실 정정 후 재생성", correctionFailed: "사실 정정 생성에 실패해 이전 보고서는 변경되지 않았으며, 포함된 정정 시도 1회는 사용되었습니다.", download: "HTML 다운로드", report: "AI 전문가 보고서", human: "사람 검증 필요", source: "근거 출처", actions: "실행계획", assumptions: "가정", gaps: "증거 공백", limitations: "한계", contradictions: "모순·해결", coverage: "준비도 문항 추적", sizing: "시장규모 추정", files: "참고 파일", fileHelp: "PDF·PNG·JPG, 파일당 4MB, 최대 3개 · 보고서 생성을 위해 OpenAI에 비공개 전송"
+    unknown: "모름 — 유사사례로 추론", save: "필요정보 확인하기", saving: "저장 중…", clarify: "추가정보 제출", ready: "입력 감사 완료", readyBody: "아래 정보와 유사사례 가정을 확인하면 조사와 보고서 생성을 시작합니다.", generate: "가정 확인 후 보고서 만들기", generating: "프론티어 모델이 조사·분석 중입니다. 중단되었으면 작업 이어가기를 눌러 복구할 수 있습니다.", stalled: "이 시도는 응답이 끊긴 것으로 보입니다. 작업 이어가기를 누르면 중단된 지점부터 다시 진행합니다.", resume: "작업 이어가기", retry: "보고서 다시 시도", correction: "사실 정정 후 재생성", correctionFailed: "사실 정정 생성에 실패해 이전 보고서는 변경되지 않았으며, 포함된 정정 시도 1회는 사용되었습니다.", download: "HTML 다운로드", report: "AI 전문가 보고서", human: "사람 검증 필요", source: "근거 출처", actions: "실행계획", assumptions: "가정", gaps: "증거 공백", limitations: "한계", contradictions: "모순·해결", coverage: "준비도 문항 추적", sizing: "시장규모 추정", files: "참고 파일", fileHelp: "PDF·PNG·JPG, 파일당 4MB, 최대 3개 · 보고서 생성을 위해 OpenAI에 비공개 전송"
   },
   en: {
     objective: "Decision to make", offering: "Offering", targetCountry: "Target country and city", targetCustomer: "Target customer", currentEvidence: "Current evidence, materials, and URLs", constraints: "Constraints and exclusions", resources: "Available budget, people, and time", deadline: "Planning deadline",
-    unknown: "Unknown — infer from analogs", save: "Review required information", saving: "Saving…", clarify: "Submit details", ready: "Input audit complete", readyBody: "Review the information and analog assumptions before research and report generation.", generate: "Confirm assumptions and build report", generating: "The frontier model is researching and analysing. Use resume if the previous attempt was interrupted.", resume: "Resume work", retry: "Retry report", correction: "Correct facts and regenerate", correctionFailed: "The correction attempt failed. The previous report is unchanged, and the included correction attempt was used.", download: "Download HTML", report: "AI expert report", human: "Human verification", source: "Sources", actions: "Action plan", assumptions: "Assumptions", gaps: "Evidence gaps", limitations: "Limitations", contradictions: "Contradictions and resolutions", coverage: "Readiness question trace", sizing: "Market sizing", files: "Reference files", fileHelp: "PDF, PNG, or JPG; 4 MB each; up to 3 files · privately sent to OpenAI for report generation"
+    unknown: "Unknown — infer from analogs", save: "Review required information", saving: "Saving…", clarify: "Submit details", ready: "Input audit complete", readyBody: "Review the information and analog assumptions before research and report generation.", generate: "Confirm assumptions and build report", generating: "The frontier model is researching and analysing. Use resume if the previous attempt was interrupted.", stalled: "This attempt appears to have stopped responding. Resume picks the work back up.", resume: "Resume work", retry: "Retry report", correction: "Correct facts and regenerate", correctionFailed: "The correction attempt failed. The previous report is unchanged, and the included correction attempt was used.", download: "Download HTML", report: "AI expert report", human: "Human verification", source: "Sources", actions: "Action plan", assumptions: "Assumptions", gaps: "Evidence gaps", limitations: "Limitations", contradictions: "Contradictions and resolutions", coverage: "Readiness question trace", sizing: "Market sizing", files: "Reference files", fileHelp: "PDF, PNG, or JPG; 4 MB each; up to 3 files · privately sent to OpenAI for report generation"
   }
 };
 
@@ -43,6 +49,48 @@ export function AiAgentWorkspace({ initialRun, locale = "ko" }: { initialRun: Ru
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(initialRun.status === "completed" && initialRun.report && initialRun.error_message ? c.correctionFailed : "");
   const [editing, setEditing] = useState(initialRun.status === "intake");
+
+  // 생성 중에만 실행 상태를 다시 읽는다. 진행 단계를 화면에 반영하고, 페이지를
+  // 새로 열었을 때(생성 요청은 다른 탭에 있음) 완료 시점을 잡기 위한 것이다.
+  //
+  // busy는 이 탭이 생성 POST를 붙들고 있다는 뜻이다. 그때는 단계만 받는다.
+  // 결과는 POST 응답이 알려주고, 예약 직전의 낡은 상태를 읽어 화면을 되돌리면 안 된다.
+  useEffect(() => {
+    if (run.status !== "generating") return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/ai-agent-runs/${run.order_id}`, { cache: "no-store" });
+        if (!response.ok) return;
+        const { run: latest } = await response.json() as { run: Run };
+        if (cancelled || !latest) return;
+        if (busy) {
+          if (latest.status === "generating") setRun((current) => ({ ...current, generation_stage: latest.generation_stage, lease_expires_at: latest.lease_expires_at }));
+          return;
+        }
+        setRun(latest);
+        if (latest.status === "failed" && latest.error_message) setMessage(latest.error_message);
+      } catch {
+        // 폴링 실패는 무시한다. 다음 주기에 다시 시도한다.
+      }
+    };
+    void poll();
+    const timer = setInterval(() => void poll(), 5000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [run.status, run.order_id, busy]);
+
+  // 리스가 살아 있는 동안 '작업 이어가기'를 누르면 서버가 409로 막는다. 그래서
+  // 버튼을 계속 보여 주면 누를 수 있는 것처럼 보이지만 아무 일도 일어나지 않는다.
+  // 실제로 이어받을 수 있을 때만 내보낸다.
+  const [leaseExpired, setLeaseExpired] = useState(false);
+  useEffect(() => {
+    const expiresAt = run.lease_expires_at;
+    if (run.status !== "generating" || !expiresAt) { setLeaseExpired(false); return; }
+    const check = () => setLeaseExpired(Date.parse(expiresAt) < Date.now());
+    check();
+    const timer = setInterval(check, 15_000);
+    return () => clearInterval(timer);
+  }, [run.status, run.lease_expires_at]);
 
   async function send(body: object) {
     const previousStatus = run.status;
@@ -108,7 +156,24 @@ export function AiAgentWorkspace({ initialRun, locale = "ko" }: { initialRun: Ru
     URL.revokeObjectURL(url);
   }
 
-  if (run.status === "generating") return <section className="ai-workspace panel"><div className="ai-workspace__progress" role="status"><span className="spinner" aria-hidden="true" /><strong>{c.generating}</strong><button type="button" className="button button--ghost button--small" onClick={() => void send({ action: "generate", assumptionsConfirmed: true })} disabled={busy}>{c.resume}</button>{message && <p className="checkout-status" role="alert">{message}</p>}</div></section>;
+  if (run.status === "generating") return (
+    <section className="ai-workspace panel">
+      <div className="ai-workspace__progress" role="status" aria-live="polite">
+        <AiGenerationFlow
+          locale={locale}
+          stage={run.generation_stage ?? null}
+          startedAt={run.lease_expires_at ? new Date(Date.parse(run.lease_expires_at) - LEASE_MS).toISOString() : null}
+        />
+        {leaseExpired && (
+          <div className="ai-flow__stalled">
+            <p>{c.stalled}</p>
+            <button type="button" className="button button--ghost button--small" onClick={() => void send({ action: "generate", assumptionsConfirmed: true })} disabled={busy}>{c.resume}</button>
+          </div>
+        )}
+        {message && <p className="checkout-status" role="alert">{message}</p>}
+      </div>
+    </section>
+  );
 
   if (run.status === "completed" && run.report && !editing) {
     return <section className="ai-workspace ai-report panel">

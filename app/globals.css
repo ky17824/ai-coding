@@ -3131,6 +3131,139 @@ main[lang="en"] .hero h1 {
 
 @keyframes ai-spin { to { transform: rotate(360deg); } }
 
+/* 생성 진행 플로우차트.
+   상태는 서버가 기록한 단계에서만 온다. 완료(done)·진행(active)·대기(pending) 셋을
+   색 농도와 마커 모양으로 함께 나타내, 색만으로 구분하지 않는다. */
+.ai-flow {
+  width: 100%;
+  max-width: 620px;
+  text-align: left;
+}
+
+.ai-flow__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.ai-flow__head strong { font-size: 18px; color: var(--ink); }
+
+.ai-flow__elapsed {
+  font-size: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-flow__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.ai-flow__step {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 14px;
+  padding-bottom: 20px;
+  position: relative;
+}
+
+/* 단계 사이를 잇는 선. 마지막 단계 아래로는 그리지 않는다. */
+.ai-flow__step::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 24px;
+  bottom: 0;
+  width: 2px;
+  background: var(--line);
+}
+
+.ai-flow__step:last-child { padding-bottom: 0; }
+.ai-flow__step:last-child::before { display: none; }
+.ai-flow__step--done::before { background: var(--chart-level-3); }
+
+.ai-flow__marker {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--paper, #fff);
+  position: relative;
+  z-index: 1;
+}
+
+.ai-flow__step--done .ai-flow__marker {
+  border-color: var(--chart-level-4);
+  background: var(--chart-level-4);
+}
+
+/* 완료 표시는 체크. 색이 안 보여도 상태를 알 수 있어야 한다. */
+.ai-flow__step--done .ai-flow__marker::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 4px;
+  width: 7px;
+  height: 12px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.ai-flow__step--active .ai-flow__marker {
+  border-color: var(--chart-level-4);
+  background: var(--mint);
+}
+
+.ai-flow__step--active .ai-flow__marker::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--chart-level-4);
+  animation: ai-flow-pulse 1600ms ease-in-out infinite;
+}
+
+@keyframes ai-flow-pulse {
+  0%, 100% { transform: scale(0.6); opacity: 0.5; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+.ai-flow__body { display: grid; gap: 4px; padding-top: 2px; }
+.ai-flow__body strong { font-size: 15px; color: var(--muted); font-weight: 600; }
+.ai-flow__body span { font-size: 14px; line-height: 1.6; color: var(--muted); }
+
+.ai-flow__step--done .ai-flow__body strong { color: var(--ink); }
+.ai-flow__step--active .ai-flow__body strong { color: var(--ink); font-weight: 700; }
+.ai-flow__step--active .ai-flow__body span { color: var(--ink); }
+.ai-flow__step--pending .ai-flow__body { opacity: 0.55; }
+
+.ai-flow__note {
+  margin: 20px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.ai-flow__stalled {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding-top: 4px;
+}
+
+.ai-flow__stalled p { margin: 0; font-size: 14px; color: var(--ink); }
+
+/* 움직임을 줄이도록 설정한 사용자에게는 맥동 대신 고정된 점을 보여 준다. */
+@media (prefers-reduced-motion: reduce) {
+  .ai-flow__step--active .ai-flow__marker::after { animation: none; transform: scale(1); opacity: 1; }
+}
+
 .ai-report__summary {
   max-width: 900px;
   font-size: 18px;
