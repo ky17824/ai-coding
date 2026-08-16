@@ -2485,6 +2485,14 @@ main[lang="en"] .hero h1 {
   box-shadow: var(--button-shadow-small);
 }
 
+.admin-role-form__hint {
+  margin-top: 8px;
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .journey-expert-note {
   margin-top: 8px;
   display: block;

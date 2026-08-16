@@ -31,6 +31,13 @@ export function AdminRoleForm({
   const [state, action, pending] = useActionState(changeUserRole, initialState);
   const unchanged = role === currentRole && (role !== "admin" || purpose === currentPurpose);
   const disabled = Boolean(disabledReason) || pending || unchanged;
+  // 버튼이 왜 눌리지 않는지 화면에 남긴다. disabledReason과 pending은 각각 배너와 버튼 문구가
+  // 알려주지만, unchanged는 아무 단서가 없어 죽은 버튼으로만 보였다.
+  const blockedHint = disabledReason || pending || !unchanged
+    ? null
+    : role === "admin" && currentRole === "admin"
+      ? en ? "Pick a different administrator purpose to enable this." : "관리자 용도를 다른 값으로 바꾸면 버튼이 활성화됩니다."
+      : en ? "Pick a different role to enable this." : "새 역할을 다른 값으로 바꾸면 버튼이 활성화됩니다.";
 
   return (
     <form action={action} className="provider-form admin-role-form">
@@ -68,6 +75,7 @@ export function AdminRoleForm({
       <button className="button button--primary" type="submit" disabled={disabled}>
         {pending ? (en ? "Changing…" : "변경 중…") : (en ? "Change access" : "권한 변경")}
       </button>
+      {blockedHint && <small className="admin-role-form__hint" role="status">{blockedHint}</small>}
       {state.message && <p className={state.ok ? "form-success" : "field-error"} role="status">{state.message}</p>}
     </form>
   );
