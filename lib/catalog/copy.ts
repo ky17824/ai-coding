@@ -166,9 +166,109 @@ export const HUMAN_BOUNDARY: Record<string, Copy> = {
   "ai-gtm-operations": { ko: "조직 내 역할 배정과 실제 실행 — 계획까지 제공합니다.", en: "Assigning owners inside your organization and executing the plan; we provide the plan." }
 };
 
-export const BOUNDARY_INTRO: Copy = {
-  ko: "아래 항목은 AI가 결론 내리지 않고 ‘사람 확인 필요’로 표시해 드립니다. 이 서비스에 전문가 검토는 포함되어 있지 않습니다.",
-  en: "The AI does not conclude the items below; it marks them for human confirmation. Expert review is not included in this service."
+/**
+ * 상품 단위 경계 재정의. 포함 상품에서 유도하면 안 되는 경우에 쓴다.
+ * 예: hx-classification은 `ai-entry-requirements`를 포함하지만, 그 상품의 경계였던
+ * "관세사 확인이 필요합니다"를 그대로 물려받으면 정작 그 확인을 파는 상품이
+ * 자기 자신을 경계로 표시하게 된다.
+ */
+export const PRODUCT_BOUNDARY: Record<string, CopyList> = {
+  "hx-classification": {
+    ko: ["자격자의 검토 의견이며 관할 기관의 사전심사 결정이 아닙니다. 실제 통관·인허가 심사 결과는 기관이 판단합니다."],
+    en: ["This is a licensed expert's opinion, not an advance ruling. The authority decides the actual customs and approval outcome."]
+  },
+  "hx-classification-plus": {
+    ko: ["자격자의 검토 의견이며 관할 기관의 사전심사 결정이 아닙니다. 실제 통관·인허가 심사 결과는 기관이 판단합니다."],
+    en: ["This is a licensed expert's opinion, not an advance ruling. The authority decides the actual customs and approval outcome."]
+  },
+  "hx-gtm-review": {
+    ko: ["실행은 직접 하셔야 합니다. 검토 의견이며 성과를 보장하지 않습니다."],
+    en: ["Execution stays with you. This is a review, not a performance guarantee."]
+  },
+  "hx-partner-verify": {
+    ko: ["확인 시점 기준의 정보입니다. 거래 성사나 파트너의 이후 행위를 보장하지 않습니다."],
+    en: ["Findings are as of the date checked. Neither a deal nor the partner's later conduct is guaranteed."]
+  },
+  "hx-partner-intro": {
+    ko: ["접촉과 소개까지입니다. 계약 체결과 그 조건은 직접 협상하셔야 합니다."],
+    en: ["Scope ends at the introduction. Signing and terms are yours to negotiate."]
+  },
+  "hx-interview": {
+    ko: ["인터뷰 대상의 응답이며 시장 전체의 판단이 아닙니다. 표본 수가 적을수록 해석에 주의가 필요합니다."],
+    en: ["These are the interviewees' answers, not a market-wide verdict. Read a small sample with care."]
+  },
+  "hx-mentor-1h": {
+    ko: ["상담 의견이며 실행과 그 결과는 직접 책임지셔야 합니다.", "법률·세무·규제 판단이 필요한 사안은 해당 자격자에게 확인하셔야 합니다."],
+    en: ["A mentor's view; execution and its outcome remain yours.", "Anything needing legal, tax, or regulatory judgment goes to a licensed expert."]
+  },
+  "hx-mentor-2h": {
+    ko: ["상담 의견이며 실행과 그 결과는 직접 책임지셔야 합니다.", "법률·세무·규제 판단이 필요한 사안은 해당 자격자에게 확인하셔야 합니다."],
+    en: ["A mentor's view; execution and its outcome remain yours.", "Anything needing legal, tax, or regulatory judgment goes to a licensed expert."]
+  }
+};
+
+/** 상품 단위 필요정보 재정의. 전문가 상품은 포함 AI 상품과 준비물이 다르다. */
+export const PRODUCT_REQUIRED_INPUT: Record<string, CopyList> = {
+  "hx-classification": {
+    ko: ["제품 사양서·성분표와 실제 용도", "이미 검토한 HS코드 후보가 있다면 함께 전달해 주세요."],
+    en: ["Product spec, composition, and actual use", "Any HS code candidates you have already considered."]
+  },
+  "hx-classification-plus": {
+    ko: ["제품 사양서·성분표와 실제 용도", "분류가 갈릴 수 있는 유사 제품이나 기존 통관 이력"],
+    en: ["Product spec, composition, and actual use", "Similar products or past customs history where classification could diverge."]
+  },
+  "hx-gtm-review": {
+    ko: ["검토받을 GTM 계획 문서", "조직 구성과 담당자, 목표 기한"],
+    en: ["The GTM plan to review", "Your team, owners, and target date."]
+  },
+  "hx-partner-verify": {
+    ko: ["검증받을 파트너 후보 (3곳 내외)", "각 후보에게 확인하고 싶은 항목"],
+    en: ["Partner candidates to verify (about three)", "What you want checked on each."]
+  },
+  "hx-partner-intro": {
+    ko: ["접촉할 후보와 제안하려는 거래 조건", "영문 또는 현지어 회사 소개 자료"],
+    en: ["Who to contact and the terms you intend to propose", "A company introduction in English or the local language."]
+  },
+  "hx-interview": {
+    ko: ["인터뷰 대상 조건 (업종·직무·규모 등)", "확인하고 싶은 가설과 질문"],
+    en: ["Who to interview (industry, role, size)", "The hypotheses and questions to test."]
+  },
+  "hx-mentor-1h": {
+    ko: ["상담에서 다루고 싶은 주제와 지금 막힌 지점"],
+    en: ["What you want to cover and where you are stuck."]
+  },
+  "hx-mentor-2h": {
+    ko: ["상담에서 다루고 싶은 주제와 지금 막힌 지점", "함께 볼 자료 (계획서·재무·계약서 등)"],
+    en: ["What you want to cover and where you are stuck", "Materials to go through together (plan, financials, contracts)."]
+  }
+};
+
+/**
+ * 경계 블록의 도입 문구. 계층마다 다르다 —
+ * A·B는 전문가 검토가 포함되지 않은 상품이고, C·D·M은 포함된 상품이므로
+ * 같은 문구를 쓰면 후자에서 사실과 어긋난다.
+ */
+export const BOUNDARY_INTRO_BY_TIER: Record<Tier, Copy> = {
+  A: {
+    ko: "아래 항목은 AI가 결론 내리지 않고 ‘사람 확인 필요’로 표시해 드립니다. 이 서비스에 전문가 검토는 포함되어 있지 않습니다.",
+    en: "The AI does not conclude the items below; it marks them for human confirmation. Expert review is not included in this service."
+  },
+  B: {
+    ko: "아래 항목은 AI가 결론 내리지 않고 ‘사람 확인 필요’로 표시해 드립니다. 이 서비스에 전문가 검토는 포함되어 있지 않습니다.",
+    en: "The AI does not conclude the items below; it marks them for human confirmation. Expert review is not included in this service."
+  },
+  C: {
+    ko: "이 서비스에는 자격자의 검토가 포함됩니다. 다만 아래는 그 검토로도 확정되지 않는 범위입니다.",
+    en: "A licensed expert's review is included. Even so, the items below fall outside what that review can settle."
+  },
+  D: {
+    ko: "이 서비스에는 담당 전문가의 직접 수행이 포함됩니다. 다만 아래는 제공 범위 밖입니다.",
+    en: "An expert carries this out for you. Even so, the items below fall outside the scope."
+  },
+  M: {
+    ko: "이 서비스는 멘토와의 상담입니다. 아래는 상담으로 대신할 수 없는 범위입니다.",
+    en: "This service is a mentor session. The items below are outside what a session can replace."
+  }
 };
 
 export const PROVIDER: { name: Copy; title: Copy; duration: Copy } = {

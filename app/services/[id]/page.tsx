@@ -5,7 +5,7 @@ import { CheckoutButton } from "@/components/checkout-button";
 import { getPublishedService } from "@/lib/services";
 import { getAiPriceWithVat } from "@/lib/ai-agent-report";
 import { getRequestLocale } from "@/lib/i18n-server";
-import { BOUNDARY_INTRO, TIER_FIRST_STEP } from "@/lib/catalog";
+import { TIER_FIRST_STEP } from "@/lib/catalog";
 
 const won = new Intl.NumberFormat("ko-KR");
 
@@ -44,7 +44,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             <li>{en ? "The AI asks up to two material follow-up rounds. Unknown answers become labelled analog assumptions, not facts." : "AI는 결과를 바꾸는 질문만 최대 2회 묻습니다. 모름 응답은 사실이 아니라 유사사례 가정으로 표시합니다."}</li>
             <li>{en ? "After you review assumptions, the frontier model produces a report and action plan with traceable sources." : "가정을 확인하면 프론티어 모델이 출처가 연결된 보고서와 실행계획을 만듭니다."}</li>
           </ol> : <ol><li>{en ? "After payment, goals and materials are organized in a questionnaire." : "결제 후 목표와 보유 자료를 사전 질문지로 정리합니다."}</li><li>{service.type === "mentoring" ? (en ? `A ${service.durationLabel} video session is held.` : `${service.durationLabel} 화상 세션을 진행합니다.`) : (en ? `Agreed milestones are delivered over ${service.durationLabel}.` : `${service.durationLabel} 동안 합의된 단계별 실행목표를 수행합니다.`)}</li><li>{en ? "The engagement closes after deliverable confirmation." : "결과물을 확인한 뒤 거래를 마칩니다."}</li></ol>}</div>
-          {isAi && <><div className="detail-block"><h2>{en ? "Required inputs" : "필요정보"}</h2><ul>{service.requiredInputs?.map((item) => <li key={item}>{item}</li>)}</ul></div><div className="detail-block detail-block--boundary"><h2>{en ? "What this report does not conclude" : "이 보고서가 결론 내리지 않는 것"}</h2><p>{BOUNDARY_INTRO[locale]}</p><ul>{service.humanVerification?.map((item) => <li key={item}>{item}</li>)}</ul></div></>}
+          {isAi && <><div className="detail-block"><h2>{en ? "Required inputs" : "필요정보"}</h2><ul>{service.requiredInputs?.map((item) => <li key={item}>{item}</li>)}</ul></div><div className="detail-block detail-block--boundary"><h2>{en ? "What this report does not conclude" : "이 보고서가 결론 내리지 않는 것"}</h2><p>{service.boundaryIntro}</p><ul>{service.humanVerification?.map((item) => <li key={item}>{item}</li>)}</ul></div></>}
           <div className="detail-block"><h2>{en ? "Cancellation & refunds" : "취소·환불 정책"}</h2><p>{isAi ? (en ? "A full refund is available before report generation begins. Requests after generation starts are reviewed using the order and generation record." : "보고서 생성 시작 전에는 전액 환불됩니다. 생성 시작 후 요청은 주문·생성 기록을 기준으로 검토합니다.") : (en ? "A full refund is available before the service begins. Requests after service start are reviewed by an administrator." : "서비스 시작 전에는 전액 환불됩니다. 시작 후 요청은 관리자가 주문 기록을 확인합니다.")}</p></div>
         </section>
         <aside className="purchase-panel panel">

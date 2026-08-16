@@ -10,6 +10,7 @@ import {
   laborCost,
   listCatalogProducts,
   partsTotal,
+  localizeCatalogProduct,
   OFFICIAL_SOURCE_AGENT_ID
 } from "@/lib/catalog";
 import { PRODUCT_COPY } from "@/lib/catalog/copy";
@@ -118,5 +119,43 @@ describe("scope boundary", () => {
     const pkg = getCatalogService("pkg-feasibility")?.humanVerification ?? [];
     expect(pkg.length).toBe(3);
     expect(pkg.join(" ")).toContain("파트너");
+  });
+});
+
+describe("phase-2 products are complete before they are ever exposed", () => {
+  // 2차 상품은 게이트로 가려져 있어 화면 검증이 불가능하다. 플래그를 켜는 순간
+  // 빈 블록이나 자기모순 문구가 그대로 나가지 않도록 여기서 미리 막는다.
+  const rules = buildSpecialistRules("5.0");
+  const every = (locale: "ko" | "en") =>
+    CATALOG_PRODUCTS.map((product) => [product, localizeCatalogProduct(product, locale, rules)] as const);
+
+  for (const locale of ["ko", "en"] as const) {
+    it(`fills every ${locale} block for all ${CATALOG_PRODUCTS.length} products, phase 2 included`, () => {
+      for (const [product, service] of every(locale)) {
+        expect(service.title, `${product.id} title`).toBeTruthy();
+        expect(service.deliverables.length, `${product.id} deliverables`).toBeGreaterThan(0);
+        expect(service.requiredInputs?.length, `${product.id} requiredInputs`).toBeGreaterThan(1);
+        expect(service.humanVerification?.length, `${product.id} boundary`).toBeGreaterThan(0);
+        expect(service.boundaryIntro, `${product.id} boundaryIntro`).toBeTruthy();
+        expect(service.tierLabel, `${product.id} tierLabel`).toBeTruthy();
+      }
+    });
+  }
+
+  it("never lets an expert product cite the very review it sells as its own boundary", () => {
+    for (const [product, service] of every("ko")) {
+      if (product.tier === "A" || product.tier === "B") continue;
+      const boundary = (service.humanVerification ?? []).join(" ");
+      // hx-classification이 "관세사 확인이 필요합니다"를 경계로 내걸면 자기모순이다.
+      expect(boundary, `${product.id}`).not.toMatch(/확인이 필요합니다\.$/);
+      expect(service.boundaryIntro, `${product.id} intro`).not.toContain("전문가 검토는 포함되어 있지 않습니다");
+    }
+  });
+
+  it("tells A and B buyers plainly that no expert review is included", () => {
+    for (const [product, service] of every("ko")) {
+      if (product.tier !== "A" && product.tier !== "B") continue;
+      expect(service.boundaryIntro).toContain("전문가 검토는 포함되어 있지 않습니다");
+    }
   });
 });

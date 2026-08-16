@@ -2,13 +2,13 @@ import type { Locale } from "@/lib/i18n";
 import type { SurveyVersion } from "@/lib/intake-questions";
 import type { ServiceOffering } from "@/lib/types";
 import { CATALOG_PRODUCTS } from "./products";
-import { BOUNDARY_INTRO, HUMAN_BOUNDARY, PRODUCT_COPY, PROVIDER, REQUIRED_INPUT_BY_AGENT, SHARED_REQUIRED_INPUT, TIER_BADGE, TIER_FIRST_STEP } from "./copy";
+import { BOUNDARY_INTRO_BY_TIER, HUMAN_BOUNDARY, PRODUCT_BOUNDARY, PRODUCT_COPY, PRODUCT_REQUIRED_INPUT, PROVIDER, REQUIRED_INPUT_BY_AGENT, SHARED_REQUIRED_INPUT, TIER_BADGE, TIER_FIRST_STEP } from "./copy";
 import { buildSpecialistRules, OFFICIAL_SOURCE_AGENT_ID } from "./rules";
 import { LABOR_RATES, PLATFORM_FEE_RATE, type CatalogProduct, type Phase } from "./types";
 
 export type { CatalogProduct, Phase, Tier } from "./types";
 export { CATALOG_PRODUCTS } from "./products";
-export { TIER_BADGE, BOUNDARY_INTRO, TIER_FIRST_STEP } from "./copy";
+export { TIER_BADGE, BOUNDARY_INTRO_BY_TIER, TIER_FIRST_STEP } from "./copy";
 export { buildSpecialistRules, OFFICIAL_SOURCE_AGENT_ID } from "./rules";
 export { LABOR_RATES, PLATFORM_FEE_RATE } from "./types";
 
@@ -85,18 +85,22 @@ export function localizeCatalogProduct(
     reviewCount: 0,
     productKind: product.productKind,
     includedAgentIds: product.includedAgentIds,
-    // 공통 입력 + 포함 전문가별 추가 입력. 무엇을 준비해야 하는지가 상품마다 다르다.
+    // 공통 입력 + 상품별 추가 입력. 전문가 상품은 준비물이 달라 상품 단위 재정의를 우선한다.
     requiredInputs: [
       SHARED_REQUIRED_INPUT[locale],
-      ...new Set(product.includedAgentIds.map((id) => REQUIRED_INPUT_BY_AGENT[id]?.[locale]).filter(Boolean))
+      ...(PRODUCT_REQUIRED_INPUT[product.id]?.[locale]
+        ?? [...new Set(product.includedAgentIds.map((id) => REQUIRED_INPUT_BY_AGENT[id]?.[locale]).filter(Boolean))])
     ] as string[],
     questionIds: [...new Set(productRules.flatMap((rule) => rule.questionIds))],
     officialSourceQuestionIds: product.includedAgentIds.includes(OFFICIAL_SOURCE_AGENT_ID)
       ? rules[OFFICIAL_SOURCE_AGENT_ID].questionIds
       : [],
     completionInstructions: productRules.map((rule) => rule.instructions[locale]),
-    // 포함된 전문가의 경계만 모은다. 패키지는 합집합, 중복은 제거.
-    humanVerification: [...new Set(product.includedAgentIds.map((id) => HUMAN_BOUNDARY[id]?.[locale]).filter(Boolean))] as string[],
+    // 상품 단위 재정의가 있으면 그것을 쓰고, 없으면 포함 전문가의 경계를 합친다.
+    // 전문가 상품은 자기가 파는 검토를 스스로 경계로 표시하면 안 되므로 반드시 재정의가 있어야 한다.
+    humanVerification: (PRODUCT_BOUNDARY[product.id]?.[locale]
+      ?? [...new Set(product.includedAgentIds.map((id) => HUMAN_BOUNDARY[id]?.[locale]).filter(Boolean))]) as string[],
+    boundaryIntro: BOUNDARY_INTRO_BY_TIER[product.tier][locale],
     tier: product.tier,
     tierLabel: TIER_BADGE[product.tier][locale],
     area: product.area
