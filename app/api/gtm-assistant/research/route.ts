@@ -54,8 +54,12 @@ const requestSchema = z.object({
   founderContext: founderContextSchema
 });
 
-// Vercel Fluid Compute caps Hobby functions at 300s; the app must finish (or fail cleanly) before that.
-export const maxDuration = 300;
+// Vercel Pro function ceiling (800s). Only the ceiling moves; the internal budgets below stay at their
+// measured Hobby-era values because this route completes within them today. Raising the ceiling without
+// raising RESEARCH_DEADLINE_MS just widens the gap in which a late failure can still run its catch block
+// and release the run instead of leaving it wedged. Widen the internal budgets only against a measurement.
+// Requires the Vercel project to be on Pro; on Hobby this is silently clamped to 300.
+export const maxDuration = 800;
 
 const RESEARCH_DEADLINE_MS = 285_000;
 const PUBLIC_RESEARCH_TIMEOUT_MS = 205_000;

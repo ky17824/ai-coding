@@ -26,9 +26,9 @@ const MAX_WEB_SEARCHES = 8;
  * 그 전 값이던 32,000도 예상 소요가 15분으로 잡혀 마찬가지로 실패했다(이 결함은 최근 변경 이전
  * 부터 있었다).
  *
- * 이 라우트의 예산은 모든 스테이지를 합쳐 285초뿐이다(app/api/ai-agent-runs/[orderId]/route.ts의
- * deadlineAt = startedAt + 285_000). 예상 소요가 수십 분 단위로 잡히는 한도는 애초에 이 라우트
- * 안에서는 도달할 수 없었다.
+ * 이 라우트의 예산은 모든 스테이지를 합쳐 785초다(app/api/ai-agent-runs/[orderId]/route.ts의
+ * ROUTE_DEADLINE_MS, Vercel Pro 기준). 예상 소요가 수십 분 단위로 잡히는 한도는 그래도 이 라우트
+ * 안에서는 도달할 수 없다.
  *
  * 더 올리려면 이 숫자를 키우는 게 아니라 writeReport를 스트리밍 API(client.messages.stream)로
  * 바꿔야 한다.

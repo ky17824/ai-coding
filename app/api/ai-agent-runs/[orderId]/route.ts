@@ -44,9 +44,17 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("submit_clarification"), locale: z.enum(["ko", "en"]).default("ko"), answers: z.record(z.string(), z.string().trim().max(3000)) }),
   z.object({ action: z.literal("generate"), locale: z.enum(["ko", "en"]).default("ko"), assumptionsConfirmed: z.literal(true) })
 ]);
-// Vercel Fluid Compute의 Hobby 함수 상한과 같은 값. 선언이 없으면 기본값에서
-// 강제 종료되어 catch가 실행되지 않고 실행 리스가 묶인 채 남는다.
-export const maxDuration = 300;
+// Vercel Pro의 함수 상한(800초). 선언이 없으면 기본값 300초에서 강제 종료되어
+// catch가 실행되지 않고 실행 리스가 묶인 채 남는다.
+//
+// 300초는 Hobby 상한이었고 그 안에서 실측이 이랬다(2026-08-17, 주문 bf45d83b):
+//   Luna 앞단 54초 + Opus 보고서 239초 = 293초 → 285초 데드라인을 8초 넘겨 완성 보고서 폐기.
+// Opus 보고서 본문 하나가 155초(오프라인 실측)라 코드로 깎을 수 있는 건 시장규모 호출 13초뿐이었다.
+// 품질을 유지하며 Opus로 보고서를 쓰기로 한 결정 자체가 300초 이상을 요구하므로 Pro로 올렸다.
+// 이 값은 Vercel 프로젝트 플랜이 Pro일 때만 유효하다. Hobby로 내려가면 300으로 잘린다.
+export const maxDuration = 800;
+/** 데드라인은 maxDuration보다 15초 앞. 마지막 RPC(complete/fail)와 응답 직렬화 여유다. */
+const ROUTE_DEADLINE_MS = (maxDuration - 15) * 1000;
 
 const paidServiceSchema = z.object({
   contractVersion: z.literal(1),
@@ -324,7 +332,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     reportDate
   };
 
-  const deadlineAt = startedAt + 285_000;
+  const deadlineAt = startedAt + ROUTE_DEADLINE_MS;
   const ensureBudget = (stage: Stage) => { if (deadlineAt - Date.now() < 20_000) throw new Error(`budget_exhausted:${stage}`); };
   const adapterFor = (key: ModelKey): Adapter => { const spec = modelSpec(key); return spec.provider === "anthropic" ? anthropicAdapter(spec.model) : openaiAdapter(spec.model); };
   let usage = { ...EMPTY_USAGE };
