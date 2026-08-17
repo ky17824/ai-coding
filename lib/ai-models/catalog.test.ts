@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MODEL_CATALOG, costOf, modelSpec, parseModelKey, type ModelKey } from "@/lib/ai-models/catalog";
+import { MODEL_CATALOG, costOf, isModelOptionVisible, modelSpec, parseModelKey, type ModelKey } from "@/lib/ai-models/catalog";
 
 const KEYS = Object.keys(MODEL_CATALOG) as ModelKey[];
 
@@ -46,5 +46,20 @@ describe("모델 허용 목록", () => {
     // (in-cached)*5 + cached*0.5 + out*30
     const usage = { input: 31131, cachedInput: 0, cacheWriteInput: 0, output: 8397, webSearchCalls: 3 };
     expect(costOf("openai:gpt-5.6-sol", usage)).toBeCloseTo((31131 * 5 + 8397 * 30) / 1e6, 6);
+  });
+});
+
+describe("isModelOptionVisible", () => {
+  // 지금 목록엔 deprecated 모델이 없다. 조건을 직접 구성해서 규칙만 확인한다.
+  it("deprecated가 아니면 저장된 값이 아니어도 보인다", () => {
+    expect(isModelOptionVisible({ deprecatedAt: undefined }, false)).toBe(true);
+  });
+
+  it("deprecated고 그 단계의 저장된 값이 아니면 숨긴다", () => {
+    expect(isModelOptionVisible({ deprecatedAt: "2026-06-01" }, false)).toBe(false);
+  });
+
+  it("deprecated여도 그 단계에 지금 저장된 값이면 보인다", () => {
+    expect(isModelOptionVisible({ deprecatedAt: "2026-06-01" }, true)).toBe(true);
   });
 });

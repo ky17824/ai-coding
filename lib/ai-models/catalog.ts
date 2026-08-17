@@ -76,3 +76,11 @@ export function modelLabel(value: string): string {
   const byModel = MODEL_KEYS.find((key) => MODEL_CATALOG[key].model === value);
   return byModel ? MODEL_CATALOG[byModel].label : value;
 }
+
+/**
+ * 관리자 드롭다운에 이 모델을 보여줄지 정한다. deprecated 모델은 새로 고를 수 없게 숨기되,
+ * 그 단계에 지금 저장된 값이면(스냅샷이 이미 그 모델을 가리키면) 계속 보여주고 "지원 종료" 라벨만 붙인다.
+ */
+export function isModelOptionVisible(spec: Pick<ModelSpec, "deprecatedAt">, isSavedValue: boolean): boolean {
+  return !spec.deprecatedAt || isSavedValue;
+}
