@@ -39,7 +39,9 @@ export function AdminModelRoutingForm(props: {
   const [state, action, pending] = useActionState(changeModelRouting, initial);
   const [rollbackState, rollbackAction, rollbackPending] = useActionState(rollbackModelRouting, initial);
   const changes = useMemo(() => diffRoutes(activeRoutes, draft), [activeRoutes, draft]);
-  const unchanged = changes.length === 0;
+  // 활성 설정이 없으면(신규 배포 직후 등) draft는 시드값과 같아 diff가 비어도 저장할 게 있다.
+  // 이 "바뀐 값 없음" 가드는 활성 설정이 있을 때만 적용한다.
+  const unchanged = props.activeVersion !== null && changes.length === 0;
   const fmt = (iso: string) => new Intl.DateTimeFormat(en ? "en-US" : "ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 
   const setStage = (stage: Stage, patch: Partial<{ model: ModelKey; effort: Effort }>) =>
@@ -83,6 +85,7 @@ export function AdminModelRoutingForm(props: {
                   value={draft[stage].model}
                   onChange={(event) => setStage(stage, { model: event.target.value as ModelKey })}
                   disabled={pending}
+                  aria-describedby={`${stage}-help`}
                 >
                   {MODEL_KEYS.filter((key) => isModelOptionVisible(MODEL_CATALOG[key], key === activeRoutes[stage].model)).map((key) => {
                     const spec = MODEL_CATALOG[key];
@@ -114,6 +117,7 @@ export function AdminModelRoutingForm(props: {
                   value={draft[stage].effort}
                   onChange={(event) => setStage(stage, { effort: event.target.value as Effort })}
                   disabled={pending}
+                  aria-describedby={`${stage}-help`}
                 >
                   {MODEL_CATALOG[draft[stage].model].efforts.map((effort) => (
                     <option key={effort} value={effort}>{EFFORT_LABEL[locale][effort]}</option>

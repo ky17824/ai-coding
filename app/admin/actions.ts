@@ -99,14 +99,29 @@ function routingErrorMessage(error: RoutesValidationError | string, en: boolean)
   return en ? "The change could not be saved." : "설정을 저장하지 못했습니다.";
 }
 
-async function applyRouting(routesInput: unknown, reason: string, locale: Locale): Promise<ModelRoutingActionState> {
-  const en = locale === "en";
+type RoutingAdminGate = { ok: true; userId: string } | { ok: false; message: string };
+
+/**
+ * 관리자 확인은 항상 ai_model_routing_configs를 읽기 전에 끝난다. 순서를 바꾸면 비관리자가
+ * "그 버전이 없습니다" vs "관리자 권한이 필요합니다" 메시지 차이로 버전 존재 여부를 추측할 수 있다
+ * (privileged 테이블에 대한 존재 여부 오라클). 두 액션 모두 DB를 읽기 전에 이 함수부터 부른다.
+ */
+async function requireRoutingAdmin(en: boolean): Promise<RoutingAdminGate> {
   const user = await requireUser();
   const supabase = await createSupabaseServerClient();
-  const admin = createSupabaseAdminClient();
-  if (!user || !supabase || !admin) return { ok: false, message: en ? "Please sign in." : "로그인이 필요합니다." };
+  if (!user || !supabase) return { ok: false, message: en ? "Please sign in." : "로그인이 필요합니다." };
   const { data: actor } = await supabase.from("profiles").select("role,deleted_at").eq("id", user.id).maybeSingle();
   if (actor?.role !== "admin" || actor.deleted_at) return { ok: false, message: routingErrorMessage("admin_required", en) };
+  return { ok: true, userId: user.id };
+}
+
+async function applyRouting(routesInput: unknown, reason: string, locale: Locale): Promise<ModelRoutingActionState> {
+  const en = locale === "en";
+  // 호출자(rollbackModelRouting)가 이미 이 게이트를 통과했더라도 다시 확인한다 — 방어적 이중 확인.
+  const gate = await requireRoutingAdmin(en);
+  if (!gate.ok) return { ok: false, message: gate.message };
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, message: en ? "Please sign in." : "로그인이 필요합니다." };
   if (reason.trim().length < 10) return { ok: false, message: en ? "Write a reason of at least 10 characters." : "변경 사유를 10자 이상 적어 주세요." };
 
   // 클라이언트가 이미 검증했더라도 제출된 값은 신뢰하지 않는다. 서버가 다시 본다.
@@ -125,7 +140,7 @@ async function applyRouting(routesInput: unknown, reason: string, locale: Locale
   const { data: version, error } = await admin.rpc("apply_ai_model_routing", {
     p_routes: validated.routes,
     p_reason: reason.trim(),
-    p_actor: user.id
+    p_actor: gate.userId
   });
   if (error) {
     return {
@@ -154,10 +169,15 @@ export async function changeModelRouting(_state: ModelRoutingActionState, formDa
 export async function rollbackModelRouting(_state: ModelRoutingActionState, formData: FormData): Promise<ModelRoutingActionState> {
   const locale: Locale = formData.get("locale") === "en" ? "en" : "ko";
   const en = locale === "en";
+  // 게이트를 먼저 통과시킨다. 버전 조회를 먼저 하면 "그 버전이 없습니다" vs "관리자 권한이
+  // 필요합니다" 메시지 차이로 비관리자가 버전 존재 여부를 알아낼 수 있다.
+  const gate = await requireRoutingAdmin(en);
+  if (!gate.ok) return { ok: false, message: gate.message };
   const admin = createSupabaseAdminClient();
   const version = Number(formData.get("version"));
   if (!admin || !Number.isInteger(version)) return { ok: false, message: en ? "Invalid version." : "버전이 올바르지 않습니다." };
   const { data: row } = await admin.from("ai_model_routing_configs").select("routes").eq("version", version).maybeSingle();
   if (!row) return { ok: false, message: en ? "That version does not exist." : "그 버전이 없습니다." };
+  // 폼에 다른 필드가 실려 있어도 무시한다 — routes는 오직 저장된 버전 스냅샷에서만 온다.
   return applyRouting(row.routes, String(formData.get("reason") ?? ""), locale);
 }

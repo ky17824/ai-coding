@@ -5353,5 +5353,5 @@ h2.plan-summary {
 .admin-model-routing__index { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--mint); color: var(--chart-level-4); font-size: 13px; font-weight: 700; }
 .admin-model-routing__fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .admin-model-routing__fields select { min-height: 42px; }
-.admin-model-routing__actions { display: flex; justify-content: space-between; gap: 12px; }
+.admin-model-routing__actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
 @media (max-width: 480px) { .admin-model-routing__fields { grid-template-columns: 1fr; } }

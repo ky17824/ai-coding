@@ -6,6 +6,7 @@ const page = readFileSync(join(process.cwd(), "app/admin/ai-models/page.tsx"), "
 const form = readFileSync(join(process.cwd(), "components/admin-model-routing-form.tsx"), "utf8");
 const actions = readFileSync(join(process.cwd(), "app/admin/actions.ts"), "utf8");
 const nav = readFileSync(join(process.cwd(), "components/admin-nav.tsx"), "utf8");
+const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 
 describe("/admin/ai-models", () => {
   it("관리자만 들어온다 (사용자 관리와 같은 검사)", () => {
@@ -53,5 +54,22 @@ describe("/admin/ai-models", () => {
   it("deprecated 모델은 저장된 값일 때만 드롭다운에 보인다", () => {
     expect(form).toContain("isModelOptionVisible");
     expect(form).toContain("deprecatedAt");
+  });
+
+  it("활성 설정이 없을 때는 시드값 그대로도 저장할 수 있어야 한다 (빈 상태 탈출구)", () => {
+    // activeVersion이 null이면(활성 설정 없음) draft==activeRoutes(시드값)이어도 unchanged가
+    // true가 되면 안 된다 — 그러면 배너는 "아래에서 저장하세요"라면서 버튼은 막혀 있게 된다.
+    expect(form).toContain("props.activeVersion !== null && changes.length === 0");
+  });
+
+  it("단계 도움말은 aria-describedby로 모델·추론 강도 선택과 연결된다", () => {
+    const modelSelect = form.slice(form.indexOf('name={`${stage}.model`}'), form.indexOf("</select>", form.indexOf('name={`${stage}.model`}')));
+    const effortSelect = form.slice(form.indexOf('name={`${stage}.effort`}'), form.indexOf("</select>", form.indexOf('name={`${stage}.effort`}')));
+    expect(modelSelect).toContain("aria-describedby={`${stage}-help`}");
+    expect(effortSelect).toContain("aria-describedby={`${stage}-help`}");
+  });
+
+  it("저장/취소 버튼 줄은 320px에서 줄바꿈되어 가로 스크롤을 만들지 않는다", () => {
+    expect(css).toMatch(/\.admin-model-routing__actions\s*\{[^}]*flex-wrap:\s*wrap;/s);
   });
 });
