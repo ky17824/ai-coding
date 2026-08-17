@@ -83,3 +83,28 @@ describe("market research source verification", () => {
     expect([...collectCitedUrls({ deliverables: ["https://not-a-citation.example"] })]).toEqual([]);
   });
 });
+
+describe("collectAllowedResearchUrls — Anthropic 응답 모양", () => {
+  it("web_search_tool_result의 결과 URL과 텍스트 citations URL을 모두 모은다", () => {
+    const content = [
+      { type: "server_tool_use", id: "srv_1", name: "web_search", input: { query: "q" } },
+      { type: "web_search_tool_result", tool_use_id: "srv_1", content: [
+        { type: "web_search_result", url: "https://a.com/page?utm_source=x", title: "A", encrypted_content: "..." },
+        { type: "web_search_result", url: "https://b.org/doc", title: "B", encrypted_content: "..." }
+      ] },
+      { type: "text", text: "…", citations: [
+        { type: "web_search_result_location", url: "https://c.net/read", title: "C", encrypted_index: "…", cited_text: "…" }
+      ] }
+    ];
+    const allowed = collectAllowedResearchUrls([content], []);
+    expect(allowed.has("https://a.com/page")).toBe(true);   // utm 제거
+    expect(allowed.has("https://b.org/doc")).toBe(true);
+    expect(allowed.has("https://c.net/read")).toBe(true);
+    expect(allowed.size).toBe(3);
+  });
+
+  it("검색 오류 결과(content가 객체)는 조용히 건너뛴다", () => {
+    const content = [{ type: "web_search_tool_result", tool_use_id: "srv_1", content: { type: "web_search_tool_result_error", error_code: "max_uses_exceeded" } }];
+    expect(collectAllowedResearchUrls([content], []).size).toBe(0);
+  });
+});
