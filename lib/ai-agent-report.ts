@@ -4,6 +4,28 @@ import { resolveAssessmentQuestions } from "@/lib/readiness";
 import { canonicalResearchUrl } from "@/lib/research-sources";
 import type { ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
 
+/**
+ * 검증 실패의 사용자용 메시지는 짧은 한국어 문장 하나뿐이라 원인을 남기지 않는다.
+ * 어떤 문항이 빠졌는지, 어떤 출처가 문제였는지는 실패와 함께 사라진다 — 재시도해야
+ * 같은 문제인지도 알 수 없다. detail은 그 진단 정보를 담는다. message는 기존 테스트가
+ * 그대로 assert하는 사용자 노출 문구이므로 바이트 단위로 그대로 둔다.
+ *
+ * detail 자체는 저장하지 않는다(리포트 전체도 마찬가지 — 거절된 리포트는 route.ts
+ * catch 블록의 스코프 밖이라 애초에 접근할 수 없고, 크고 진단에 불필요하다). 호출부가
+ * detail을 model_attempts 같은 운영 로그에 얹는다.
+ */
+export class ReportValidationError extends Error {
+  constructor(message: string, readonly detail: Record<string, unknown>) {
+    super(message);
+    this.name = "ReportValidationError";
+  }
+}
+
+const DETAIL_LIST_CAP = 20;
+function capList<T>(items: T[], limit = DETAIL_LIST_CAP) {
+  return { values: items.slice(0, limit), total: items.length, truncated: items.length > limit };
+}
+
 export const aiIntakeFields = ["objective", "offering", "targetCountry", "targetCustomer", "currentEvidence", "constraints", "resources", "deadline"] as const;
 export type AiIntakeField = typeof aiIntakeFields[number];
 export type AiInputAudit = { field: AiIntakeField; status: "confirmed" | "unclear" | "missing" | "conflicting"; reason: string }[];
@@ -248,36 +270,58 @@ export function estimateAiVariableCosts(input: { modelCostUsd: number; webSearch
 }
 
 export function validateAiAgentSources(citedUrls: string[], allowedUrls: Set<string>) {
-  if (citedUrls.some((url) => !/^https?:\/\//i.test(url))) throw new Error("HTTP(S)가 아닌 출처가 포함되었습니다.");
+  const nonHttp = citedUrls.filter((url) => !/^https?:\/\//i.test(url));
+  if (nonHttp.length) throw new ReportValidationError("HTTP(S)가 아닌 출처가 포함되었습니다.", { offendingUrls: capList(nonHttp) });
   const forged = citedUrls.map(canonicalResearchUrl).filter((url) => !allowedUrls.has(url));
-  if (forged.length) throw new Error("검색 도구로 확인되지 않은 출처가 포함되었습니다.");
+  if (forged.length) throw new ReportValidationError("검색 도구로 확인되지 않은 출처가 포함되었습니다.", { offendingUrls: capList(forged), allowListSize: allowedUrls.size });
 }
 
 export function validateAiAgentReport(report: AiAgentReport, contract: { questionIds: string[]; includedAgentIds: string[]; officialSourceQuestionIds?: string[]; questionPriorities?: Record<string, "critical" | "current_gate" | "low_score" | "other"> }, reportDate: string) {
   const expected = new Set(contract.questionIds);
   const coverage = report.questionCoverage.map((item) => item.questionId);
   if (coverage.length !== new Set(coverage).size || coverage.length !== expected.size || coverage.some((id) => !expected.has(id))) {
-    throw new Error("구매 상품의 준비도 문항 추적이 완전하지 않습니다.");
+    const counts = new Map<string, number>();
+    for (const id of coverage) counts.set(id, (counts.get(id) ?? 0) + 1);
+    const duplicated = [...counts.entries()].filter(([, count]) => count > 1).map(([questionId, count]) => ({ questionId, count }));
+    const missing = [...expected].filter((id) => !counts.has(id)).sort();
+    const unexpected = [...counts.keys()].filter((id) => !expected.has(id));
+    throw new ReportValidationError("구매 상품의 준비도 문항 추적이 완전하지 않습니다.", {
+      expected: capList([...expected].sort()),
+      got: capList(coverage),
+      missing: capList(missing),
+      unexpected: capList(unexpected),
+      duplicated: capList(duplicated)
+    });
   }
   const rank = { critical: 0, current_gate: 1, low_score: 2, other: 3 } as const;
-  if (report.questionCoverage.some((item, index) => index > 0 && rank[item.priority] < rank[report.questionCoverage[index - 1].priority])) {
-    throw new Error("문항 우선순위가 Critical → Gate → 낮은 점수 순서가 아닙니다.");
+  const brokenAtIndex = report.questionCoverage.findIndex((item, index) => index > 0 && rank[item.priority] < rank[report.questionCoverage[index - 1].priority]);
+  if (brokenAtIndex !== -1) {
+    throw new ReportValidationError("문항 우선순위가 Critical → Gate → 낮은 점수 순서가 아닙니다.", {
+      sequence: capList(report.questionCoverage.map((item) => ({ questionId: item.questionId, priority: item.priority }))),
+      brokenAtIndex
+    });
   }
-  if (contract.questionPriorities && report.questionCoverage.some((item) => contract.questionPriorities?.[item.questionId] !== item.priority)) {
-    throw new Error("문항 우선순위가 진단 결과와 일치하지 않습니다.");
+  if (contract.questionPriorities) {
+    const mismatches = report.questionCoverage
+      .filter((item) => contract.questionPriorities?.[item.questionId] !== item.priority)
+      .map((item) => ({ questionId: item.questionId, expectedPriority: contract.questionPriorities?.[item.questionId] ?? null, gotPriority: item.priority }));
+    if (mismatches.length) throw new ReportValidationError("문항 우선순위가 진단 결과와 일치하지 않습니다.", { mismatches: capList(mismatches) });
   }
   const sourceUrls = new Set(report.sources.map((source) => canonicalResearchUrl(source.url)));
   for (const finding of report.findings) {
-    if (finding.questionIds.some((id) => !expected.has(id))) throw new Error("결과가 구매 범위 밖 문항을 참조합니다.");
-    if (finding.sourceUrls.some((url) => !sourceUrls.has(canonicalResearchUrl(url)))) throw new Error("결과 출처가 근거 원장에 없습니다.");
+    const offendingQuestionIds = finding.questionIds.filter((id) => !expected.has(id));
+    if (offendingQuestionIds.length) throw new ReportValidationError("결과가 구매 범위 밖 문항을 참조합니다.", { findingTitle: finding.title, offendingIds: capList(offendingQuestionIds) });
+    const offendingSourceUrls = finding.sourceUrls.filter((url) => !sourceUrls.has(canonicalResearchUrl(url)));
+    if (offendingSourceUrls.length) throw new ReportValidationError("결과 출처가 근거 원장에 없습니다.", { findingTitle: finding.title, offendingUrls: capList(offendingSourceUrls) });
   }
   const reportTime = Date.parse(`${reportDate}T23:59:59Z`);
-  if (report.sources.some((source) => {
+  const offendingSources = report.sources.filter((source) => {
     const published = Date.parse(`${source.publishedAt}T00:00:00Z`);
     const checked = Date.parse(`${source.checkedAt}T00:00:00Z`);
     return published > reportTime || checked > reportTime || reportTime - checked > 3 * 86400000;
-  })) {
-    throw new Error("미래 날짜이거나 최근 확인되지 않은 근거는 사용할 수 없습니다.");
+  }).map((source) => ({ url: source.url, publishedAt: source.publishedAt, checkedAt: source.checkedAt }));
+  if (offendingSources.length) {
+    throw new ReportValidationError("미래 날짜이거나 최근 확인되지 않은 근거는 사용할 수 없습니다.", { reportDate, offendingSources: capList(offendingSources) });
   }
   const officialUrls = new Set(report.sources.filter((source) => {
     if (source.kind !== "official") return false;
@@ -286,16 +330,35 @@ export function validateAiAgentReport(report: AiAgentReport, contract: { questio
     return officialDomains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
   }).map((source) => canonicalResearchUrl(source.url)));
   if (contract.includedAgentIds.includes("ai-market-entry-requirements") && !officialUrls.size) {
-    throw new Error("규제·진입요건 결과에는 공식출처가 필요합니다.");
+    throw new ReportValidationError("규제·진입요건 결과에는 공식출처가 필요합니다.", {
+      includedAgentId: "ai-market-entry-requirements",
+      sourceCount: report.sources.length,
+      sourceKinds: capList([...new Set(report.sources.map((source) => source.kind))])
+    });
   }
   const officialQuestionIds = new Set(contract.officialSourceQuestionIds ?? []);
-  if (report.findings.some((finding) => finding.questionIds.some((id) => officialQuestionIds.has(id)) && finding.status !== "human_verification" && !finding.sourceUrls.some((url) => officialUrls.has(canonicalResearchUrl(url))))) {
-    throw new Error("규제·진입요건 결론은 해당 공식출처를 직접 인용하거나 사람 검증 필요로 표시해야 합니다.");
+  const offendingFindings = report.findings.filter((finding) =>
+    finding.questionIds.some((id) => officialQuestionIds.has(id)) &&
+    finding.status !== "human_verification" &&
+    !finding.sourceUrls.some((url) => officialUrls.has(canonicalResearchUrl(url)))
+  ).map((finding) => ({ title: finding.title, status: finding.status, offendingQuestionIds: finding.questionIds.filter((id) => officialQuestionIds.has(id)) }));
+  if (offendingFindings.length) {
+    throw new ReportValidationError("규제·진입요건 결론은 해당 공식출처를 직접 인용하거나 사람 검증 필요로 표시해야 합니다.", { offendingFindings: capList(offendingFindings) });
   }
   if (contract.includedAgentIds.includes("ai-market-intelligence")) {
     const sizing = report.marketSizing;
-    if (!sizing || sizing.tam.low < sizing.sam.low || sizing.sam.low < sizing.som.low || sizing.tam.base < sizing.sam.base || sizing.sam.base < sizing.som.base || sizing.tam.high < sizing.sam.high || sizing.sam.high < sizing.som.high) {
-      throw new Error("시장규모 결과는 TAM ≥ SAM ≥ SOM을 충족해야 합니다.");
+    const violations: string[] = [];
+    if (!sizing) violations.push("marketSizing_missing");
+    else {
+      if (sizing.tam.low < sizing.sam.low) violations.push("tam.low<sam.low");
+      if (sizing.sam.low < sizing.som.low) violations.push("sam.low<som.low");
+      if (sizing.tam.base < sizing.sam.base) violations.push("tam.base<sam.base");
+      if (sizing.sam.base < sizing.som.base) violations.push("sam.base<som.base");
+      if (sizing.tam.high < sizing.sam.high) violations.push("tam.high<sam.high");
+      if (sizing.sam.high < sizing.som.high) violations.push("sam.high<som.high");
+    }
+    if (violations.length) {
+      throw new ReportValidationError("시장규모 결과는 TAM ≥ SAM ≥ SOM을 충족해야 합니다.", { violations, marketSizing: sizing });
     }
   }
 }

@@ -14,7 +14,8 @@ import {
   normalizeAiAgentScope,
   publicTargetCountryCode,
   validateAiAgentReport,
-  validateAiAgentSources
+  validateAiAgentSources,
+  ReportValidationError
 } from "@/lib/ai-agent-report";
 
 describe("AI expert execution rules", () => {
@@ -185,5 +186,226 @@ describe("AI expert execution rules", () => {
     expect(() => validateAiAgentReport(regulation, regulationContract, "2026-08-14")).toThrow();
     const humanOnly = aiAgentReportSchema.parse({ ...regulation, findings: [{ ...regulation.findings[0], status: "human_verification" }] });
     expect(() => validateAiAgentReport(humanOnly, regulationContract, "2026-08-14")).not.toThrow();
+  });
+});
+
+function captureError(fn: () => void): ReportValidationError {
+  try {
+    fn();
+  } catch (error) {
+    if (!(error instanceof ReportValidationError)) throw error;
+    return error;
+  }
+  throw new Error("expected function to throw ReportValidationError");
+}
+
+function buildCoverageReport(questionCoverage: Array<{ questionId: string; disposition: "used" | "excluded"; priority: "critical" | "current_gate" | "low_score" | "other"; reason: string }>) {
+  return aiAgentReportSchema.parse({
+    title: "리포트", executiveSummary: "요약", methodology: "방법",
+    findings: [{ title: "f", status: "estimate", confidence: "medium", summary: "s", evidence: [], counterEvidence: [], questionIds: ["q1"], sourceUrls: ["https://example.com/report"], actions: [] }],
+    actionPlan: [{ title: "a", why: "w", owner: "o", timing: "t", successMetric: "m", stopCondition: "s" }],
+    assumptions: [],
+    questionCoverage,
+    contradictions: [],
+    marketSizing: null,
+    sources: [{ title: "src", url: "https://example.com/report", publisher: "Agency", kind: "official", publishedAt: "2026-08-01", checkedAt: "2026-08-14" }],
+    evidenceGaps: [], humanVerification: [], limitations: ["l"]
+  });
+}
+
+describe("validateAiAgentReport / validateAiAgentSources 진단 정보", () => {
+  it("HTTP(S) 아닌 출처를 detail에 지목하면서 사용자 메시지는 그대로 유지한다", () => {
+    const error = captureError(() => validateAiAgentSources(["javascript:alert(1)"], new Set()));
+    expect(error.message).toBe("HTTP(S)가 아닌 출처가 포함되었습니다.");
+    expect(error.detail.offendingUrls).toEqual({ values: ["javascript:alert(1)"], total: 1, truncated: false });
+  });
+
+  it("검색 도구로 확인되지 않은 출처를 detail에 지목하고 허용목록 크기만 남긴다", () => {
+    const error = captureError(() => validateAiAgentSources(["https://example.com/forged"], new Set(["https://official.example/report"])));
+    expect(error.message).toBe("검색 도구로 확인되지 않은 출처가 포함되었습니다.");
+    expect(error.detail.offendingUrls).toEqual({ values: ["https://example.com/forged"], total: 1, truncated: false });
+    expect(error.detail.allowListSize).toBe(1);
+  });
+
+  it("detail 배열은 20개에서 잘리고 잘렸다는 표시가 남는다", () => {
+    const manyUrls = Array.from({ length: 25 }, (_, i) => `https://example.com/forged-${i}`);
+    const error = captureError(() => validateAiAgentSources(manyUrls, new Set()));
+    const offending = error.detail.offendingUrls as { values: string[]; total: number; truncated: boolean };
+    expect(offending.values).toHaveLength(20);
+    expect(offending.total).toBe(25);
+    expect(offending.truncated).toBe(true);
+  });
+
+  it("문항 커버리지 결함을 missing/unexpected/duplicated로 구분한다", () => {
+    const contract = { questionIds: ["q1", "q2", "q3"], includedAgentIds: [] };
+
+    const missingReport = buildCoverageReport([
+      { questionId: "q1", disposition: "used", priority: "other", reason: "r" },
+      { questionId: "q2", disposition: "used", priority: "other", reason: "r" }
+    ]);
+    const missingError = captureError(() => validateAiAgentReport(missingReport, contract, "2026-08-14"));
+    expect(missingError.message).toBe("구매 상품의 준비도 문항 추적이 완전하지 않습니다.");
+    expect((missingError.detail.missing as { values: string[] }).values).toEqual(["q3"]);
+    expect((missingError.detail.unexpected as { values: string[] }).values).toEqual([]);
+    expect((missingError.detail.duplicated as { values: unknown[] }).values).toEqual([]);
+
+    const unexpectedReport = buildCoverageReport([
+      { questionId: "q1", disposition: "used", priority: "other", reason: "r" },
+      { questionId: "q2", disposition: "used", priority: "other", reason: "r" },
+      { questionId: "q4", disposition: "used", priority: "other", reason: "r" }
+    ]);
+    const unexpectedError = captureError(() => validateAiAgentReport(unexpectedReport, contract, "2026-08-14"));
+    expect((unexpectedError.detail.missing as { values: string[] }).values).toEqual(["q3"]);
+    expect((unexpectedError.detail.unexpected as { values: string[] }).values).toEqual(["q4"]);
+
+    // q1이 두 번 들어와 총 개수는 계약과 맞아떨어지지만(3건) 중복이라 여전히 실패해야 한다.
+    const duplicateReport = buildCoverageReport([
+      { questionId: "q1", disposition: "used", priority: "other", reason: "r" },
+      { questionId: "q1", disposition: "used", priority: "other", reason: "r" },
+      { questionId: "q2", disposition: "used", priority: "other", reason: "r" }
+    ]);
+    const duplicateError = captureError(() => validateAiAgentReport(duplicateReport, contract, "2026-08-14"));
+    expect((duplicateError.detail.duplicated as { values: unknown[] }).values).toEqual([{ questionId: "q1", count: 2 }]);
+    expect((duplicateError.detail.missing as { values: string[] }).values).toEqual(["q3"]);
+  });
+
+  it("우선순위 정렬이 깨진 지점과 전체 순서를 detail에 남긴다", () => {
+    const report = buildCoverageReport([
+      { questionId: "q1", disposition: "used", priority: "critical", reason: "r" },
+      { questionId: "q2", disposition: "used", priority: "other", reason: "r" },
+      { questionId: "q3", disposition: "used", priority: "current_gate", reason: "r" }
+    ]);
+    const contract = { questionIds: ["q1", "q2", "q3"], includedAgentIds: [] };
+    const error = captureError(() => validateAiAgentReport(report, contract, "2026-08-14"));
+    expect(error.message).toBe("문항 우선순위가 Critical → Gate → 낮은 점수 순서가 아닙니다.");
+    expect(error.detail.brokenAtIndex).toBe(2);
+    expect((error.detail.sequence as { values: unknown[] }).values).toEqual([
+      { questionId: "q1", priority: "critical" },
+      { questionId: "q2", priority: "other" },
+      { questionId: "q3", priority: "current_gate" }
+    ]);
+  });
+
+  it("진단 결과와 다른 우선순위를 가진 문항 ID를 detail에 남긴다", () => {
+    const report = buildCoverageReport([{ questionId: "q1", disposition: "used", priority: "critical", reason: "r" }]);
+    const contract = { questionIds: ["q1"], includedAgentIds: [], questionPriorities: { q1: "other" as const } };
+    const error = captureError(() => validateAiAgentReport(report, contract, "2026-08-14"));
+    expect(error.message).toBe("문항 우선순위가 진단 결과와 일치하지 않습니다.");
+    expect((error.detail.mismatches as { values: unknown[] }).values).toEqual([{ questionId: "q1", expectedPriority: "other", gotPriority: "critical" }]);
+  });
+
+  it("구매 범위 밖 문항을 참조한 결과 제목과 해당 ID를 detail에 남긴다", () => {
+    const report = aiAgentReportSchema.parse({
+      title: "t", executiveSummary: "e", methodology: "m",
+      findings: [{ title: "범위 밖", status: "estimate", confidence: "medium", summary: "s", evidence: [], counterEvidence: [], questionIds: ["q1", "q9"], sourceUrls: ["https://example.com/report"], actions: [] }],
+      actionPlan: [{ title: "a", why: "w", owner: "o", timing: "t", successMetric: "m", stopCondition: "s" }],
+      assumptions: [], questionCoverage: [{ questionId: "q1", disposition: "used", priority: "other", reason: "r" }], contradictions: [],
+      marketSizing: null,
+      sources: [{ title: "src", url: "https://example.com/report", publisher: "Agency", kind: "official", publishedAt: "2026-08-01", checkedAt: "2026-08-14" }],
+      evidenceGaps: [], humanVerification: [], limitations: ["l"]
+    });
+    const contract = { questionIds: ["q1"], includedAgentIds: [] };
+    const error = captureError(() => validateAiAgentReport(report, contract, "2026-08-14"));
+    expect(error.message).toBe("결과가 구매 범위 밖 문항을 참조합니다.");
+    expect(error.detail.findingTitle).toBe("범위 밖");
+    expect((error.detail.offendingIds as { values: string[] }).values).toEqual(["q9"]);
+  });
+
+  it("근거 원장에 없는 출처를 인용한 결과 제목과 URL을 detail에 남긴다", () => {
+    const report = aiAgentReportSchema.parse({
+      title: "t", executiveSummary: "e", methodology: "m",
+      findings: [{ title: "출처 누락", status: "estimate", confidence: "medium", summary: "s", evidence: [], counterEvidence: [], questionIds: ["q1"], sourceUrls: ["https://example.com/report", "https://example.com/missing"], actions: [] }],
+      actionPlan: [{ title: "a", why: "w", owner: "o", timing: "t", successMetric: "m", stopCondition: "s" }],
+      assumptions: [], questionCoverage: [{ questionId: "q1", disposition: "used", priority: "other", reason: "r" }], contradictions: [],
+      marketSizing: null,
+      sources: [{ title: "src", url: "https://example.com/report", publisher: "Agency", kind: "official", publishedAt: "2026-08-01", checkedAt: "2026-08-14" }],
+      evidenceGaps: [], humanVerification: [], limitations: ["l"]
+    });
+    const contract = { questionIds: ["q1"], includedAgentIds: [] };
+    const error = captureError(() => validateAiAgentReport(report, contract, "2026-08-14"));
+    expect(error.message).toBe("결과 출처가 근거 원장에 없습니다.");
+    expect(error.detail.findingTitle).toBe("출처 누락");
+    expect((error.detail.offendingUrls as { values: string[] }).values).toEqual(["https://example.com/missing"]);
+  });
+
+  it("날짜 창을 벗어난 출처와 판단 기준일을 detail에 남긴다", () => {
+    const report = aiAgentReportSchema.parse({
+      title: "t", executiveSummary: "e", methodology: "m",
+      findings: [{ title: "f", status: "estimate", confidence: "medium", summary: "s", evidence: [], counterEvidence: [], questionIds: ["q1"], sourceUrls: ["https://example.com/report"], actions: [] }],
+      actionPlan: [{ title: "a", why: "w", owner: "o", timing: "t", successMetric: "m", stopCondition: "s" }],
+      assumptions: [], questionCoverage: [{ questionId: "q1", disposition: "used", priority: "other", reason: "r" }], contradictions: [],
+      marketSizing: null,
+      sources: [{ title: "src", url: "https://example.com/report", publisher: "Agency", kind: "official", publishedAt: "2026-08-01", checkedAt: "2026-08-01" }],
+      evidenceGaps: [], humanVerification: [], limitations: ["l"]
+    });
+    const contract = { questionIds: ["q1"], includedAgentIds: [] };
+    const error = captureError(() => validateAiAgentReport(report, contract, "2026-08-14"));
+    expect(error.message).toBe("미래 날짜이거나 최근 확인되지 않은 근거는 사용할 수 없습니다.");
+    expect(error.detail.reportDate).toBe("2026-08-14");
+    expect((error.detail.offendingSources as { values: unknown[] }).values).toEqual([
+      { url: "https://example.com/report", publishedAt: "2026-08-01", checkedAt: "2026-08-01" }
+    ]);
+  });
+
+  it("공식출처가 아예 없을 때 출처 종류와 개수를 detail에 남긴다", () => {
+    const report = aiAgentReportSchema.parse({
+      title: "t", executiveSummary: "e", methodology: "m",
+      findings: [{ title: "f", status: "estimate", confidence: "medium", summary: "s", evidence: [], counterEvidence: [], questionIds: ["q1"], sourceUrls: ["https://example.com/report"], actions: [] }],
+      actionPlan: [{ title: "a", why: "w", owner: "o", timing: "t", successMetric: "m", stopCondition: "s" }],
+      assumptions: [], questionCoverage: [{ questionId: "q1", disposition: "used", priority: "other", reason: "r" }], contradictions: [],
+      marketSizing: null,
+      sources: [{ title: "src", url: "https://example.com/report", publisher: "Agency", kind: "industry", publishedAt: "2026-08-01", checkedAt: "2026-08-14" }],
+      evidenceGaps: [], humanVerification: [], limitations: ["l"]
+    });
+    const contract = { questionIds: ["q1"], includedAgentIds: ["ai-market-entry-requirements"] };
+    const error = captureError(() => validateAiAgentReport(report, contract, "2026-08-14"));
+    expect(error.message).toBe("규제·진입요건 결과에는 공식출처가 필요합니다.");
+    expect(error.detail.includedAgentId).toBe("ai-market-entry-requirements");
+    expect(error.detail.sourceCount).toBe(1);
+    expect((error.detail.sourceKinds as { values: string[] }).values).toEqual(["industry"]);
+  });
+
+  it("공식출처 인용이나 사람 검증 표시가 없는 규제 결론의 제목과 문항을 detail에 남긴다", () => {
+    const report = aiAgentReportSchema.parse({
+      title: "t", executiveSummary: "e", methodology: "m",
+      findings: [{ title: "규제 결론", status: "estimate", confidence: "medium", summary: "s", evidence: [], counterEvidence: [], questionIds: ["q1"], sourceUrls: ["https://example.com/report"], actions: [] }],
+      actionPlan: [{ title: "a", why: "w", owner: "o", timing: "t", successMetric: "m", stopCondition: "s" }],
+      assumptions: [], questionCoverage: [{ questionId: "q1", disposition: "used", priority: "other", reason: "r" }], contradictions: [],
+      marketSizing: null,
+      sources: [
+        { title: "src", url: "https://example.com/report", publisher: "Agency", kind: "industry", publishedAt: "2026-08-01", checkedAt: "2026-08-14" },
+        { title: "공식 요건", url: "https://www.hsa.gov.sg/cosmetics", publisher: "HSA", kind: "official", publishedAt: "2026-08-01", checkedAt: "2026-08-14" }
+      ],
+      evidenceGaps: [], humanVerification: [], limitations: ["l"]
+    });
+    const contract = { questionIds: ["q1"], includedAgentIds: ["ai-market-entry-requirements"], officialSourceQuestionIds: ["q1"] };
+    const error = captureError(() => validateAiAgentReport(report, contract, "2026-08-14"));
+    expect(error.message).toBe("규제·진입요건 결론은 해당 공식출처를 직접 인용하거나 사람 검증 필요로 표시해야 합니다.");
+    expect((error.detail.offendingFindings as { values: unknown[] }).values).toEqual([
+      { title: "규제 결론", status: "estimate", offendingQuestionIds: ["q1"] }
+    ]);
+  });
+
+  it("TAM ≥ SAM ≥ SOM을 어긴 구체적인 비교식을 detail에 남긴다", () => {
+    const report = aiAgentReportSchema.parse({
+      title: "t", executiveSummary: "e", methodology: "m",
+      findings: [{ title: "f", status: "estimate", confidence: "medium", summary: "s", evidence: [], counterEvidence: [], questionIds: ["q1"], sourceUrls: ["https://example.com/report"], actions: [] }],
+      actionPlan: [{ title: "a", why: "w", owner: "o", timing: "t", successMetric: "m", stopCondition: "s" }],
+      assumptions: [], questionCoverage: [{ questionId: "q1", disposition: "used", priority: "other", reason: "r" }], contradictions: [],
+      marketSizing: {
+        currency: "USD", referenceYear: 2026,
+        tam: { low: 100, base: 120, high: 140 },
+        sam: { low: 110, base: 115, high: 120 },
+        som: { low: 5, base: 8, high: 10 },
+        beachhead: { low: 1, base: 2, high: 3 },
+        formula: "f"
+      },
+      sources: [{ title: "src", url: "https://example.com/report", publisher: "Agency", kind: "official", publishedAt: "2026-08-01", checkedAt: "2026-08-14" }],
+      evidenceGaps: [], humanVerification: [], limitations: ["l"]
+    });
+    const contract = { questionIds: ["q1"], includedAgentIds: ["ai-market-intelligence"] };
+    const error = captureError(() => validateAiAgentReport(report, contract, "2026-08-14"));
+    expect(error.message).toBe("시장규모 결과는 TAM ≥ SAM ≥ SOM을 충족해야 합니다.");
+    expect(error.detail.violations).toEqual(["tam.low<sam.low"]);
   });
 });

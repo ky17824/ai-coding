@@ -15,7 +15,8 @@ import {
   publicTargetCountryCode,
   normalizeReportTitles,
   validateAiAgentReport,
-  validateAiAgentSources
+  validateAiAgentSources,
+  ReportValidationError
 } from "@/lib/ai-agent-report";
 import { collectCitedUrls, stripUnverifiedSources } from "@/lib/research-sources";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
@@ -266,7 +267,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   // 기록 자체(fail_ai_agent_generation 호출)가 실패하면 실행이 이유 없이 'generating'에
   // 묶인 채 15분 리스가 재시도를 막는다 — 오늘 실제로 겪은 장애라 020이 존재한다.
   // 그래서 모든 실패 경로가 이 함수 하나만 거치게 해서, 쓰기 실패를 반드시 로그로 남긴다.
-  const attempts: Array<{ stage: Stage; model: ModelKey; ok: boolean; errorClass?: string; usage: typeof EMPTY_USAGE; costUsd: number; ms: number }> = [];
+  const attempts: Array<{ stage: Stage | "finalize"; model: ModelKey; ok: boolean; errorClass?: string; detail?: Record<string, unknown>; usage: typeof EMPTY_USAGE; costUsd: number; ms: number }> = [];
   const recordFailure = async (u: typeof EMPTY_USAGE, message: string, modelAttempts: typeof attempts) => {
     const cost = attempts.reduce((sum, a) => sum + a.costUsd, 0);
     const c = estimateAiVariableCosts({ modelCostUsd: cost, webSearchCalls: u.webSearchCalls, grossAmountKrw: order.amount_krw });
@@ -438,6 +439,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     // 실제로 fail_ai_agent_generation의 타입 버그(020에서 수정) 때문에 실패한 실행의
     // 원인을 사후에 알 방법이 없었다.
     console.error("[ai-agent-run] generation failed", { orderId, attemptId: reserved.generation_attempt_id, error });
+    if (error instanceof ReportValidationError) {
+      // 거절된 리포트 본문(reportResult.parsed)은 try 블록 스코프 안에만 존재해 여기서
+      // 손댈 수 없고, 크고 진단에는 불필요하다 — 어떤 문항/URL/우선순위가 문제였는지는
+      // detail이 이미 담고 있다. 그래서 리포트 전체는 절대 저장하지 않는다.
+      console.error("[ai-agent-run] report validation failed", { orderId, attemptId: reserved.generation_attempt_id, detail: error.detail });
+      attempts.push({ stage: "finalize", model: finalModel, ok: false, errorClass: error.message, detail: error.detail, usage: EMPTY_USAGE, costUsd: 0, ms: 0 });
+    }
     const { data: failed, error: failError } = await recordFailure(usage, error instanceof Error ? error.message : "generation_failed", attempts);
     if (failError || !failed) return NextResponse.json({ message: en ? "The generation state needs an operations review." : "생성 상태를 저장하지 못해 운영 확인이 필요합니다." }, { status: 500 });
     if (reserved.report) {
