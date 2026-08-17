@@ -17,13 +17,27 @@ const MIN_CALL_BUDGET_MS = 20_000;
 /** research 검색 단계 전체(모든 pause_turn 재개 포함)에 허용하는 웹 검색 총 횟수. OpenAI 쪽 max_tool_calls와 맞춘다. */
 const MAX_WEB_SEARCHES = 8;
 /**
- * writeReport의 출력 상한. Opus 5 / Sonnet 5 문서상 최대 출력 토큰(2026-08-17 기준).
- * Anthropic은 reasoning 토큰도 output_tokens에 포함해 세고, 패키지 상품은 effort:"high"를
- * 강제한다 — 32,000이면 잘릴 여지가 있었고, 잘리면 parseStructured가 이름 있는 하드 실패로
- * 바꿔 고객의 두 번뿐인 생성 시도 중 하나를 태운다. final_report를 Anthropic 기본값으로
- * 삼기 전에 실제 출력 토큰 수를 측정해 이 값을 더 좁혀도 되는지 확인할 것.
+ * writeReport의 출력 상한.
+ *
+ * SDK는 non-streaming 요청의 예상 소요 시간을 max_tokens만으로(네트워크 호출 전에) 계산해서
+ * expectedTime = 60분 * maxTokens / 128000 이 10분을 넘으면 로컬에서 즉시 AnthropicError를
+ * 던진다(node_modules/@anthropic-ai/sdk/src/client.ts calculateNonstreamingTimeout). 역산하면
+ * 상한은 21,333 — 이걸 넘기면 API에 닿기도 전에 SDK가 막는다. 128,000은 매번 100% 실패했고,
+ * 그 전 값이던 32,000도 예상 소요가 15분으로 잡혀 마찬가지로 실패했다(이 결함은 최근 변경 이전
+ * 부터 있었다).
+ *
+ * 이 라우트의 예산은 모든 스테이지를 합쳐 285초뿐이다(app/api/ai-agent-runs/[orderId]/route.ts의
+ * deadlineAt = startedAt + 285_000). 예상 소요가 수십 분 단위로 잡히는 한도는 애초에 이 라우트
+ * 안에서는 도달할 수 없었다.
+ *
+ * 더 올리려면 이 숫자를 키우는 게 아니라 writeReport를 스트리밍 API(client.messages.stream)로
+ * 바꿔야 한다.
+ *
+ * 20,000은 실측된 가장 큰 완료 리포트(8,397 output tokens — 유일하게 완료된 프로덕션 실행 기준)
+ * 의 약 2.4배로 잡았다. 모자라면 parseStructured에 이미 있는 max_tokens 잘림 에러가 이름 있는
+ * 실패로 드러난다.
  */
-export const WRITE_REPORT_MAX_TOKENS = 128_000;
+export const WRITE_REPORT_MAX_TOKENS = 20_000;
 
 function usageOf(response: {
   usage?: {

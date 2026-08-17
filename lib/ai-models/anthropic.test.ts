@@ -9,6 +9,14 @@ import { StageError } from "@/lib/ai-models/types";
 const textJson = (obj: unknown) => ({ type: "text", text: JSON.stringify(obj) });
 const usage = { input_tokens: 100, cache_read_input_tokens: 10, cache_creation_input_tokens: 5, output_tokens: 20 };
 
+/**
+ * SDK가 non-streaming 요청을 로컬에서(네트워크 호출 전에) 거부하는 상한. calculateNonstreamingTimeout이
+ * expectedTime = 60*60*1000 * maxTokens / 128000 을 10*60*1000과 비교해서 넘기면 AnthropicError를 던진다
+ * (node_modules/@anthropic-ai/sdk/src/client.ts). 역산: 10*60*1000 = 60*60*1000*maxTokens/128000
+ * → maxTokens = 128000/6 = 21,333.33... → 정수 max_tokens로는 21,333까지 안전하다.
+ */
+const ANTHROPIC_NONSTREAMING_MAX_TOKENS_CEILING = 21_333;
+
 beforeEach(() => createMock.mockReset());
 
 describe("anthropicAdapter", () => {
@@ -121,6 +129,26 @@ describe("anthropicAdapter", () => {
     const promise = anthropicAdapter("claude-opus-5").classify({ locale: "ko", effort: "low", userHash: "h", intake: { offering: "립밤" } });
     await expect(promise).rejects.toThrow("publicClassificationSchema");
     await expect(promise).rejects.toThrow(/no text content/i);
+  });
+
+  it("모든 호출의 max_tokens가 SDK의 non-streaming 상한(21,333) 이하다 — 넘기면 API를 부르기도 전에 로컬에서 던진다", async () => {
+    createMock
+      .mockResolvedValueOnce({ stop_reason: "end_turn", content: [textJson({ offeringCategory: "beauty_personal_care", customerSegment: "consumer", targetCountryCode: "US" })], usage })
+      .mockResolvedValueOnce({ stop_reason: "end_turn", role: "assistant", content: [{ type: "text", text: "found" }], usage })
+      .mockResolvedValueOnce({ stop_reason: "end_turn", content: [textJson({ summary: "s", findings: [{ title: "t", summary: "s", counterEvidence: [], sourceUrls: ["https://a.com/x"] }], sources: [{ title: "t", url: "https://a.com/x", publisher: "p", kind: "official", publishedAt: "2026-01-01", checkedAt: "2026-01-01" }] })], usage })
+      .mockResolvedValueOnce({ stop_reason: "end_turn", content: [textJson(minimalReport())], usage });
+
+    const adapter = anthropicAdapter("claude-opus-5");
+    await adapter.classify({ locale: "ko", effort: "low", userHash: "h", intake: { offering: "립밤" } });
+    await adapter.research({ locale: "ko", effort: "medium", userHash: "h", serviceTitle: "T", deliverables: ["d"], completionInstructions: [], publicBrief: {}, reportDate: "2026-08-17", deadlineAt: Date.now() + 120_000 });
+    await adapter.writeReport({ locale: "ko", effort: "high", userHash: "h", instructions: "i", payload: { a: 1 }, files: [], deadlineAt: Date.now() + 120_000 });
+
+    expect(createMock).toHaveBeenCalledTimes(4);
+    for (const [args] of createMock.mock.calls) {
+      expect(typeof args.max_tokens).toBe("number");
+      expect(args.max_tokens).toBeGreaterThan(0);
+      expect(args.max_tokens).toBeLessThanOrEqual(ANTHROPIC_NONSTREAMING_MAX_TOKENS_CEILING);
+    }
   });
 });
 
