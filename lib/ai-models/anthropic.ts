@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { aiAgentReportSchema, aiPublicResearchSchema, publicClassificationSchema } from "@/lib/ai-agent-report";
 import { toModelSchema } from "@/lib/ai-models/schema";
-import { StageError, type Adapter } from "@/lib/ai-models/types";
+import { EMPTY_USAGE, StageError, type Adapter } from "@/lib/ai-models/types";
 import type { ModelUsage } from "@/lib/ai-models/catalog";
 import { parseTruncatingStrings } from "@/lib/lenient-text-format";
 import { collectAllowedResearchUrls } from "@/lib/research-sources";
@@ -38,6 +38,20 @@ const MAX_WEB_SEARCHES = 8;
  * 실패로 드러난다.
  */
 export const WRITE_REPORT_MAX_TOKENS = 20_000;
+
+/**
+ * writeReport를 두 번의 구조화 호출로 나눈 이유 — 전체 스키마 하나로는 Anthropic이 400을 던진다:
+ * "The compiled grammar is too large". 2026-08-17 claude-opus-5 실측(모두 실제 호출):
+ *   aiPublicResearchSchema 941B ✅ · 전체 리포트 4008B ❌ · marketSizing 제거 3010B ✅
+ *   $defs 재사용 4595B ❌ · marketSizing을 스칼라 12개로 평탄화 3756B ❌ · 같은 것 non-null 3728B ❌
+ * 한도는 바이트가 아니라 문법 복잡도다. $defs는 컴파일러가 펼쳐서 도움이 안 되고, marketSizing은
+ * 어떤 모양이든 한도를 넘긴다 — 제거만이 통과한다. 다시 한 호출로 합치기 전에 이 표를 재측정할 것.
+ *
+ * 도메인상으로도 맞다: validateAiAgentReport는 includedAgentIds에 "ai-market-intelligence"가
+ * 있을 때만 marketSizing을 요구하고, 나머지 제품은 null을 기대한다(lib/ai-agent-report.ts).
+ */
+const reportBodySchema = aiAgentReportSchema.omit({ marketSizing: true });
+const marketSizingSchema = aiAgentReportSchema.shape.marketSizing.unwrap();
 
 function usageOf(response: {
   usage?: {
@@ -180,24 +194,47 @@ export function anthropicAdapter(model: string): Adapter {
       }
     },
 
-    async writeReport({ effort, userHash, instructions, payload, files, deadlineAt }) {
-      ensureBudget(deadlineAt);
-      const response = await client.messages.create({
-        ...base(userHash),
-        max_tokens: WRITE_REPORT_MAX_TOKENS,
-        system: instructions,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "text", text: JSON.stringify(payload) },
-            ...files.map((file): Anthropic.ContentBlockParam => file.mimeType === "application/pdf"
-              ? { type: "document", source: { type: "url", url: file.signedUrl }, title: file.fileName }
-              : { type: "image", source: { type: "url", url: file.signedUrl } })
-          ]
-        }],
-        output_config: outputConfig(effort, aiAgentReportSchema)
-      });
-      return { parsed: parseStructured(aiAgentReportSchema, response, "aiAgentReportSchema"), usage: usageOf(response) };
+    async writeReport({ locale, effort, userHash, instructions, payload, includedAgentIds, files, deadlineAt }) {
+      // research()와 같은 이유로 함수 경계 하나에서 잡는다 — 두 번째 호출이 던져도 첫 호출의 usage는 이미 과금됐다.
+      let usage = EMPTY_USAGE;
+      try {
+        ensureBudget(deadlineAt);
+        const response = await client.messages.create({
+          ...base(userHash),
+          max_tokens: WRITE_REPORT_MAX_TOKENS,
+          system: instructions,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: JSON.stringify(payload) },
+              ...files.map((file): Anthropic.ContentBlockParam => file.mimeType === "application/pdf"
+                ? { type: "document", source: { type: "url", url: file.signedUrl }, title: file.fileName }
+                : { type: "image", source: { type: "url", url: file.signedUrl } })
+            ]
+          }],
+          output_config: outputConfig(effort, reportBodySchema)
+        });
+        usage = addUsage(usage, usageOf(response));
+        const body = parseStructured(reportBodySchema, response, "aiAgentReportSchema");
+
+        let marketSizing: z.infer<typeof marketSizingSchema> | null = null;
+        if (includedAgentIds.includes("ai-market-intelligence")) {
+          ensureBudget(deadlineAt);
+          const sizing = await client.messages.create({
+            ...base(userHash),
+            max_tokens: WRITE_REPORT_MAX_TOKENS,
+            system: `${instructions} ${locale === "en" ? "Size the market from the findings and sources below. Return only the market sizing object." : "아래 발견과 출처만으로 시장 규모를 산정하세요. 시장 규모 객체만 반환하세요."}`,
+            messages: [{ role: "user", content: JSON.stringify({ findings: body.findings, sources: body.sources }) }],
+            output_config: outputConfig(effort, marketSizingSchema)
+          });
+          usage = addUsage(usage, usageOf(sizing));
+          marketSizing = parseStructured(marketSizingSchema, sizing, "marketSizingSchema");
+        }
+        // 합친 뒤 전체 스키마로 다시 검증한다 — 하위(validateAiAgentReport)가 보던 값과 정확히 같아야 한다.
+        return { parsed: parseTruncatingStrings(aiAgentReportSchema, { ...body, marketSizing }), usage };
+      } catch (err) {
+        throw new StageError((err as Error).message, usage, { cause: err });
+      }
     }
   };
 }

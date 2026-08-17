@@ -108,13 +108,52 @@ describe("anthropicAdapter", () => {
 
   it("writeReport: 파일을 document/image 블록으로 넘긴다", async () => {
     createMock.mockResolvedValue({ stop_reason: "end_turn", content: [textJson(minimalReport())], usage });
-    await anthropicAdapter("claude-opus-5").writeReport({ locale: "ko", effort: "high", userHash: "h", instructions: "i", payload: { a: 1 },
+    await anthropicAdapter("claude-opus-5").writeReport({ locale: "ko", effort: "high", userHash: "h", instructions: "i", payload: { a: 1 }, includedAgentIds: ["ai-market-entry-requirements"],
       files: [{ signedUrl: "https://s/x.pdf", fileName: "x.pdf", mimeType: "application/pdf" }, { signedUrl: "https://s/y.png", fileName: "y.png", mimeType: "image/png" }], deadlineAt: Date.now() + 120_000 });
     const content = createMock.mock.calls[0][0].messages[0].content;
     expect(content[1]).toEqual({ type: "document", source: { type: "url", url: "https://s/x.pdf" }, title: "x.pdf" });
     expect(content[2]).toEqual({ type: "image", source: { type: "url", url: "https://s/y.png" } });
     expect(createMock.mock.calls[0][0].max_tokens).toBe(WRITE_REPORT_MAX_TOKENS);
     expect(createMock.mock.calls[0][0].output_config.effort).toBe("high");
+  });
+
+  it("writeReport: 시장 규모가 없는 제품은 한 번만 호출하고 marketSizing은 null이다", async () => {
+    createMock.mockResolvedValue({ stop_reason: "end_turn", content: [textJson(minimalReport())], usage });
+    const result = await anthropicAdapter("claude-opus-5").writeReport({ locale: "ko", effort: "high", userHash: "h", instructions: "i", payload: { a: 1 }, includedAgentIds: ["ai-market-entry-requirements"], files: [], deadlineAt: Date.now() + 120_000 });
+    expect(createMock).toHaveBeenCalledTimes(1);
+    expect(result.parsed.marketSizing).toBeNull();
+    // 본문 호출은 marketSizing을 뺀 스키마를 보낸다 — 전체 스키마는 "grammar too large" 400을 받는다.
+    expect(JSON.stringify(createMock.mock.calls[0][0].output_config.format.schema)).not.toContain("marketSizing");
+  });
+
+  it("writeReport: ai-market-intelligence 제품은 두 번째 호출로 marketSizing만 따로 받고 usage를 합산한다", async () => {
+    createMock
+      .mockResolvedValueOnce({ stop_reason: "end_turn", content: [textJson(minimalReport())], usage })
+      .mockResolvedValueOnce({ stop_reason: "end_turn", content: [textJson(sizing())], usage });
+
+    const result = await anthropicAdapter("claude-opus-5").writeReport({ locale: "ko", effort: "high", userHash: "h", instructions: "i", payload: { a: 1 }, includedAgentIds: ["ai-market-intelligence"], files: [], deadlineAt: Date.now() + 120_000 });
+
+    expect(createMock).toHaveBeenCalledTimes(2);
+    const second = createMock.mock.calls[1][0];
+    // 두 번째는 marketSizing 하위 스키마만 — 본문 필드가 섞여 있으면 다시 문법 한도를 넘긴다.
+    const secondSchema = JSON.stringify(second.output_config.format.schema);
+    expect(secondSchema).not.toContain("findings");
+    expect(secondSchema).toContain("tam");
+    // 본문의 findings/sources를 근거로 넘겨 같은 증거 위에서 산정하게 한다.
+    expect(JSON.parse(second.messages[0].content).sources[0].url).toBe("https://a.com/x");
+    expect(result.parsed.marketSizing).toEqual(sizing());
+    // 115/호출 × 2회
+    expect(result.usage).toEqual({ input: 230, cachedInput: 20, cacheWriteInput: 10, output: 40, webSearchCalls: 0 });
+  });
+
+  it("writeReport: 두 번째 호출이 실패해도 첫 호출의 usage를 담은 StageError를 던진다", async () => {
+    createMock
+      .mockResolvedValueOnce({ stop_reason: "end_turn", content: [textJson(minimalReport())], usage })
+      .mockResolvedValueOnce({ stop_reason: "max_tokens", content: [textJson(sizing())], usage });
+    const promise = anthropicAdapter("claude-opus-5").writeReport({ locale: "ko", effort: "high", userHash: "h", instructions: "i", payload: { a: 1 }, includedAgentIds: ["ai-market-intelligence"], files: [], deadlineAt: Date.now() + 120_000 });
+    await expect(promise).rejects.toBeInstanceOf(StageError);
+    await expect(promise).rejects.toThrow("marketSizingSchema");
+    await expect(promise).rejects.toMatchObject({ usage: { input: 230, output: 40 } });
   });
 
   it("classify: stop_reason이 max_tokens면 스키마 이름과 함께 잘렸다고 던진다(빈 JSON 파싱 오류로 새지 않는다)", async () => {
@@ -141,7 +180,7 @@ describe("anthropicAdapter", () => {
     const adapter = anthropicAdapter("claude-opus-5");
     await adapter.classify({ locale: "ko", effort: "low", userHash: "h", intake: { offering: "립밤" } });
     await adapter.research({ locale: "ko", effort: "medium", userHash: "h", serviceTitle: "T", deliverables: ["d"], completionInstructions: [], publicBrief: {}, reportDate: "2026-08-17", deadlineAt: Date.now() + 120_000 });
-    await adapter.writeReport({ locale: "ko", effort: "high", userHash: "h", instructions: "i", payload: { a: 1 }, files: [], deadlineAt: Date.now() + 120_000 });
+    await adapter.writeReport({ locale: "ko", effort: "high", userHash: "h", instructions: "i", payload: { a: 1 }, includedAgentIds: [], files: [], deadlineAt: Date.now() + 120_000 });
 
     expect(createMock).toHaveBeenCalledTimes(4);
     for (const [args] of createMock.mock.calls) {
@@ -151,6 +190,11 @@ describe("anthropicAdapter", () => {
     }
   });
 });
+
+function sizing() {
+  const range = { low: 1, base: 2, high: 3 };
+  return { currency: "USD", referenceYear: 2026, tam: range, sam: range, som: range, beachhead: range, formula: "f" };
+}
 
 function minimalReport() {
   return {

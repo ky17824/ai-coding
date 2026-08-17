@@ -413,7 +413,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     const reportInstructions = `${buildAiAgentInstructions(parsed.data.locale, service.title, service.deliverables)} ${(service.completionInstructions ?? []).join(" ")} ${en ? `Use every question ID exactly once in questionCoverage, ordered Critical, current_gate, low_score, other. Mark unused questions excluded with a reason. Cite source URLs only from publicEvidence. Resolve or explicitly record every contradiction. Required question IDs: ${contractQuestionIds.join(", ")}.` : `모든 문항 ID를 questionCoverage에 정확히 한 번 넣고 Critical, current_gate, low_score, other 순서로 정렬하세요. 사용하지 않은 문항은 제외 이유를 적으세요. 출처 URL은 publicEvidence에 있는 것만 사용하세요. 모순은 모두 해결하거나 명시적으로 기록하세요. 필수 문항 ID: ${contractQuestionIds.join(", ")}.`}`;
     const reportPayload = { product: { id: service.id, title: service.title, includedAgentIds: service.includedAgentIds, deliverables: service.deliverables }, privateContext, publicEvidence, privateFiles: referenceFiles.map((file) => file.fileName).filter(Boolean) };
     const reportResult = await runStage("final_report", (adapter, effort) =>
-      adapter.writeReport({ locale: parsed.data.locale, effort, userHash, instructions: reportInstructions, payload: reportPayload, files: referenceFiles, deadlineAt }));
+      adapter.writeReport({ locale: parsed.data.locale, effort, userHash, instructions: reportInstructions, payload: reportPayload, includedAgentIds: service.includedAgentIds, files: referenceFiles, deadlineAt }));
     await markStage("finalize");
     const report = normalizeReportTitles(reportResult.parsed);
     validateAiAgentSources([...collectCitedUrls(report)], allowedUrls);
