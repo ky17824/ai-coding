@@ -10,6 +10,13 @@ export type AiInputAudit = { field: AiIntakeField; status: "confirmed" | "unclea
 export const publicOfferingCategories = ["consumer_goods", "beauty_personal_care", "food_beverage", "b2b_software", "consumer_software", "industrial", "healthcare", "professional_services", "education", "other"] as const;
 export const publicCustomerSegments = ["consumer", "small_business", "mid_market", "enterprise", "public_sector", "channel_partner", "mixed", "other"] as const;
 
+export const publicClassificationSchema = z.object({
+  offeringCategory: z.enum(publicOfferingCategories),
+  customerSegment: z.enum(publicCustomerSegments),
+  targetCountryCode: z.union([z.string().regex(/^[A-Z]{2}$/), z.literal("UNSPECIFIED")])
+});
+export type PublicClassification = z.infer<typeof publicClassificationSchema>;
+
 const reportText = z.string().trim().min(1).max(6000);
 // 모델에 보내는 스키마이므로 JSON Schema로 새어 나가는 제약을 쓰지 않는다.
 //
@@ -104,6 +111,7 @@ export const aiPublicResearchSchema = z.object({
   })).min(1).max(30),
   sources: z.array(sourceSchema).min(1).max(60)
 });
+export type AiPublicResearch = z.infer<typeof aiPublicResearchSchema>;
 
 export const aiAgentReportSchema = z.object({
   title: z.string().trim().min(1).max(300),
@@ -229,10 +237,6 @@ export function getAiOrderAmounts(amountKrw: number) {
 
 export function nextAiAgentStep(input: { missingCriticalInputs: boolean; clarificationRound: number }) {
   return input.missingCriticalInputs && input.clarificationRound < 2 ? "clarifying" as const : "ready" as const;
-}
-
-export function calculateSolCostUsd(tokens: { inputTokens: number; cachedInputTokens: number; outputTokens: number }) {
-  return Number((((tokens.inputTokens - tokens.cachedInputTokens) * 5 + tokens.cachedInputTokens * 0.5 + tokens.outputTokens * 30) / 1_000_000).toFixed(6));
 }
 
 export function estimateAiVariableCosts(input: { modelCostUsd: number; webSearchCalls: number; grossAmountKrw: number }) {

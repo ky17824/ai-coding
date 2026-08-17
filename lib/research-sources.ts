@@ -29,6 +29,7 @@ export function collectCitedUrls(value: unknown, result = new Set<string>(), par
   return result;
 }
 
+// OpenAI Responses(output[])와 Anthropic Messages(content[]) 두 모양을 모두 받는다. GTM 어시스턴트가 OpenAI 모양으로 이 함수를 쓴다.
 export function collectAllowedResearchUrls(outputs: unknown[], approvedSources: unknown[]) {
   const result = new Set<string>();
   const add = (url: unknown) => { if (typeof url === "string" && /^https?:\/\//i.test(url)) result.add(canonicalResearchUrl(url)); };
@@ -47,6 +48,13 @@ export function collectAllowedResearchUrls(outputs: unknown[], approvedSources: 
         for (const content of (item as { content?: { annotations?: { url?: string }[] }[] }).content ?? []) {
           for (const annotation of content.annotations ?? []) add(annotation.url);
         }
+      } else if (type === "web_search_tool_result") {
+        // Anthropic: 도구가 실제로 반환한 결과. content가 오류 객체이면 배열이 아니다.
+        const content = (item as { content?: unknown }).content;
+        if (Array.isArray(content)) for (const hit of content) add((hit as { url?: string }).url);
+      } else if (type === "text") {
+        // Anthropic: 모델이 실제로 읽고 인용한 페이지.
+        for (const citation of (item as { citations?: { url?: string }[] }).citations ?? []) add(citation.url);
       }
     }
   }

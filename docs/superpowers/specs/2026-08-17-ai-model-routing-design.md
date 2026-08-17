@@ -124,11 +124,12 @@ model_attempts       jsonb not null default '[]'   -- [{stage, model, ok, errorC
 |---|---|---|
 | 호출 | 현재 라우트 코드를 그대로 이동 | `messages.parse` + `output_config.format` |
 | 스키마 | `zodTextFormat` (uri 없는 현재 스키마) | `toModelSchema()` 통과본(§3.3) |
-| effort | `reasoning.effort` | 최상위 `effort` — **항상 명시**(기본 high) |
+| effort | `reasoning.effort` | **`output_config.effort`** — 항상 명시(기본 high) |
 | 사용자 식별 | `safety_identifier` | `metadata.user_id` (같은 SHA-256) |
 | 재시도 | `maxRetries: 0` | `maxRetries: 0` |
 | 파일 | `input_file` + 서명 URL | `document`/`image` 블록 `source: {type: "url"}` — 서명 URL 15분으로 충분한지 스파이크 확인, 아니면 base64 |
-| 웹검색 | `web_search`, `max_tool_calls: 8` | `web_search_20250305`, `max_uses: 8`, `allowed_callers: ["direct"]`, `pause_turn` 루프 ≤5회 + 예산 검사 |
+| 웹검색 | `web_search`, `max_tool_calls: 8` | `web_search_20250305`, `allowed_callers: ["direct"]`, `pause_turn` 루프 ≤5회 + 예산 검사 |
+| 검색 상한 | `max_tool_calls: 8` — 스테이지 전체에 적용 | `max_uses`는 **요청당** 상한이라 재개마다 초기화된다. 재개 요청마다 남은 할당량(`8 − 지금까지 사용`)으로 줄여 스테이지 전체를 8회로 묶는다 |
 | 허용 URL | `web_search_call.action` + `url_citation` | `web_search_tool_result.content[].url` + `citations[].url` |
 
 `collectAllowedResearchUrls`(`lib/research-sources.ts`)에는 Anthropic 모양을 **추가만** 한다.

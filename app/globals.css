@@ -5340,3 +5340,18 @@ h2.plan-summary {
   }
 
 }
+
+/* 관리자 AI 모델 설정. 부품은 전부 기존 것이고 배치만 정한다. */
+.admin-model-routing__status {
+  margin: 34px 0 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.admin-model-routing__recent { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
+.admin-model-routing__stage h2 { display: flex; align-items: center; gap: 10px; font-size: 17px; margin: 0 0 12px; }
+.admin-model-routing__index { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--mint); color: var(--chart-level-4); font-size: 13px; font-weight: 700; }
+.admin-model-routing__fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.admin-model-routing__fields select { min-height: 42px; }
+.admin-model-routing__actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+@media (max-width: 480px) { .admin-model-routing__fields { grid-template-columns: 1fr; } }

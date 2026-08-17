@@ -6,7 +6,6 @@ import {
   buildAiReadinessSnapshot,
   buildSafePublicResearchBrief,
   buildAiAgentInstructions,
-  calculateSolCostUsd,
   clearUnknownIntakeValues,
   estimateAiVariableCosts,
   getAiOrderAmounts,
@@ -116,8 +115,8 @@ describe("AI expert execution rules", () => {
     })).toThrow();
   });
 
-  it("calculates GPT-5.6 Sol token cost", () => {
-    expect(calculateSolCostUsd({ inputTokens: 200000, cachedInputTokens: 0, outputTokens: 40000 })).toBe(2.2);
+  it("estimates variable costs from model cost, web search calls, and gross amount", () => {
+    // 모델 토큰 비용 자체는 lib/ai-models/catalog.ts의 costOf가 계산한다(그쪽 테스트에서 회귀 확인).
     expect(estimateAiVariableCosts({ modelCostUsd: 2.2, webSearchCalls: 8, grossAmountKrw: 218900 })).toEqual({
       toolCostUsd: 0.08,
       paymentFeeKrw: 7224,

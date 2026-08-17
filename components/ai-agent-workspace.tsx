@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import type { AiAgentReport } from "@/lib/ai-agent-report";
 import { AiGenerationFlow, type GenerationStage } from "@/components/ai-generation-flow";
+// 순수 데이터 모듈이라 서버 전용 의존성이 없다 — 클라이언트 번들에 넣어도 안전하다.
+import { modelLabel } from "@/lib/ai-models/catalog";
 
 /** 리스는 예약 시점에 now() + 15분으로 한 번만 잡힌다(010:168). 갱신되지 않으므로
  *  여기서 되돌리면 이번 시도의 실제 시작 시각이 나온다. 추정이 아니다. */
@@ -19,6 +21,7 @@ type Run = {
   assumptions: { field: string; basis: string }[];
   report: AiAgentReport | null;
   generation_count: number;
+  model?: string | null;
   error_message?: string | null;
   lease_expires_at?: string | null;
   generation_stage?: GenerationStage | null;
@@ -210,7 +213,7 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
   if (run.status === "completed" && run.report && !editing) {
     return <section className="ai-workspace ai-report panel">
       {message && <p className="notice-banner" role="alert">{message}</p>}
-      <header className="ai-workspace__header"><span><small>{locale === "en" ? "FRONTIER MODEL" : "프론티어 모델"}</small><h2>{run.report.title}</h2></span><div><button type="button" className="button button--ghost button--small" onClick={downloadReport}>{c.download}</button>{run.generation_count < 2 && <button type="button" className="button button--small" onClick={() => setEditing(true)}>{c.correction}</button>}</div></header>
+      <header className="ai-workspace__header"><span><small>{locale === "en" ? "Written by" : "작성 모델"} · {modelLabel(run.model ?? "")}</small><h2>{run.report.title}</h2></span><div><button type="button" className="button button--ghost button--small" onClick={downloadReport}>{c.download}</button>{run.generation_count < 2 && <button type="button" className="button button--small" onClick={() => setEditing(true)}>{c.correction}</button>}</div></header>
       <p className="ai-report__summary">{run.report.executiveSummary}</p>
       <div className="ai-report__grid">{run.report.findings.map((finding) => <article key={finding.title}>
         <span className={`pill ai-report__status ai-report__status--${finding.status}`}>{L.status[finding.status]} · {L.confidence[finding.confidence]}</span>
