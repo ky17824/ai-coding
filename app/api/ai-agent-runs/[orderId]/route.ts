@@ -417,6 +417,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     publicEvidence.findings = publicEvidence.findings.filter((finding) => finding.sourceUrls.length > 0);
     if (publicEvidence.findings.length === 0) throw new Error("검색 도구로 확인된 출처를 가진 발견이 없습니다.");
     validateAiAgentSources([...collectCitedUrls(publicEvidence)], allowedUrls);
+    // 진행 표시용 부가 정보. markStage와 같은 원칙 — 기록에 실패해도 생성은 계속한다.
+    const { error: researchSummaryError } = await admin.from("ai_agent_runs")
+      .update({ research_summary: { sources: publicEvidence.sources.length, findings: publicEvidence.findings.length } })
+      .eq("order_id", orderId).eq("generation_attempt_id", reserved.generation_attempt_id);
+    if (researchSummaryError) console.warn("[ai-agent-run] research summary not recorded", { orderId, error: researchSummaryError });
 
     await markStage("report");
     // 우선순위는 relevantQuestions로 이미 넘기지만, "그 값을 쓰라"는 말이 없어서 모델이

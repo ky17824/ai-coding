@@ -25,6 +25,9 @@ type Run = {
   error_message?: string | null;
   lease_expires_at?: string | null;
   generation_stage?: GenerationStage | null;
+  generation_stage_log?: Array<{ stage: string; at: string; attempt?: string }> | null;
+  model_route_snapshot?: Record<string, { model: string; effort: string }> | null;
+  research_summary?: { sources: number; findings: number } | null;
 };
 
 const fieldNames = ["objective", "offering", "targetCountry", "targetCustomer", "currentEvidence", "constraints", "resources", "deadline"] as const;
@@ -100,7 +103,14 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
         const { run: latest } = await response.json() as { run: Run };
         if (cancelled || !latest) return;
         if (busy) {
-          if (latest.status === "generating") setRun((current) => ({ ...current, generation_stage: latest.generation_stage, lease_expires_at: latest.lease_expires_at }));
+          if (latest.status === "generating") setRun((current) => ({
+            ...current,
+            generation_stage: latest.generation_stage,
+            lease_expires_at: latest.lease_expires_at,
+            generation_stage_log: latest.generation_stage_log,
+            model_route_snapshot: latest.model_route_snapshot,
+            research_summary: latest.research_summary
+          }));
           return;
         }
         setRun(latest);
@@ -198,6 +208,9 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
           locale={locale}
           stage={run.generation_stage ?? null}
           startedAt={run.lease_expires_at ? new Date(Date.parse(run.lease_expires_at) - LEASE_MS).toISOString() : null}
+          stageLog={run.generation_stage_log ?? undefined}
+          routeSnapshot={run.model_route_snapshot}
+          researchSummary={run.research_summary}
         />
         {leaseExpired && (
           <div className="ai-flow__stalled">

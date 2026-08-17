@@ -3187,6 +3187,29 @@ main[lang="en"] .hero h1 {
 .ai-flow__step:last-child::before { display: none; }
 .ai-flow__step--done::before { background: var(--chart-level-3); }
 
+/* 진행 중인 단계로 들어가는 연결선: 점 하나가 흐르며 "지금 이 단계로 작업이 흘러
+   들어가고 있다"는 사실만 나타낸다. 몇 %인지는 서버가 모르므로 그리지 않는다. */
+.ai-flow__step--done:has(+ .ai-flow__step--active)::before { background: var(--line); }
+
+.ai-flow__step--done:has(+ .ai-flow__step--active)::after {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 24px;
+  bottom: 0;
+  width: 6px;
+  background-image: radial-gradient(circle, var(--chart-level-4) 45%, transparent 50%);
+  background-size: 6px 20px;
+  background-repeat: no-repeat;
+  background-position: 0 -10%;
+  animation: ai-flow-travel 1400ms linear infinite;
+}
+
+@keyframes ai-flow-travel {
+  0% { background-position: 0 -10%; }
+  100% { background-position: 0 110%; }
+}
+
 .ai-flow__marker {
   width: 28px;
   height: 28px;
@@ -3238,6 +3261,18 @@ main[lang="en"] .hero h1 {
 .ai-flow__body strong { font-size: 15px; color: var(--muted); font-weight: 600; }
 .ai-flow__body span { font-size: 14px; line-height: 1.6; color: var(--muted); }
 
+/* 활성 단계 아래의 서버가 실제로 아는 사실들 — 경과 시간, 작업 중인 모델, 출처 수.
+   비율·퍼센트는 없다. 서버가 모르는 값이라 그릴 수 없다. */
+.ai-flow__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .ai-flow__step--done .ai-flow__body strong { color: var(--ink); }
 .ai-flow__step--active .ai-flow__body strong { color: var(--ink); font-weight: 700; }
 .ai-flow__step--active .ai-flow__body span { color: var(--ink); }
@@ -3262,6 +3297,7 @@ main[lang="en"] .hero h1 {
 /* 움직임을 줄이도록 설정한 사용자에게는 맥동 대신 고정된 점을 보여 준다. */
 @media (prefers-reduced-motion: reduce) {
   .ai-flow__step--active .ai-flow__marker::after { animation: none; transform: scale(1); opacity: 1; }
+  .ai-flow__step--done:has(+ .ai-flow__step--active)::after { animation: none; background-position: 0 50%; }
 }
 
 .ai-report__summary {
