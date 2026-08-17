@@ -45,8 +45,10 @@ describe("paid AI service security contract", () => {
     expect(migration).toContain("create or replace function public.append_ai_agent_reference_file");
     expect(runRoute).toContain("Changing the offering, target country, or core customer requires a new order.");
     expect(runRoute).toContain("reference_file_missing");
-    // publicClassificationSchema lives in lib/ai-agent-report.ts (moved out of the route in Task 6).
+    // publicClassificationSchema lives in lib/ai-agent-report.ts now (moved out of the route in
+    // Task 6), but the route must still be the thing that applies it to the classification call.
     expect(aiAgentReportLib).toContain('z.literal("UNSPECIFIED")');
+    expect(runRoute).toContain("zodTextFormat(publicClassificationSchema");
   });
 
   it("does not present a failed correction as a new report", () => {
