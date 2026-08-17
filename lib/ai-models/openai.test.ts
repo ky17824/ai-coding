@@ -1,13 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const parseMock = vi.fn();
-vi.mock("openai", () => ({ default: class { responses = { parse: parseMock }; constructor(public opts: unknown) {} } }));
+const constructorMock = vi.fn();
+vi.mock("openai", () => ({ default: class { responses = { parse: parseMock }; constructor(public opts: unknown) { constructorMock(opts); } } }));
 
 import { openaiAdapter } from "@/lib/ai-models/openai";
 
-beforeEach(() => parseMock.mockReset());
+beforeEach(() => {
+  parseMock.mockReset();
+  constructorMock.mockReset();
+  delete process.env.AI_PROBE;
+});
 
 describe("openaiAdapter", () => {
+  it("AI_PROBE가 꺼져 있으면(기본) maxRetries는 1이다", () => {
+    openaiAdapter("gpt-5.6-sol");
+    expect(constructorMock.mock.calls[0][0]).toMatchObject({ maxRetries: 1 });
+  });
+
+  it("AI_PROBE=1이면 maxRetries는 0이다", () => {
+    process.env.AI_PROBE = "1";
+    openaiAdapter("gpt-5.6-sol");
+    expect(constructorMock.mock.calls[0][0]).toMatchObject({ maxRetries: 0 });
+  });
+
   it("classify: reasoning.effort와 safety_identifier를 넘기고 usage를 매핑한다", async () => {
     parseMock.mockResolvedValue({
       output_parsed: { offeringCategory: "beauty_personal_care", customerSegment: "consumer", targetCountryCode: "US" },

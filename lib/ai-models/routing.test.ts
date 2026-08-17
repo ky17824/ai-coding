@@ -19,7 +19,7 @@ describe("validateRoutes", () => {
   });
 
   it("허용 목록 밖 모델을 거부한다", () => {
-    const result = validateRoutes({ ...opusAll, final_report: { model: "openai:gpt-5.6-luna", effort: "medium" } }, bothKeys);
+    const result = validateRoutes({ ...opusAll, final_report: { model: "openai:gpt-5.6-nova", effort: "medium" } }, bothKeys);
     expect(result).toEqual({ ok: false, error: "unknown_model" });
   });
 

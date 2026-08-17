@@ -4,7 +4,7 @@
  */
 export type Provider = "openai" | "anthropic";
 export type Effort = "low" | "medium" | "high";
-export type ModelKey = "anthropic:claude-opus-5" | "anthropic:claude-sonnet-5" | "openai:gpt-5.6-sol";
+export type ModelKey = "anthropic:claude-opus-5" | "anthropic:claude-sonnet-5" | "openai:gpt-5.6-sol" | "openai:gpt-5.6-luna";
 
 export type ModelSpec = {
   key: ModelKey;
@@ -43,6 +43,14 @@ export const MODEL_CATALOG: Record<ModelKey, ModelSpec> = {
     key: "openai:gpt-5.6-sol", provider: "openai", model: "gpt-5.6-sol", label: "GPT-5.6 Sol",
     structuredOutput: true, webSearch: true, fileInput: true, efforts: ["low", "medium", "high"],
     priceUsdPerMTok: { input: 5, cacheRead: 0.5, output: 30 }, webSearchUsdPerCall: 0.01
+  },
+  // ponytail: Luna도 none/xhigh/max effort를 지원하지만 efforts에는 넣지 않는다. none은
+  // 웹검색을 없애 다른 파이프라인을 재게 되므로(더 빠른 게 아니라 다른 것을 측정), Effort
+  // 유니온을 넓히지 않는 이유는 비용이 아니라 측정 타당성이다.
+  "openai:gpt-5.6-luna": {
+    key: "openai:gpt-5.6-luna", provider: "openai", model: "gpt-5.6-luna", label: "GPT-5.6 Luna",
+    structuredOutput: true, webSearch: true, fileInput: true, efforts: ["low", "medium", "high"],
+    priceUsdPerMTok: { input: 0.2, cacheRead: 0.02, output: 1.2 }, webSearchUsdPerCall: 0.01
   }
 };
 

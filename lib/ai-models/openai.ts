@@ -22,7 +22,12 @@ export function openaiAdapter(model: string): Adapter {
   // 확인하므로(route.ts의 ensureBudget), 재시도 1회는 리팩터 이전 SDK 기본값(2회)보다 항상
   // 더 안전하다. 다만 재시도는 호출 "시작" 시점만 예산으로 막는다 — 이미 시작한 재시도가
   // 진행 중에 데드라인을 넘길 수는 있다.
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 1 });
+  //
+  // AI_PROBE=1일 때만 0으로 내린다: 단계 구간 계측 중에는 늦게 재시작한 재시도와 느린 첫 호출이
+  // generation_stage_log에서 구분되지 않는다(docs/plans/2026-08-17-luna-단계예산-판별실험.md 3단계
+  // "측정 정확도"). 이 코드는 유료 파이프라인의 공유 프로덕션 경로다 — 플래그가 켜진 동안 돌아가는
+  // 다른 고객의 생성도 재시도를 잃는다. 프로브가 끝나면 즉시 꺼야 한다(분 단위 노출로 유지, 상시 아님).
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: process.env.AI_PROBE === "1" ? 0 : 1 });
   const common = (userHash: string) => ({ model, store: false as const, safety_identifier: userHash });
   return {
     async classify({ locale, effort, userHash, intake }) {

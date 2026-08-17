@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createMock = vi.fn();
-vi.mock("@anthropic-ai/sdk", () => ({ default: class { messages = { create: createMock }; constructor(public opts: unknown) {} } }));
+const constructorMock = vi.fn();
+vi.mock("@anthropic-ai/sdk", () => ({ default: class { messages = { create: createMock }; constructor(public opts: unknown) { constructorMock(opts); } } }));
 
 import { PAUSE_TURN_LIMIT, WRITE_REPORT_MAX_TOKENS, anthropicAdapter } from "@/lib/ai-models/anthropic";
 import { StageError } from "@/lib/ai-models/types";
@@ -17,9 +18,24 @@ const usage = { input_tokens: 100, cache_read_input_tokens: 10, cache_creation_i
  */
 const ANTHROPIC_NONSTREAMING_MAX_TOKENS_CEILING = 21_333;
 
-beforeEach(() => createMock.mockReset());
+beforeEach(() => {
+  createMock.mockReset();
+  constructorMock.mockReset();
+  delete process.env.AI_PROBE;
+});
 
 describe("anthropicAdapter", () => {
+  it("AI_PROBE가 꺼져 있으면(기본) maxRetries는 1이다", () => {
+    anthropicAdapter("claude-opus-5");
+    expect(constructorMock.mock.calls[0][0]).toMatchObject({ maxRetries: 1 });
+  });
+
+  it("AI_PROBE=1이면 maxRetries는 0이다", () => {
+    process.env.AI_PROBE = "1";
+    anthropicAdapter("claude-opus-5");
+    expect(constructorMock.mock.calls[0][0]).toMatchObject({ maxRetries: 0 });
+  });
+
   it("classify: effort를 항상 output_config 안에 보내고 output_config.format에 변환 스키마를 넣는다", async () => {
     createMock.mockResolvedValue({ stop_reason: "end_turn", content: [textJson({ offeringCategory: "beauty_personal_care", customerSegment: "consumer", targetCountryCode: "US" })], usage });
     const result = await anthropicAdapter("claude-opus-5").classify({ locale: "ko", effort: "low", userHash: "h", intake: { offering: "립밤" } });
