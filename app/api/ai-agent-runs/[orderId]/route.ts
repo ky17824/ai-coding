@@ -17,9 +17,8 @@ import {
   estimateAiVariableCosts,
   nextAiAgentStep,
   normalizeAiAgentScope,
+  publicClassificationSchema,
   publicTargetCountryCode,
-  publicCustomerSegments,
-  publicOfferingCategories,
   normalizeReportTitles,
   validateAiAgentReport,
   validateAiAgentSources
@@ -30,11 +29,6 @@ import { getIntakeQuestions, INTAKE_ITEMS, INTAKE_STAGES } from "@/lib/intake-qu
 
 export const runtime = "nodejs";
 const MODEL = "gpt-5.6-sol" as const;
-const publicClassificationSchema = z.object({
-  offeringCategory: z.enum(publicOfferingCategories),
-  customerSegment: z.enum(publicCustomerSegments),
-  targetCountryCode: z.union([z.string().regex(/^[A-Z]{2}$/), z.literal("UNSPECIFIED")])
-});
 const intakeSchema = z.object({
   objective: z.string().trim().max(2000).default(""),
   offering: z.string().trim().max(2000).default(""),

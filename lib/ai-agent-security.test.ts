@@ -6,6 +6,7 @@ const migration = ["010_paid_ai_expert_services.sql", "011_paid_ai_expert_contra
 const orderRoute = readFileSync("app/api/orders/route.ts", "utf8");
 const runRoute = readFileSync("app/api/ai-agent-runs/[orderId]/route.ts", "utf8");
 const uploadRoute = readFileSync("app/api/ai-agent-runs/[orderId]/upload-url/route.ts", "utf8");
+const aiAgentReportLib = readFileSync("lib/ai-agent-report.ts", "utf8");
 const workspace = readFileSync("components/ai-agent-workspace.tsx", "utf8");
 
 describe("paid AI service security contract", () => {
@@ -44,7 +45,8 @@ describe("paid AI service security contract", () => {
     expect(migration).toContain("create or replace function public.append_ai_agent_reference_file");
     expect(runRoute).toContain("Changing the offering, target country, or core customer requires a new order.");
     expect(runRoute).toContain("reference_file_missing");
-    expect(runRoute).toContain('z.literal("UNSPECIFIED")');
+    // publicClassificationSchema lives in lib/ai-agent-report.ts (moved out of the route in Task 6).
+    expect(aiAgentReportLib).toContain('z.literal("UNSPECIFIED")');
   });
 
   it("does not present a failed correction as a new report", () => {
