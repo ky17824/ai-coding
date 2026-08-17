@@ -42,7 +42,8 @@ describe("모델 허용 목록", () => {
   });
 
   it("기존 sol 계산과 결과가 같다 (회귀)", () => {
-    // 010 이후 쓰던 calculateSolCostUsd: (in-cached)*5 + cached*0.5 + out*30
+    // 010~021에서 쓰다 022에서 삭제한 lib/ai-agent-report.ts의 calculateSolCostUsd:
+    // (in-cached)*5 + cached*0.5 + out*30
     const usage = { input: 31131, cachedInput: 0, cacheWriteInput: 0, output: 8397, webSearchCalls: 3 };
     expect(costOf("openai:gpt-5.6-sol", usage)).toBeCloseTo((31131 * 5 + 8397 * 30) / 1e6, 6);
   });

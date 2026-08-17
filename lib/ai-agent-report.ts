@@ -239,10 +239,6 @@ export function nextAiAgentStep(input: { missingCriticalInputs: boolean; clarifi
   return input.missingCriticalInputs && input.clarificationRound < 2 ? "clarifying" as const : "ready" as const;
 }
 
-export function calculateSolCostUsd(tokens: { inputTokens: number; cachedInputTokens: number; outputTokens: number }) {
-  return Number((((tokens.inputTokens - tokens.cachedInputTokens) * 5 + tokens.cachedInputTokens * 0.5 + tokens.outputTokens * 30) / 1_000_000).toFixed(6));
-}
-
 export function estimateAiVariableCosts(input: { modelCostUsd: number; webSearchCalls: number; grossAmountKrw: number }) {
   const toolCostUsd = Number((input.webSearchCalls * 0.01).toFixed(6));
   const paymentFeeKrw = Math.round(input.grossAmountKrw * 0.033);

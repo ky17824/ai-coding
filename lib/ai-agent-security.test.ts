@@ -8,6 +8,9 @@ const runRoute = readFileSync("app/api/ai-agent-runs/[orderId]/route.ts", "utf8"
 const uploadRoute = readFileSync("app/api/ai-agent-runs/[orderId]/upload-url/route.ts", "utf8");
 const aiAgentReportLib = readFileSync("lib/ai-agent-report.ts", "utf8");
 const workspace = readFileSync("components/ai-agent-workspace.tsx", "utf8");
+// Task 8이 실제 모델 호출을 어댑터로 옮겼다. 웹검색 호출 자체와 그 스키마 사용은
+// 이제 여기(공급자별 어댑터)에 있고, 라우트는 무엇을 보낼지만 정한다.
+const openaiAdapter = readFileSync("lib/ai-models/openai.ts", "utf8");
 
 describe("paid AI service security contract", () => {
   it("keeps order and AI-run writes server-only", () => {
@@ -29,11 +32,14 @@ describe("paid AI service security contract", () => {
   });
 
   it("sends only the anonymized brief to the web-enabled call", () => {
-    const webCall = runRoute.slice(runRoute.indexOf("const researchResponse"), runRoute.indexOf("const reportResponse"));
+    // Task 8: 모델 호출은 어댑터로 옮겨졌지만, 라우트가 research 단계에 어떤 필드를
+    // 넘기는지는 여전히 여기서 봐야 한다 — privateContext/privateFileInputs가 새지 않는지.
+    const webCall = runRoute.slice(runRoute.indexOf('runStage("public_research"'), runRoute.indexOf("const publicEvidence"));
     expect(webCall).toContain("publicBrief");
     expect(webCall).not.toContain("privateContext");
     expect(webCall).not.toContain("privateFileInputs");
-    expect(webCall).toContain("max_tool_calls: 8");
+    // 웹검색 총 호출 상한 자체는 이제 OpenAI 어댑터 안에 있다.
+    expect(openaiAdapter).toContain("max_tool_calls: 8");
   });
 
   it("loads the complete assessment for Gate priority and keeps attachments private", () => {
@@ -46,9 +52,10 @@ describe("paid AI service security contract", () => {
     expect(runRoute).toContain("Changing the offering, target country, or core customer requires a new order.");
     expect(runRoute).toContain("reference_file_missing");
     // publicClassificationSchema lives in lib/ai-agent-report.ts now (moved out of the route in
-    // Task 6), but the route must still be the thing that applies it to the classification call.
+    // Task 6). Task 8 then moved the classification call itself into the OpenAI adapter, so that's
+    // the thing that must still apply the schema to the call's structured-output format.
     expect(aiAgentReportLib).toContain('z.literal("UNSPECIFIED")');
-    expect(runRoute).toContain("zodTextFormat(publicClassificationSchema");
+    expect(openaiAdapter).toContain("zodTextFormat(publicClassificationSchema");
   });
 
   it("does not present a failed correction as a new report", () => {
