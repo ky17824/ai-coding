@@ -45,10 +45,21 @@ describe("model routing", () => {
     expect(source).toContain("ensureBudget(stage)");
     expect((source.match(/runStage\("(classification|public_research|final_report)"/g) ?? []).length).toBe(3);
   });
-  it("패키지 상품은 최종 보고서만 high effort로 승격한다", () => {
-    expect(source).toContain('stage === "final_report" && service.productKind === "package" ? "high" : route.effort');
+  it("패키지 상품은 조사·보고서 단계를 high effort로 승격한다(분류 단계는 그대로)", () => {
+    // 020 이전 동작(4b19b47)은 research·report 모두 package면 high였다 — 라우팅 도입으로
+    // final_report만 승격되던 회귀를 다시 두 단계로 되돌린다. classification은 원래도
+    // 항상 medium이라 이 조건에 들어가면 안 된다.
+    expect(source).toContain('(stage === "public_research" || stage === "final_report") && service.productKind === "package" ? "high" : route.effort');
+    expect(source).not.toContain('stage === "classification" && service.productKind === "package"');
   });
   it("실패한 단계의 usage도 실행 합계에 반영한다", () => {
     expect(source).toContain("error instanceof StageError ? error.usage : EMPTY_USAGE");
+  });
+  it("실패 기록 RPC 쓰기가 실패해도 조용히 넘어가지 않는다", () => {
+    // 예약 스냅샷/공급자 키 사전 검사 두 곳과 catch 블록, 세 실패 경로 모두 같은
+    // recordFailure 하나만 거친다 — fail_ai_agent_generation 쓰기 자체가 실패하면
+    // 실행이 이유 없이 generating에 묶이는 사고(020)를 다시 만들지 않기 위해서다.
+    expect((source.match(/recordFailure\(/g) ?? []).length).toBe(3);
+    expect(source).toContain("if (error || !data) console.error(\"[ai-agent-run] failure handling did not persist\"");
   });
 });

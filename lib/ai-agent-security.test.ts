@@ -33,11 +33,14 @@ describe("paid AI service security contract", () => {
 
   it("sends only the anonymized brief to the web-enabled call", () => {
     // Task 8: 모델 호출은 어댑터로 옮겨졌지만, 라우트가 research 단계에 어떤 필드를
-    // 넘기는지는 여전히 여기서 봐야 한다 — privateContext/privateFileInputs가 새지 않는지.
+    // 넘기는지는 여전히 여기서 봐야 한다 — privateContext, 그리고 서명 URL이 붙은 첨부
+    // 파일(referenceFiles, writeReport에만 넘어가야 한다)이 새지 않는지.
+    // ResearchInput 타입 자체에 files 필드가 없어 구조적으로도 막혀 있지만, 이 테스트는
+    // 그 타입을 누군가 넓히거나 as로 우회해도 걸리도록 소스 문자열로 다시 본다.
     const webCall = runRoute.slice(runRoute.indexOf('runStage("public_research"'), runRoute.indexOf("const publicEvidence"));
     expect(webCall).toContain("publicBrief");
     expect(webCall).not.toContain("privateContext");
-    expect(webCall).not.toContain("privateFileInputs");
+    expect(webCall).not.toContain("referenceFiles");
     // 웹검색 총 호출 상한 자체는 이제 OpenAI 어댑터 안에 있다.
     expect(openaiAdapter).toContain("max_tool_calls: 8");
   });

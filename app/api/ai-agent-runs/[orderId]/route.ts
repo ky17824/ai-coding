@@ -246,25 +246,34 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   if (reserveError) return NextResponse.json({ message: en ? "We couldn't reserve report generation." : "보고서 생성 작업을 예약하지 못했습니다." }, { status: 500 });
   if (!reserved?.generation_attempt_id) return NextResponse.json({ message: en ? "A report is already being generated or the correction limit was reached." : "이미 보고서를 생성 중이거나 사실 정정 재생성 한도를 사용했습니다." }, { status: 409 });
 
-  // 시도 기록과 실패 RPC 인자 헬퍼. 예약 직후부터 필요하다 — 라우트 스냅샷이
-  // 깨져 있거나 필요한 공급자 키가 없으면 어떤 단계도 시작하기 전에 실패 처리해야 한다.
+  // 시도 기록과 실패 RPC 헬퍼. 예약 직후부터 필요하다 — 라우트 스냅샷이 깨져 있거나
+  // 필요한 공급자 키가 없으면 어떤 단계도 시작하기 전에 실패 처리해야 한다.
+  //
+  // 기록 자체(fail_ai_agent_generation 호출)가 실패하면 실행이 이유 없이 'generating'에
+  // 묶인 채 15분 리스가 재시도를 막는다 — 오늘 실제로 겪은 장애라 020이 존재한다.
+  // 그래서 모든 실패 경로가 이 함수 하나만 거치게 해서, 쓰기 실패를 반드시 로그로 남긴다.
   const attempts: Array<{ stage: Stage; model: ModelKey; ok: boolean; errorClass?: string; usage: typeof EMPTY_USAGE; costUsd: number; ms: number }> = [];
-  const failArgs = (u: typeof EMPTY_USAGE, message: string) => {
+  const recordFailure = async (u: typeof EMPTY_USAGE, message: string, modelAttempts: typeof attempts) => {
     const cost = attempts.reduce((sum, a) => sum + a.costUsd, 0);
     const c = estimateAiVariableCosts({ modelCostUsd: cost, webSearchCalls: u.webSearchCalls, grossAmountKrw: order.amount_krw });
-    return { p_order_id: orderId, p_attempt_id: reserved.generation_attempt_id, p_error_message: message,
+    const { data, error } = await admin.rpc("fail_ai_agent_generation", {
+      p_order_id: orderId, p_attempt_id: reserved.generation_attempt_id, p_error_message: message,
       p_input_tokens: u.input, p_cached_input_tokens: u.cachedInput, p_output_tokens: u.output, p_web_search_calls: u.webSearchCalls,
-      p_model_cost_usd: cost, p_tool_cost_usd: c.toolCostUsd, p_payment_fee_krw: c.paymentFeeKrw, p_support_storage_krw: c.supportStorageKrw, p_total_variable_cost_krw: c.totalVariableCostKrw };
+      p_model_cost_usd: cost, p_tool_cost_usd: c.toolCostUsd, p_payment_fee_krw: c.paymentFeeKrw, p_support_storage_krw: c.supportStorageKrw, p_total_variable_cost_krw: c.totalVariableCostKrw,
+      p_model_attempts: modelAttempts
+    });
+    if (error || !data) console.error("[ai-agent-run] failure handling did not persist", { orderId, error, data });
+    return { data, error };
   };
 
   const routes = routesSchema.safeParse(reserved.model_route_snapshot);
   if (!routes.success) {
-    await admin.rpc("fail_ai_agent_generation", { ...failArgs(EMPTY_USAGE, "invalid_model_route_snapshot"), p_model_attempts: [] });
+    await recordFailure(EMPTY_USAGE, "invalid_model_route_snapshot", []);
     return NextResponse.json({ message: en ? "The AI model configuration is invalid." : "AI 모델 설정이 올바르지 않습니다." }, { status: 500 });
   }
   const providersNeeded = new Set(STAGES.map((stage) => modelSpec(routes.data[stage].model).provider));
   if ((providersNeeded.has("openai") && !process.env.OPENAI_API_KEY) || (providersNeeded.has("anthropic") && !process.env.ANTHROPIC_API_KEY)) {
-    await admin.rpc("fail_ai_agent_generation", { ...failArgs(EMPTY_USAGE, "provider_key_missing"), p_model_attempts: [] });
+    await recordFailure(EMPTY_USAGE, "provider_key_missing", []);
     return NextResponse.json({ message: en ? "The AI model is not configured." : "AI 모델이 구성되지 않았습니다." }, { status: 503 });
   }
 
@@ -308,7 +317,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   const runStage = async <T>(stage: Stage, fn: (adapter: Adapter, effort: "low" | "medium" | "high") => Promise<{ parsed: T; usage: typeof EMPTY_USAGE; allowedUrls?: Set<string> }>) => {
     ensureBudget(stage);
     const route = routes.data[stage];
-    const effort = stage === "final_report" && service.productKind === "package" ? "high" : route.effort;
+    // 패키지 상품은 조사·보고서 단계를 high로 승격한다(020 이전 동작과 동일 — 4b19b47).
+    // 분류 단계는 원래도 늘 medium이었으므로 승격 대상이 아니다.
+    const effort = (stage === "public_research" || stage === "final_report") && service.productKind === "package" ? "high" : route.effort;
     const began = Date.now();
     try {
       const result = await fn(adapterFor(route.model), effort);
@@ -413,8 +424,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     // 실제로 fail_ai_agent_generation의 타입 버그(020에서 수정) 때문에 실패한 실행의
     // 원인을 사후에 알 방법이 없었다.
     console.error("[ai-agent-run] generation failed", { orderId, attemptId: reserved.generation_attempt_id, error });
-    const { data: failed, error: failError } = await admin.rpc("fail_ai_agent_generation", { ...failArgs(usage, error instanceof Error ? error.message : "generation_failed"), p_model_attempts: attempts });
-    if (failError || !failed) console.error("[ai-agent-run] failure handling did not persist", { orderId, failError, failed });
+    const { data: failed, error: failError } = await recordFailure(usage, error instanceof Error ? error.message : "generation_failed", attempts);
     if (failError || !failed) return NextResponse.json({ message: en ? "The generation state needs an operations review." : "생성 상태를 저장하지 못해 운영 확인이 필요합니다." }, { status: 500 });
     if (reserved.report) {
       return NextResponse.json({ report: reserved.report, correctionFailed: true, generationCount: reserved.generation_count, message: en ? "The correction attempt failed. The previous report is unchanged, and the included correction attempt was used." : "사실 정정 생성에 실패해 이전 보고서는 변경되지 않았으며, 포함된 정정 시도 1회는 사용되었습니다." });
