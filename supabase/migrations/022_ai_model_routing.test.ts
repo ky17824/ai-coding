@@ -25,6 +25,11 @@ describe("022 ai model routing", () => {
     expect(code).toContain("p_model text");
   });
 
+  it("완료 RPC는 orders 대입이 0행이면 예외를 던진다 (010 회귀)", () => {
+    const completeBody = code.slice(code.indexOf("function public.complete_ai_agent_generation"), code.indexOf("$$;", code.indexOf("function public.complete_ai_agent_generation")));
+    expect(completeBody).toContain("if not found then raise exception 'order transition rejected'; end if;");
+  });
+
   it("실패 RPC의 orders.status 대입은 enum으로 캐스트한다 (020 회귀)", () => {
     const failBody = code.slice(code.indexOf("function public.fail_ai_agent_generation"));
     expect(failBody).toContain("::public.order_status");

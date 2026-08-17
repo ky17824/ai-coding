@@ -128,6 +128,7 @@ begin
   if not found then return false; end if;
   update public.orders set status = 'completed', completed_at = now()
   where id = p_order_id and status = 'service_started';
+  if not found then raise exception 'order transition rejected'; end if;
   return true;
 end;
 $$;
