@@ -51,7 +51,7 @@ export function collectAllowedResearchUrls(outputs: unknown[], approvedSources: 
       } else if (type === "web_search_tool_result") {
         // Anthropic: 도구가 실제로 반환한 결과. content가 오류 객체이면 배열이 아니다.
         const content = (item as { content?: unknown }).content;
-        if (Array.isArray(content)) for (const result of content) add((result as { url?: string }).url);
+        if (Array.isArray(content)) for (const hit of content) add((hit as { url?: string }).url);
       } else if (type === "text") {
         // Anthropic: 모델이 실제로 읽고 인용한 페이지.
         for (const citation of (item as { citations?: { url?: string }[] }).citations ?? []) add(citation.url);
