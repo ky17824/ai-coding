@@ -82,6 +82,22 @@ describe("anthropicAdapter", () => {
     expect(createMock).not.toHaveBeenCalled();
   });
 
+  it("research: 정리 호출이 max_tokens로 잘리면 검색+정리 usage를 담은 StageError를 F3 메시지 그대로 던진다", async () => {
+    const searchTurn = { stop_reason: "end_turn", role: "assistant", content: [{ type: "text", text: "found" }], usage: { ...usage, server_tool_use: { web_search_requests: 2 } } };
+    const structureTurnTruncated = { stop_reason: "max_tokens", content: [textJson({ summary: "s" })], usage };
+    createMock.mockResolvedValueOnce(searchTurn).mockResolvedValueOnce(structureTurnTruncated);
+
+    const promise = anthropicAdapter("claude-opus-5").research({ locale: "ko", effort: "medium", userHash: "h", serviceTitle: "T", deliverables: ["d"], completionInstructions: [], publicBrief: {}, reportDate: "2026-08-17", deadlineAt: Date.now() + 120_000 });
+
+    await expect(promise).rejects.toBeInstanceOf(StageError);
+    // F3가 만든 잘림 메시지(스키마 이름 포함)가 그대로 살아 있어야 한다 — 빈 JSON 파싱 오류로 뭉개지면 안 된다.
+    await expect(promise).rejects.toThrow("aiPublicResearchSchema");
+    await expect(promise).rejects.toThrow(/truncat/i);
+    // 검색 호출(입력 115, 검색 2회) + 정리 호출(입력 115) 둘 다 실려 있어야 한다 — 정리 호출까지는 이미 과금됐다.
+    await expect(promise).rejects.toMatchObject({ usage: { input: 230, cachedInput: 20, cacheWriteInput: 10, output: 40, webSearchCalls: 2 } });
+    await expect(promise).rejects.toMatchObject({ cause: expect.any(Error) });
+  });
+
   it("writeReport: 파일을 document/image 블록으로 넘긴다", async () => {
     createMock.mockResolvedValue({ stop_reason: "end_turn", content: [textJson(minimalReport())], usage });
     await anthropicAdapter("claude-opus-5").writeReport({ locale: "ko", effort: "high", userHash: "h", instructions: "i", payload: { a: 1 },

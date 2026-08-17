@@ -104,49 +104,53 @@ export function anthropicAdapter(model: string): Adapter {
       const messages: Anthropic.MessageParam[] = [{ role: "user", content: JSON.stringify({ product: serviceTitle, deliverables, publicBrief, reportDate }) }];
       let usage: ModelUsage = { input: 0, cachedInput: 0, cacheWriteInput: 0, output: 0, webSearchCalls: 0 };
       const contents: unknown[][] = [];
-      // research()가 실패로 던질 때 이미 쌓인 usage를 실어 보낸다 — 실패한 실행도 과금 대상이라 라우트가
-      // 실패 경로에서도 usage를 기록하기 때문이다. 로컬 usage 변수는 던지는 순간 사라지므로 에러에 담는다.
-      const checkBudget = () => {
-        try { ensureBudget(deadlineAt); } catch (err) { throw new StageError((err as Error).message, usage); }
-      };
 
-      // 1) 검색 — 구조화 출력 없이(도구와 구조화 출력을 함께 쓰는 것은 문서화되어 있지 않다).
-      // pause_turn이면 받은 assistant 메시지를 그대로 되돌려 이어 간다. max_uses는 이 검색 단계
-      // 전체(재개 포함)의 남은 허용치로 매번 줄여 보낸다 — 아니면 재개할 때마다 8회가 새로 열려
-      // 최악의 경우 6번의 요청 × 8회 = 48회까지 청구된다(OpenAI 쪽은 max_tool_calls로 전체를 8회로 막는다).
-      let turns = 0;
-      for (;;) {
-        checkBudget();
-        const response = await client.messages.create({
+      // research() 안에서 던질 수 있는 모든 지점(예산 초과, pause_turn 상한, 검색/정리 호출 자체의
+      // 실패, 정리 응답 파싱 실패)을 한 곳에서 잡는다. 실패한 실행도 과금 대상이라 usage를 잃으면
+      // 안 되는데, 개별 호출부마다 따로 감싸면 다음에 추가되는 호출이 감싸는 걸 빼먹기 쉽다 —
+      // 함수 경계 하나에서 잡으면 이 함수 안 어디서 던지든 그때까지 쌓인 usage가 실린다.
+      try {
+        // 1) 검색 — 구조화 출력 없이(도구와 구조화 출력을 함께 쓰는 것은 문서화되어 있지 않다).
+        // pause_turn이면 받은 assistant 메시지를 그대로 되돌려 이어 간다. max_uses는 이 검색 단계
+        // 전체(재개 포함)의 남은 허용치로 매번 줄여 보낸다 — 아니면 재개할 때마다 8회가 새로 열려
+        // 최악의 경우 6번의 요청 × 8회 = 48회까지 청구된다(OpenAI 쪽은 max_tool_calls로 전체를 8회로 막는다).
+        let turns = 0;
+        for (;;) {
+          ensureBudget(deadlineAt);
+          const response = await client.messages.create({
+            ...base(userHash),
+            max_tokens: 8_000,
+            system,
+            messages,
+            tools: [{ type: "web_search_20250305", name: "web_search", max_uses: Math.max(1, MAX_WEB_SEARCHES - usage.webSearchCalls), allowed_callers: ["direct"] }],
+            output_config: outputConfig(effort)
+          });
+          usage = addUsage(usage, usageOf(response));
+          contents.push(response.content ?? []);
+          if (response.stop_reason !== "pause_turn") break;
+          if (++turns > PAUSE_TURN_LIMIT) throw new Error("web_search_pause_limit");
+          messages.push({ role: "assistant", content: response.content });
+        }
+        const allowedUrls = collectAllowedResearchUrls(contents, []);
+        const researchText = contents.flat().filter((b) => (b as { type?: string }).type === "text").map((b) => (b as { text?: string }).text ?? "").join("\n");
+
+        // 2) 정리 — 도구 없이 구조화 출력만. 검색 결과 밖의 URL을 만들 여지를 줄인다.
+        ensureBudget(deadlineAt);
+        const structured = await client.messages.create({
           ...base(userHash),
-          max_tokens: 8_000,
-          system,
-          messages,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: Math.max(1, MAX_WEB_SEARCHES - usage.webSearchCalls), allowed_callers: ["direct"] }],
-          output_config: outputConfig(effort)
+          max_tokens: 16_000,
+          system: en
+            ? "Turn the research notes into the schema. Cite only URLs that appear in the notes. Do not invent sources."
+            : "조사 메모를 스키마에 맞게 정리하세요. 메모에 나온 URL만 인용하고 출처를 만들어 내지 마세요.",
+          messages: [{ role: "user", content: JSON.stringify({ product: serviceTitle, deliverables, reportDate, notes: researchText, urls: [...allowedUrls] }) }],
+          output_config: outputConfig(effort, aiPublicResearchSchema)
         });
-        usage = addUsage(usage, usageOf(response));
-        contents.push(response.content ?? []);
-        if (response.stop_reason !== "pause_turn") break;
-        if (++turns > PAUSE_TURN_LIMIT) throw new StageError("web_search_pause_limit", usage);
-        messages.push({ role: "assistant", content: response.content });
+        usage = addUsage(usage, usageOf(structured));
+        return { parsed: parseStructured(aiPublicResearchSchema, structured, "aiPublicResearchSchema"), usage, allowedUrls };
+      } catch (err) {
+        // F3의 잘림/빈 텍스트 메시지, pause_turn 상한, 예산 초과 메시지를 그대로 보존하고 usage만 얹는다.
+        throw new StageError((err as Error).message, usage, { cause: err });
       }
-      const allowedUrls = collectAllowedResearchUrls(contents, []);
-      const researchText = contents.flat().filter((b) => (b as { type?: string }).type === "text").map((b) => (b as { text?: string }).text ?? "").join("\n");
-
-      // 2) 정리 — 도구 없이 구조화 출력만. 검색 결과 밖의 URL을 만들 여지를 줄인다.
-      checkBudget();
-      const structured = await client.messages.create({
-        ...base(userHash),
-        max_tokens: 16_000,
-        system: en
-          ? "Turn the research notes into the schema. Cite only URLs that appear in the notes. Do not invent sources."
-          : "조사 메모를 스키마에 맞게 정리하세요. 메모에 나온 URL만 인용하고 출처를 만들어 내지 마세요.",
-        messages: [{ role: "user", content: JSON.stringify({ product: serviceTitle, deliverables, reportDate, notes: researchText, urls: [...allowedUrls] }) }],
-        output_config: outputConfig(effort, aiPublicResearchSchema)
-      });
-      usage = addUsage(usage, usageOf(structured));
-      return { parsed: parseStructured(aiPublicResearchSchema, structured, "aiPublicResearchSchema"), usage, allowedUrls };
     },
 
     async writeReport({ effort, userHash, instructions, payload, files, deadlineAt }) {

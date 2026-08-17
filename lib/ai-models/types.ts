@@ -18,8 +18,8 @@ export const EMPTY_USAGE: ModelUsage = { input: 0, cachedInput: 0, cacheWriteInp
  * callers that persist usage on failure read `.usage` off the caught error instead of losing it.
  */
 export class StageError extends Error {
-  constructor(message: string, readonly usage: ModelUsage) {
-    super(message);
+  constructor(message: string, readonly usage: ModelUsage, options?: { cause?: unknown }) {
+    super(message, options);
     this.name = "StageError";
   }
 }
