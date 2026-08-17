@@ -16,6 +16,14 @@ export const PAUSE_TURN_LIMIT = 5;
 const MIN_CALL_BUDGET_MS = 20_000;
 /** research 검색 단계 전체(모든 pause_turn 재개 포함)에 허용하는 웹 검색 총 횟수. OpenAI 쪽 max_tool_calls와 맞춘다. */
 const MAX_WEB_SEARCHES = 8;
+/**
+ * writeReport의 출력 상한. Opus 5 / Sonnet 5 문서상 최대 출력 토큰(2026-08-17 기준).
+ * Anthropic은 reasoning 토큰도 output_tokens에 포함해 세고, 패키지 상품은 effort:"high"를
+ * 강제한다 — 32,000이면 잘릴 여지가 있었고, 잘리면 parseStructured가 이름 있는 하드 실패로
+ * 바꿔 고객의 두 번뿐인 생성 시도 중 하나를 태운다. final_report를 Anthropic 기본값으로
+ * 삼기 전에 실제 출력 토큰 수를 측정해 이 값을 더 좁혀도 되는지 확인할 것.
+ */
+export const WRITE_REPORT_MAX_TOKENS = 128_000;
 
 function usageOf(response: {
   usage?: {
@@ -80,7 +88,12 @@ function outputConfig(effort: "low" | "medium" | "high", structuredSchema?: z.Zo
 }
 
 export function anthropicAdapter(model: string): Adapter {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
+  // maxRetries: 1. 0은 예전 장애에서 나온 값이다 — 그때는 SDK 재시도가 300초 함수 예산을
+  // 넘겨서 껐는데, 그 코드에는 예산 검사가 없었다. 지금은 매 스테이지 호출 전에 남은 예산을
+  // 확인하므로(ensureBudget), 재시도 1회는 리팩터 이전 SDK 기본값(2회)보다 항상 더 안전하다.
+  // 다만 재시도는 호출 "시작" 시점만 예산으로 막는다 — 이미 시작한 재시도가 진행 중에
+  // 데드라인을 넘길 수는 있다.
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 1 });
   const base = (userHash: string) => ({ model, metadata: { user_id: userHash } });
 
   return {
@@ -157,7 +170,7 @@ export function anthropicAdapter(model: string): Adapter {
       ensureBudget(deadlineAt);
       const response = await client.messages.create({
         ...base(userHash),
-        max_tokens: 32_000,
+        max_tokens: WRITE_REPORT_MAX_TOKENS,
         system: instructions,
         messages: [{
           role: "user",

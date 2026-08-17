@@ -29,6 +29,12 @@ describe("/admin/ai-models", () => {
     expect(nav).toContain('"/admin/ai-models"');
   });
 
+  it("24시간 요약은 ai_agent_runs.model이 아니라 model_attempts를 집계한다 (실패 실행이 모델을 못 채워 오귀속되는 문제)", () => {
+    expect(page).toContain('select("model_attempts")');
+    expect(page).not.toContain('select("model")');
+    expect(page).toContain("attempt.ok");
+  });
+
   it("서버 액션은 validateRoutes로 다시 검증하고 apply RPC를 부른다", () => {
     expect(actions).toContain("export async function changeModelRouting");
     expect(actions).toContain("export async function rollbackModelRouting");

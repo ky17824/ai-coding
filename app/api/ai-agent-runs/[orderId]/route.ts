@@ -244,7 +244,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   if (answersError) return NextResponse.json({ message: en ? "We couldn't load the saved readiness answers." : "저장된 준비도 답변을 불러오지 못했습니다." }, { status: 500 });
   const { data: reserved, error: reserveError } = await admin.rpc("reserve_ai_agent_generation", { p_order_id: orderId });
   if (reserveError) return NextResponse.json({ message: en ? "We couldn't reserve report generation." : "보고서 생성 작업을 예약하지 못했습니다." }, { status: 500 });
-  if (!reserved?.generation_attempt_id) return NextResponse.json({ message: en ? "A report is already being generated or the correction limit was reached." : "이미 보고서를 생성 중이거나 사실 정정 재생성 한도를 사용했습니다." }, { status: 409 });
+  if (!reserved?.generation_attempt_id) {
+    // reserve_ai_agent_generation은 활성 라우팅 설정이 없을 때도 null을 반환한다(022 §3) —
+    // 생성 중/재생성 한도 소진과 같은 null이라 구분이 안 된다. 사용자에게 "재생성 한도를
+    // 썼다"고 잘못 말하지 않으려면 활성 설정이 실제로 없는지 따로 확인해야 한다.
+    const { data: activeConfig, error: activeConfigError } = await admin
+      .from("ai_model_routing_configs")
+      .select("version")
+      .eq("status", "active")
+      .maybeSingle();
+    if (!activeConfigError && !activeConfig) {
+      console.error("[ai-agent-run] reserve refused: no active model routing config", { orderId, userId: user.id, runStatus: activeRun.status, orderStatus: order.status });
+      return NextResponse.json({ message: en ? "The AI model is not configured yet. Please contact support." : "AI 모델 설정이 없어 보고서를 생성할 수 없습니다. 운영팀에 문의해 주세요." }, { status: 503 });
+    }
+    return NextResponse.json({ message: en ? "A report is already being generated or the correction limit was reached." : "이미 보고서를 생성 중이거나 사실 정정 재생성 한도를 사용했습니다." }, { status: 409 });
+  }
 
   // 시도 기록과 실패 RPC 헬퍼. 예약 직후부터 필요하다 — 라우트 스냅샷이 깨져 있거나
   // 필요한 공급자 키가 없으면 어떤 단계도 시작하기 전에 실패 처리해야 한다.

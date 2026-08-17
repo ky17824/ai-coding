@@ -45,7 +45,7 @@ export default async function AdminAiModelsPage() {
       .select("version,status,routes,reason,created_at,created_by,profiles(display_name)")
       .order("version", { ascending: false })
       .limit(20),
-    admin.from("ai_agent_runs").select("model").gte("updated_at", new Date(Date.now() - 86_400_000).toISOString()),
+    admin.from("ai_agent_runs").select("model_attempts").gte("updated_at", new Date(Date.now() - 86_400_000).toISOString()),
     admin.from("ai_agent_runs").select("order_id", { count: "exact", head: true }).eq("status", "generating")
   ]);
 
@@ -55,8 +55,18 @@ export default async function AdminAiModelsPage() {
     ? (routesSchema.safeParse(active.routes).success ? routesSchema.parse(active.routes) : null)
     : null;
 
-  const byModel = new Map<string, number>();
-  for (const run of recentRuns ?? []) byModel.set(run.model, (byModel.get(run.model) ?? 0) + 1);
+  // ai_agent_runs.model은 fail_ai_agent_generation이 절대 채우지 않아 실패한 실행은 전부
+  // 시드 모델로 잘못 잡힌다(§4.3). model_attempts는 성공·실패 모두 단계별로 남으므로 이걸 센다.
+  const byModel = new Map<string, { ok: number; failed: number }>();
+  for (const run of recentRuns ?? []) {
+    const attempts = Array.isArray(run.model_attempts) ? run.model_attempts : [];
+    for (const attempt of attempts) {
+      if (!attempt || typeof attempt !== "object" || typeof attempt.model !== "string") continue;
+      const bucket = byModel.get(attempt.model) ?? { ok: 0, failed: 0 };
+      if (attempt.ok) bucket.ok += 1; else bucket.failed += 1;
+      byModel.set(attempt.model, bucket);
+    }
+  }
 
   const systemLabel = en ? "system" : "시스템";
   // API 키 값 자체는 절대 클라이언트로 보내지 않는다. 설정되어 있는지 여부(boolean)만 넘긴다.
@@ -93,8 +103,8 @@ export default async function AdminAiModelsPage() {
           hasAnthropicKey={keyStatus.hasAnthropicKey}
           generatingCount={generating ?? 0}
           last24h={{
-            total: recentRuns?.length ?? 0,
-            byModel: [...byModel.entries()].map(([model, count]) => ({ label: modelLabel(model), count }))
+            total: [...byModel.values()].reduce((sum, counts) => sum + counts.ok + counts.failed, 0),
+            byModel: [...byModel.entries()].map(([model, counts]) => ({ label: modelLabel(model), ...counts }))
           }}
           history={rows.map((row) => ({
             version: row.version,

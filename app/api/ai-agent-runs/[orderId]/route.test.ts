@@ -55,6 +55,15 @@ describe("model routing", () => {
   it("실패한 단계의 usage도 실행 합계에 반영한다", () => {
     expect(source).toContain("error instanceof StageError ? error.usage : EMPTY_USAGE");
   });
+  it("예약 실패가 활성 설정 없음 때문이면 사용자 재생성 횟수를 탓하지 않고 서버에 남긴다", () => {
+    // reserve_ai_agent_generation은 활성 라우팅 설정이 없을 때도 null을 반환해서(022 §3)
+    // '이미 생성 중/재생성 한도 소진' 메시지와 구분이 안 된다. 활성 설정 존재 여부를 따로
+    // 조회해서 실제 원인일 때만 다른 메시지 + 서버 로그를 남긴다.
+    expect(source).toContain('.from("ai_model_routing_configs")');
+    expect(source).toContain('.eq("status", "active")');
+    expect(source).toContain("no active model routing config");
+    expect(source).toContain("AI 모델 설정이 없어 보고서를 생성할 수 없습니다");
+  });
   it("실패 기록 RPC 쓰기가 실패해도 조용히 넘어가지 않는다", () => {
     // 예약 스냅샷/공급자 키 사전 검사 두 곳과 catch 블록, 세 실패 경로 모두 같은
     // recordFailure 하나만 거친다 — fail_ai_agent_generation 쓰기 자체가 실패하면

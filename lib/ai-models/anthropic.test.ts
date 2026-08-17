@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const createMock = vi.fn();
 vi.mock("@anthropic-ai/sdk", () => ({ default: class { messages = { create: createMock }; constructor(public opts: unknown) {} } }));
 
-import { PAUSE_TURN_LIMIT, anthropicAdapter } from "@/lib/ai-models/anthropic";
+import { PAUSE_TURN_LIMIT, WRITE_REPORT_MAX_TOKENS, anthropicAdapter } from "@/lib/ai-models/anthropic";
 import { StageError } from "@/lib/ai-models/types";
 
 const textJson = (obj: unknown) => ({ type: "text", text: JSON.stringify(obj) });
@@ -105,7 +105,7 @@ describe("anthropicAdapter", () => {
     const content = createMock.mock.calls[0][0].messages[0].content;
     expect(content[1]).toEqual({ type: "document", source: { type: "url", url: "https://s/x.pdf" }, title: "x.pdf" });
     expect(content[2]).toEqual({ type: "image", source: { type: "url", url: "https://s/y.png" } });
-    expect(createMock.mock.calls[0][0].max_tokens).toBe(32_000);
+    expect(createMock.mock.calls[0][0].max_tokens).toBe(WRITE_REPORT_MAX_TOKENS);
     expect(createMock.mock.calls[0][0].output_config.effort).toBe("high");
   });
 

@@ -30,7 +30,7 @@ export function AdminModelRoutingForm(props: {
   hasOpenAiKey: boolean;
   hasAnthropicKey: boolean;
   generatingCount: number;
-  last24h: { total: number; byModel: Array<{ label: string; count: number }> };
+  last24h: { total: number; byModel: Array<{ label: string; ok: number; failed: number }> };
   history: Array<{ version: number; status: "active" | "superseded"; at: string; by: string; summary: string }>;
 }) {
   const { locale, activeRoutes, hasOpenAiKey, hasAnthropicKey } = props;
@@ -65,9 +65,12 @@ export function AdminModelRoutingForm(props: {
       </section>
 
       <p className="admin-model-routing__recent">
-        {en ? "Last 24 hours" : "최근 24시간"} · {en ? `${props.last24h.total} runs` : `실행 ${props.last24h.total}건`}
+        {en ? "Last 24 hours" : "최근 24시간"} · {en ? `${props.last24h.total} attempts` : `시도 ${props.last24h.total}건`}
         {props.last24h.byModel.map((row) => (
-          <span key={row.label}> · {row.label} {row.count}{en ? "" : "건"}</span>
+          <span key={row.label}>
+            {" "}· {row.label} {en ? `${row.ok} ok` : `성공 ${row.ok}건`}
+            {row.failed > 0 && (en ? `, ${row.failed} failed` : ` · 실패 ${row.failed}건`)}
+          </span>
         ))}
         {" · "}{en ? `${props.generatingCount} in progress` : `진행 중 ${props.generatingCount}건`}
       </p>
@@ -129,7 +132,7 @@ export function AdminModelRoutingForm(props: {
           </section>
         ))}
 
-        <div className="notice-banner" role="status">
+        <div className="notice-banner">
           <strong>{en ? "Effect" : "변경 영향"}</strong>
           <ul>
             <li>

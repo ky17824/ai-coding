@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MODEL_CATALOG, MODEL_KEYS, modelSpec, type Effort, type ModelKey } from "@/lib/ai-models/catalog";
+import { MODEL_CATALOG, modelSpec, type Effort, type ModelKey } from "@/lib/ai-models/catalog";
 
 export const STAGES = ["classification", "public_research", "final_report"] as const;
 export type Stage = (typeof STAGES)[number];
@@ -75,8 +75,4 @@ export function describeRoutes(routes: Routes, locale: "ko" | "en"): string {
   const labels = STAGES.map((stage) => MODEL_CATALOG[routes[stage].model].label);
   if (new Set(labels).size === 1) return locale === "en" ? `All stages ${labels[0]}` : `세 단계 ${labels[0]}`;
   return STAGES.map((stage, index) => `${STAGE_LABEL[locale][stage]} ${labels[index]}`).join(" · ");
-}
-
-export function keysForProvider(provider: "openai" | "anthropic"): ModelKey[] {
-  return MODEL_KEYS.filter((key) => MODEL_CATALOG[key].provider === provider);
 }

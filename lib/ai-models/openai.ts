@@ -17,7 +17,12 @@ function usageOf(response: { usage?: { input_tokens?: number; input_tokens_detai
 
 /** 라우트에 있던 세 호출을 그대로 옮긴 것. 동작 변화 없음. */
 export function openaiAdapter(model: string): Adapter {
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 });
+  // maxRetries: 1. 0은 예전 장애에서 나온 값이다 — 그때는 SDK 재시도가 300초 함수 예산을
+  // 넘겨서 껐는데, 그 코드에는 예산 검사가 없었다. 지금은 매 스테이지 호출 전에 남은 예산을
+  // 확인하므로(route.ts의 ensureBudget), 재시도 1회는 리팩터 이전 SDK 기본값(2회)보다 항상
+  // 더 안전하다. 다만 재시도는 호출 "시작" 시점만 예산으로 막는다 — 이미 시작한 재시도가
+  // 진행 중에 데드라인을 넘길 수는 있다.
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 1 });
   const common = (userHash: string) => ({ model, store: false as const, safety_identifier: userHash });
   return {
     async classify({ locale, effort, userHash, intake }) {

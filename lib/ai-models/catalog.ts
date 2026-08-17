@@ -18,7 +18,6 @@ export type ModelSpec = {
   priceUsdPerMTok: { input: number; cacheRead: number; cacheWrite?: number; output: number };
   webSearchUsdPerCall: 0.01;
   deprecatedAt?: string;
-  replacement?: ModelKey;
 };
 
 export type ModelUsage = {
