@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { aiAgentReportSchema, aiPublicResearchSchema, publicClassificationSchema } from "@/lib/ai-agent-report";
 import { toModelSchema } from "@/lib/ai-models/schema";
-import type { Adapter } from "@/lib/ai-models/types";
+import { StageError, type Adapter } from "@/lib/ai-models/types";
 import type { ModelUsage } from "@/lib/ai-models/catalog";
 import { parseTruncatingStrings } from "@/lib/lenient-text-format";
 import { collectAllowedResearchUrls } from "@/lib/research-sources";
@@ -14,6 +14,8 @@ import type { z } from "zod";
 export const PAUSE_TURN_LIMIT = 5;
 /** 이 이하로 남으면 새 호출을 시작하지 않는다. */
 const MIN_CALL_BUDGET_MS = 20_000;
+/** research 검색 단계 전체(모든 pause_turn 재개 포함)에 허용하는 웹 검색 총 횟수. OpenAI 쪽 max_tool_calls와 맞춘다. */
+const MAX_WEB_SEARCHES = 8;
 
 function usageOf(response: {
   usage?: {
@@ -49,9 +51,17 @@ function textOf(response: { content?: Array<{ type?: string; text?: string }> })
   return (response.content ?? []).filter((block) => block.type === "text").map((block) => block.text ?? "").join("");
 }
 
-function parseStructured<T extends z.ZodType>(schema: T, response: { content?: Array<{ type?: string; text?: string }> }): z.infer<T> {
+/**
+ * 파싱 실패를 구분 가능한 메시지로 바꾼다. 그냥 JSON.parse("")를 던지면 "Unexpected end of
+ * JSON input"만 남아 거절/손상 응답과 구별이 안 된다 — 이 저장소가 이미 그 원인 불명 실패로
+ * 이틀을 날린 적이 두 번 있다.
+ */
+function parseStructured<T extends z.ZodType>(schema: T, response: { stop_reason?: string | null; content?: Array<{ type?: string; text?: string }> }, stageSchemaName: string): z.infer<T> {
+  if (response.stop_reason === "max_tokens") throw new Error(`${stageSchemaName}: response was truncated (stop_reason=max_tokens) before it could be parsed`);
+  const text = textOf(response);
+  if (!text) throw new Error(`${stageSchemaName}: response had no text content to parse`);
   // 구조화 출력은 텍스트 블록에 JSON으로 온다. 길이 초과는 자르고, 나머지는 원래 Zod로 검증한다.
-  return parseTruncatingStrings(schema, JSON.parse(textOf(response)));
+  return parseTruncatingStrings(schema, JSON.parse(text));
 }
 
 function ensureBudget(deadlineAt: number) {
@@ -85,7 +95,7 @@ export function anthropicAdapter(model: string): Adapter {
         messages: [{ role: "user", content: JSON.stringify({ offering: intake.offering, targetCountry: intake.targetCountry, targetCustomer: intake.targetCustomer }) }],
         output_config: outputConfig(effort, publicClassificationSchema)
       });
-      return { parsed: parseStructured(publicClassificationSchema, response), usage: usageOf(response) };
+      return { parsed: parseStructured(publicClassificationSchema, response, "publicClassificationSchema"), usage: usageOf(response) };
     },
 
     async research({ locale, effort, userHash, serviceTitle, deliverables, completionInstructions, publicBrief, reportDate, deadlineAt }) {
@@ -94,31 +104,38 @@ export function anthropicAdapter(model: string): Adapter {
       const messages: Anthropic.MessageParam[] = [{ role: "user", content: JSON.stringify({ product: serviceTitle, deliverables, publicBrief, reportDate }) }];
       let usage: ModelUsage = { input: 0, cachedInput: 0, cacheWriteInput: 0, output: 0, webSearchCalls: 0 };
       const contents: unknown[][] = [];
+      // research()가 실패로 던질 때 이미 쌓인 usage를 실어 보낸다 — 실패한 실행도 과금 대상이라 라우트가
+      // 실패 경로에서도 usage를 기록하기 때문이다. 로컬 usage 변수는 던지는 순간 사라지므로 에러에 담는다.
+      const checkBudget = () => {
+        try { ensureBudget(deadlineAt); } catch (err) { throw new StageError((err as Error).message, usage); }
+      };
 
       // 1) 검색 — 구조화 출력 없이(도구와 구조화 출력을 함께 쓰는 것은 문서화되어 있지 않다).
-      // pause_turn이면 받은 assistant 메시지를 그대로 되돌려 이어 간다.
+      // pause_turn이면 받은 assistant 메시지를 그대로 되돌려 이어 간다. max_uses는 이 검색 단계
+      // 전체(재개 포함)의 남은 허용치로 매번 줄여 보낸다 — 아니면 재개할 때마다 8회가 새로 열려
+      // 최악의 경우 6번의 요청 × 8회 = 48회까지 청구된다(OpenAI 쪽은 max_tool_calls로 전체를 8회로 막는다).
       let turns = 0;
       for (;;) {
-        ensureBudget(deadlineAt);
+        checkBudget();
         const response = await client.messages.create({
           ...base(userHash),
           max_tokens: 8_000,
           system,
           messages,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 8, allowed_callers: ["direct"] }],
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: Math.max(1, MAX_WEB_SEARCHES - usage.webSearchCalls), allowed_callers: ["direct"] }],
           output_config: outputConfig(effort)
         });
         usage = addUsage(usage, usageOf(response));
         contents.push(response.content ?? []);
         if (response.stop_reason !== "pause_turn") break;
-        if (++turns > PAUSE_TURN_LIMIT) throw new Error("web_search_pause_limit");
+        if (++turns > PAUSE_TURN_LIMIT) throw new StageError("web_search_pause_limit", usage);
         messages.push({ role: "assistant", content: response.content });
       }
       const allowedUrls = collectAllowedResearchUrls(contents, []);
       const researchText = contents.flat().filter((b) => (b as { type?: string }).type === "text").map((b) => (b as { text?: string }).text ?? "").join("\n");
 
       // 2) 정리 — 도구 없이 구조화 출력만. 검색 결과 밖의 URL을 만들 여지를 줄인다.
-      ensureBudget(deadlineAt);
+      checkBudget();
       const structured = await client.messages.create({
         ...base(userHash),
         max_tokens: 16_000,
@@ -129,7 +146,7 @@ export function anthropicAdapter(model: string): Adapter {
         output_config: outputConfig(effort, aiPublicResearchSchema)
       });
       usage = addUsage(usage, usageOf(structured));
-      return { parsed: parseStructured(aiPublicResearchSchema, structured), usage, allowedUrls };
+      return { parsed: parseStructured(aiPublicResearchSchema, structured, "aiPublicResearchSchema"), usage, allowedUrls };
     },
 
     async writeReport({ effort, userHash, instructions, payload, files, deadlineAt }) {
@@ -149,7 +166,7 @@ export function anthropicAdapter(model: string): Adapter {
         }],
         output_config: outputConfig(effort, aiAgentReportSchema)
       });
-      return { parsed: parseStructured(aiAgentReportSchema, response), usage: usageOf(response) };
+      return { parsed: parseStructured(aiAgentReportSchema, response, "aiAgentReportSchema"), usage: usageOf(response) };
     }
   };
 }

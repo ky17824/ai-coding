@@ -11,3 +11,15 @@ export type Adapter = {
   writeReport(input: ReportInput): Promise<StageResult<AiAgentReport>>;
 };
 export const EMPTY_USAGE: ModelUsage = { input: 0, cachedInput: 0, cacheWriteInput: 0, output: 0, webSearchCalls: 0 };
+
+/**
+ * A stage failed after already accruing billable usage (e.g. a pause_turn loop hitting its round
+ * cap, or a deadline running out partway through research()). Failed runs still cost money, so
+ * callers that persist usage on failure read `.usage` off the caught error instead of losing it.
+ */
+export class StageError extends Error {
+  constructor(message: string, readonly usage: ModelUsage) {
+    super(message);
+    this.name = "StageError";
+  }
+}

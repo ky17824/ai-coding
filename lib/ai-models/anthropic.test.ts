@@ -4,6 +4,7 @@ const createMock = vi.fn();
 vi.mock("@anthropic-ai/sdk", () => ({ default: class { messages = { create: createMock }; constructor(public opts: unknown) {} } }));
 
 import { PAUSE_TURN_LIMIT, anthropicAdapter } from "@/lib/ai-models/anthropic";
+import { StageError } from "@/lib/ai-models/types";
 
 const textJson = (obj: unknown) => ({ type: "text", text: JSON.stringify(obj) });
 const usage = { input_tokens: 100, cache_read_input_tokens: 10, cache_creation_input_tokens: 5, output_tokens: 20 };
@@ -48,6 +49,8 @@ describe("anthropicAdapter", () => {
     // 두 번째 호출은 첫 응답의 assistant 메시지를 그대로 되돌려 보낸다
     const second = createMock.mock.calls[1][0];
     expect(second.messages.at(-1)).toEqual({ role: "assistant", content: searchTurn1.content });
+    // pause_turn 재개는 max_uses를 8로 재설정하지 않는다 — 1회차에서 이미 쓴 1회를 빼고 남은 7회만 연다.
+    expect(second.tools[0].max_uses).toBe(7);
     // 세 번째(정리)는 도구 없음 + 구조화, effort도 함께
     const third = createMock.mock.calls[2][0];
     expect(third.tools).toBeUndefined();
@@ -60,17 +63,23 @@ describe("anthropicAdapter", () => {
     expect(result.allowedUrls?.has("https://b.org/y")).toBe(true);
   });
 
-  it("pause_turn이 상한을 넘으면 던진다", async () => {
+  it("pause_turn이 상한을 넘으면 그때까지 쌓인 usage를 담은 StageError를 던진다", async () => {
     createMock.mockResolvedValue({ stop_reason: "pause_turn", role: "assistant", content: [], usage });
-    await expect(anthropicAdapter("claude-opus-5").research({ locale: "ko", effort: "medium", userHash: "h", serviceTitle: "T", deliverables: [], completionInstructions: [], publicBrief: {}, reportDate: "2026-08-17", deadlineAt: Date.now() + 120_000 }))
-      .rejects.toThrow("web_search_pause_limit");
+    const promise = anthropicAdapter("claude-opus-5").research({ locale: "ko", effort: "medium", userHash: "h", serviceTitle: "T", deliverables: [], completionInstructions: [], publicBrief: {}, reportDate: "2026-08-17", deadlineAt: Date.now() + 120_000 });
+    await expect(promise).rejects.toThrow("web_search_pause_limit");
+    await expect(promise).rejects.toBeInstanceOf(StageError);
+    // 6번의 호출(입력 115씩) 각각의 usage가 실패 직전까지 실려 있어야 실패한 실행도 과금 기록에 반영된다.
+    await expect(promise).rejects.toMatchObject({ usage: { input: 115 * 6, cachedInput: 60, cacheWriteInput: 30, output: 120, webSearchCalls: 0 } });
     expect(createMock).toHaveBeenCalledTimes(PAUSE_TURN_LIMIT + 1);
   });
 
-  it("예산이 부족하면 pause_turn을 이어 가지 않고 던진다", async () => {
+  it("예산이 부족하면 pause_turn을 이어 가지 않고 그때까지의 usage(0)를 담아 던진다", async () => {
     createMock.mockResolvedValue({ stop_reason: "pause_turn", role: "assistant", content: [], usage });
-    await expect(anthropicAdapter("claude-opus-5").research({ locale: "ko", effort: "medium", userHash: "h", serviceTitle: "T", deliverables: [], completionInstructions: [], publicBrief: {}, reportDate: "2026-08-17", deadlineAt: Date.now() + 1_000 }))
-      .rejects.toThrow("budget_exhausted");
+    const promise = anthropicAdapter("claude-opus-5").research({ locale: "ko", effort: "medium", userHash: "h", serviceTitle: "T", deliverables: [], completionInstructions: [], publicBrief: {}, reportDate: "2026-08-17", deadlineAt: Date.now() + 1_000 });
+    await expect(promise).rejects.toThrow("budget_exhausted");
+    await expect(promise).rejects.toBeInstanceOf(StageError);
+    await expect(promise).rejects.toMatchObject({ usage: { input: 0, cachedInput: 0, cacheWriteInput: 0, output: 0, webSearchCalls: 0 } });
+    expect(createMock).not.toHaveBeenCalled();
   });
 
   it("writeReport: 파일을 document/image 블록으로 넘긴다", async () => {
@@ -82,6 +91,20 @@ describe("anthropicAdapter", () => {
     expect(content[2]).toEqual({ type: "image", source: { type: "url", url: "https://s/y.png" } });
     expect(createMock.mock.calls[0][0].max_tokens).toBe(32_000);
     expect(createMock.mock.calls[0][0].output_config.effort).toBe("high");
+  });
+
+  it("classify: stop_reason이 max_tokens면 스키마 이름과 함께 잘렸다고 던진다(빈 JSON 파싱 오류로 새지 않는다)", async () => {
+    createMock.mockResolvedValue({ stop_reason: "max_tokens", content: [textJson({ offeringCategory: "beauty_personal_care" })], usage });
+    const promise = anthropicAdapter("claude-opus-5").classify({ locale: "ko", effort: "low", userHash: "h", intake: { offering: "립밤" } });
+    await expect(promise).rejects.toThrow("publicClassificationSchema");
+    await expect(promise).rejects.toThrow(/truncat/i);
+  });
+
+  it("classify: 텍스트 블록이 없으면 스키마 이름과 함께 던진다(빈 JSON 파싱 오류로 새지 않는다)", async () => {
+    createMock.mockResolvedValue({ stop_reason: "end_turn", content: [], usage });
+    const promise = anthropicAdapter("claude-opus-5").classify({ locale: "ko", effort: "low", userHash: "h", intake: { offering: "립밤" } });
+    await expect(promise).rejects.toThrow("publicClassificationSchema");
+    await expect(promise).rejects.toThrow(/no text content/i);
   });
 });
 
