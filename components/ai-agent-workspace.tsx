@@ -274,11 +274,12 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
   );
 
   if (run.status === "completed" && run.report && !editing) {
+    const report = normalizeReportText(run.report);
     return <section className="ai-workspace ai-report panel">
       {message && <p className="notice-banner" role="alert">{message}</p>}
-      <header className="ai-workspace__header"><span><small>{locale === "en" ? "Written by" : "작성 모델"} · {modelLabel(run.model ?? "")}</small><h2>{run.report.title}</h2></span><div><button type="button" className="button button--soft button--small" onClick={downloadReport}>{c.download}</button>{run.generation_count < 2 && <button type="button" className="button button--primary button--small" onClick={() => setEditing(true)}>{c.correction}</button>}</div></header>
-      <p className="ai-report__summary">{run.report.executiveSummary}</p>
-      <div className="ai-report__grid">{run.report.findings.map((finding) => <article key={finding.title}>
+      <header className="ai-workspace__header"><span><small>{locale === "en" ? "Written by" : "작성 모델"} · {modelLabel(run.model ?? "")}</small><h2>{report.title}</h2></span><div><button type="button" className="button button--soft button--small" onClick={downloadReport}>{c.download}</button>{run.generation_count < 2 && <button type="button" className="button button--primary button--small" onClick={() => setEditing(true)}>{c.correction}</button>}</div></header>
+      <p className="ai-report__summary">{report.executiveSummary}</p>
+      <div className="ai-report__grid">{report.findings.map((finding) => <article key={finding.title}>
         <span className={`pill ai-report__status ai-report__status--${finding.status}`}>{L.status[finding.status]} · {L.confidence[finding.confidence]}</span>
         <h3>{stripLeadingNumber(finding.title)}</h3>
         <p>{finding.summary}</p>
