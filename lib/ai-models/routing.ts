@@ -54,13 +54,95 @@ export function validateRoutes(input: unknown, env: { hasOpenAiKey: boolean; has
   }
   const routes = parsed.data;
   for (const stage of STAGES) {
-    const spec = modelSpec(routes[stage].model);
-    if (!spec.efforts.includes(routes[stage].effort)) return { ok: false, error: "unsupported_effort" };
-    if (stage === "public_research" && !spec.webSearch) return { ok: false, error: "no_web_search" };
-    if (spec.provider === "openai" && !env.hasOpenAiKey) return { ok: false, error: "provider_key_missing" };
-    if (spec.provider === "anthropic" && !env.hasAnthropicKey) return { ok: false, error: "provider_key_missing" };
+    const error = validateStageRoute(stage, routes[stage], env);
+    if (error) return { ok: false, error };
   }
   return { ok: true, routes };
+}
+
+/** 한 단계의 route가 그 단계에서 쓸 수 있는지. 공통 기본값과 상품 오버라이드가 같은 규칙을 쓴다. */
+export function validateStageRoute(stage: Stage, route: StageRoute, env: { hasOpenAiKey: boolean; hasAnthropicKey: boolean }): RoutesValidationError | null {
+  const spec = modelSpec(route.model);
+  if (!spec.efforts.includes(route.effort)) return "unsupported_effort";
+  if (stage === "public_research" && !spec.webSearch) return "no_web_search";
+  if (spec.provider === "openai" && !env.hasOpenAiKey) return "provider_key_missing";
+  if (spec.provider === "anthropic" && !env.hasAnthropicKey) return "provider_key_missing";
+  return null;
+}
+
+// ---- 상품별 오버라이드 (025) ---------------------------------------------------
+// { "<productId>": { "<stage>": {model, effort} } } — 단계별 완전한 route만. DB의 reserve RPC가
+// routes || overrides->product 로 얕게 병합하므로(단계 키 단위 교체), 반쪽 route는 허용하지 않는다.
+
+export type ProductOverrides = Record<string, Partial<Routes>>;
+export type OverridesValidationError = RoutesValidationError | "unknown_product";
+export type OverridesValidation = { ok: true; overrides: ProductOverrides } | { ok: false; error: OverridesValidationError };
+
+const productOverridesSchema = z.record(z.string().min(1), routesSchema.partial().strict());
+
+export function validateProductOverrides(input: unknown, env: { hasOpenAiKey: boolean; hasAnthropicKey: boolean }, allowedProductIds: readonly string[]): OverridesValidation {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return { ok: false, error: "invalid_shape" };
+  const parsed = productOverridesSchema.safeParse(input);
+  if (!parsed.success) {
+    // 모양은 맞는데 모델 문자열·노력만 모르는 경우를 구분해 준다 (validateRoutes와 같은 순서).
+    for (const stages of Object.values(input as Record<string, unknown>)) {
+      if (!stages || typeof stages !== "object") return { ok: false, error: "invalid_shape" };
+      for (const route of Object.values(stages as Record<string, unknown>)) {
+        const loose = z.object({ model: z.string(), effort: z.string() }).strict().safeParse(route);
+        if (!loose.success) return { ok: false, error: "invalid_shape" };
+        if (!(loose.data.model in MODEL_CATALOG)) return { ok: false, error: "unknown_model" };
+      }
+    }
+    return { ok: false, error: "unsupported_effort" };
+  }
+  const overrides: ProductOverrides = {};
+  for (const [productId, stages] of Object.entries(parsed.data)) {
+    if (!allowedProductIds.includes(productId)) return { ok: false, error: "unknown_product" };
+    const entries = STAGES.filter((stage) => stages[stage]);
+    for (const stage of entries) {
+      const error = validateStageRoute(stage, stages[stage]!, env);
+      if (error) return { ok: false, error };
+    }
+    // 빈 상품 항목은 "조정 없음"과 같다 — 저장하지 않는다.
+    if (entries.length) overrides[productId] = Object.fromEntries(entries.map((stage) => [stage, stages[stage]!]));
+  }
+  return { ok: true, overrides };
+}
+
+/** 이 상품의 유효 라우팅. reserve RPC의 `routes || coalesce(overrides->product, '{}')`와 같은 뜻이다. */
+export function effectiveRoutes(defaults: Routes, overrides: ProductOverrides, productId: string | null): Routes {
+  const over = productId ? overrides[productId] : undefined;
+  return over ? { ...defaults, ...over } : defaults;
+}
+
+export type ProductRouteChange = { productId: string; stage: Stage; from: StageRoute | null; to: StageRoute | null };
+
+export function diffRouting(
+  from: { routes: Routes; overrides: ProductOverrides },
+  to: { routes: Routes; overrides: ProductOverrides }
+): { stages: ReturnType<typeof diffRoutes>; products: ProductRouteChange[] } {
+  const products: ProductRouteChange[] = [];
+  const ids = [...new Set([...Object.keys(from.overrides), ...Object.keys(to.overrides)])].sort();
+  for (const productId of ids) {
+    for (const stage of STAGES) {
+      const a = from.overrides[productId]?.[stage] ?? null;
+      const b = to.overrides[productId]?.[stage] ?? null;
+      if (a?.model === b?.model && a?.effort === b?.effort) continue;
+      products.push({ productId, stage, from: a, to: b });
+    }
+  }
+  return { stages: diffRoutes(from.routes, to.routes), products };
+}
+
+export function countOverrides(overrides: ProductOverrides): number {
+  return Object.values(overrides).reduce((sum, stages) => sum + STAGES.filter((stage) => stages[stage]).length, 0);
+}
+
+export function describeRouting(routes: Routes, overrides: ProductOverrides, locale: "ko" | "en"): string {
+  const base = describeRoutes(routes, locale);
+  const n = countOverrides(overrides);
+  if (!n) return base;
+  return locale === "en" ? `${base} · ${n} product override${n === 1 ? "" : "s"}` : `${base} · 상품 조정 ${n}건`;
 }
 
 export function diffRoutes(from: Routes, to: Routes): Array<{ stage: Stage; from: StageRoute; to: StageRoute }> {
