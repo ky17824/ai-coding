@@ -1031,6 +1031,12 @@ main[lang="en"] .hero h1 {
   line-height: 1.6;
 }
 
+.notice-banner--warning {
+  border-color: var(--warning-line);
+  background: var(--warning-bg);
+  color: var(--warning-muted);
+}
+
 .notice-banner--error {
   border-color: var(--danger-border);
   background: var(--danger-bg);
@@ -1065,7 +1071,8 @@ main[lang="en"] .hero h1 {
 
 .danger-zone {
   border-color: var(--danger-border);
-  background: var(--danger-bg);
+  background: transparent;
+  box-shadow: none;
 }
 
 .danger-zone p {
@@ -1076,6 +1083,16 @@ main[lang="en"] .hero h1 {
 
 .admin-section {
   margin-top: 48px;
+}
+
+.admin-mode-note {
+  margin: 18px 0 0;
+  padding: 8px 14px;
+  border-radius: var(--radius-small);
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .admin-subnav {
@@ -1402,6 +1419,11 @@ main[lang="en"] .hero h1 {
 }
 
 /* 계층 배지. A는 AI가 끝까지, B는 고객 정보가 필요하고, C·D·M은 사람 인건비가 원가다. */
+/* 계층 배지는 필터 칩(pill)과 달리 눌리지 않는다 — 모서리를 작게 해 구분한다. */
+.pill[class*="pill--tier-"] {
+  border-radius: var(--radius-small);
+}
+
 .pill--tier-b {
   background: var(--cream);
   color: var(--green-uplift);
@@ -1737,7 +1759,7 @@ main[lang="en"] .hero h1 {
 .dashboard-heading,
 .dashboard-section__heading {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 28px;
 }
@@ -1866,6 +1888,17 @@ main[lang="en"] .hero h1 {
 
 .next-session > small:last-of-type {
   margin-bottom: 24px;
+}
+
+/* 해당 없음 사유는 집계 줄과 성격이 달라 한 단계 흐리게. */
+.next-session__reason {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* 0인 집계 타일은 정보가 없으므로 흐리게. */
+.answer-insight-counts .is-zero {
+  opacity: 0.55;
 }
 
 .next-session .button {
@@ -3338,6 +3371,22 @@ main[lang="en"] .hero h1 {
 }
 
 /* 생성 시작 버튼 아래 안내 한 줄. 버튼 라벨은 짧게, 설명은 여기로. */
+/* 이미 채워진 입력 칸: 읽기 전용 요약 + "수정". */
+.ai-intake-field--filled p {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-field);
+  background: var(--surface-soft);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.ai-intake-field--filled .text-link {
+  justify-self: start;
+  font-size: 13px;
+}
+
 .ai-workspace__hint { margin: 0; color: var(--muted); font-size: 14px; }
 
 .ai-workspace__progress {
@@ -5117,9 +5166,9 @@ article.research-overview-card {
 h2.plan-summary {
   margin: 8px 0 0;
   max-width: 62ch;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.55;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.7;
   letter-spacing: var(--tracking-title);
 }
 

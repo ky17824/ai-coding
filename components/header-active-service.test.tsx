@@ -84,7 +84,7 @@ describe("헤더 진행 중 서비스 알약", () => {
     expect(html.indexOf("newer")).toBeLessThan(html.indexOf("older"));
     expect(html).toContain("답변 필요 2건");
     expect(html).toContain("가정 확인 필요");
-    expect(html).toContain("+1");
+    expect(html).toContain("외 1건");
     expect(html).toContain('title="AI 전문가 서비스 2건"');
   });
 

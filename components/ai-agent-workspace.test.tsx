@@ -37,16 +37,20 @@ const count = (markup: string, pattern: RegExp) => (markup.match(pattern) ?? [])
 describe("AI 전문가 입력 화면의 상품별 특화 칸", () => {
   it("포함 전문가 수만큼 특화 textarea를 공통 8칸 뒤에 추가한다", () => {
     // 상세 페이지가 약속한 "필요 정보"가 결제 후 화면에서 사라지던 문제. 진출 설계는 8+7이 된다.
-    expect(count(render(), /<textarea/g)).toBe(8);
+    // baseRun은 objective·targetCountry가 채워져 있어 두 칸은 읽기 전용 요약(수정 버튼)으로 접힌다 → textarea 6개.
+    const plain = render();
+    expect(count(plain, /<textarea/g)).toBe(6);
+    expect(count(plain, /ai-intake-field--filled/g)).toBe(2);
+    expect(plain).toContain(">수정<");
     const markup = render({ serviceInputs: services });
-    expect(count(markup, /<textarea/g)).toBe(11);
+    expect(count(markup, /<textarea/g)).toBe(9);
     expect(markup).toContain('class="ai-service-inputs"');
     // 라벨은 상품명, 보조문구는 필요정보 문장 — 어느 보고서로 가는 답인지 보이게.
     expect(markup).toContain("규제 요건 조사");
     expect(markup).toContain("소재·성분·용도");
     // 모름 체크박스는 보조기술이 필드명과 함께 읽는다.
     expect(markup).toContain('aria-label="규제 요건 조사 — 모름 — 유사 사례로 추론"');
-    expect(markup).toContain('aria-label="이번 업무로 내릴 결정 — 모름 — 유사 사례로 추론"');
+    expect(markup).toContain('aria-label="제품·서비스 — 모름 — 유사 사례로 추론"');
   });
 
   it("첨부 안내에 상품별 유용한 자료와 PDF 변환 팁을 붙인다", () => {

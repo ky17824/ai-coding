@@ -47,7 +47,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
           <h1>{service.title}</h1>
           <p className="service-lead">{service.description}</p>
           <div className="provider-profile">
-            <span className="avatar">AI</span>
+            {!isAi && <span className="avatar">AI</span>}
             <span><strong>{service.providerName}</strong><small>{service.providerTitle}</small></span>
             <span className="service-model">{isAi ? (en ? "Evidence-led · User-controlled" : "근거 기반 · 사용자 검토") : `★ ${service.rating} (${service.reviewCount})`}</span>
           </div>
@@ -63,7 +63,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             : ["서비스 시작 전에는 전액 환불됩니다.", "시작 후 요청은 관리자가 주문 기록을 확인합니다."])).map((item) => <li key={item}>{item}</li>)}</ul></div>
         </section>
         <aside className="purchase-panel panel">
-          {isBeta && <p className="notice-banner" role="status">
+          {isBeta && <p className="notice-banner notice-banner--warning" role="status">
             <strong>{en ? "Admin beta test" : "관리자 베타 테스트"}</strong>
             <span>{en ? " This runs the real AI service without payment. The model, research, files, clarifications, report, and cost recording are identical to a paid order." : " — 결제 없이 실제 AI 실행 환경을 테스트합니다. 모델·검색·파일·추가 질문·보고서·비용 기록은 운영과 동일합니다."}</span>
           </p>}

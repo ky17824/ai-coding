@@ -178,7 +178,7 @@ export default async function DashboardPage({
             <h2>{new Date(assessment.completed_at).toLocaleDateString(en ? "en-US" : "ko-KR")} {en ? "assessment" : "진단"}</h2>
             <p>{displayIsOnHold ? (en ? `${gateMessages.length} prerequisite${gateMessages.length === 1 ? "" : "s"} need attention` : `확인이 필요한 선결 조건 ${gateMessages.length}건`) : (en ? "You have passed every prerequisite for this stage." : "현재 단계의 선결 조건을 모두 통과했습니다.")}</p>
             {surveyVersion === "5.0" && <small>{en ? `${readinessAnswers.length} responses · ${resolved.deferredIds.length} deferred · ${resolved.notApplicableIds.length} not applicable` : `응답 ${readinessAnswers.length}개 · 보류 ${resolved.deferredIds.length}개 · 해당 없음 ${resolved.notApplicableIds.length}개`}</small>}
-            {notApplicableReasons.map((reason) => <small key={reason}>{reason}</small>)}
+            {notApplicableReasons.map((reason) => <small key={reason} className="next-session__reason">{reason}</small>)}
             <Link href={path("/dashboard#answer-insights")} className="button button--soft button--full button--small">{en ? "Review previous answers" : "지난 응답 보기"}</Link>
           </article>
         </section>
@@ -223,11 +223,9 @@ export default async function DashboardPage({
               </nav>
 
               <div className="answer-insight-counts" aria-label={en ? `${answerInsights.stageLabel} response summary` : `${answerInsights.stageLabel} 응답 상태 요약`}>
-                <span><strong>{answerInsights.counts.blocker}</strong>{en ? "Required prerequisites" : "필수 선결 조건"}</span>
-                <span><strong>{answerInsights.counts.deferred}</strong>{en ? "90-day validation" : "90일 검증 과제"}</span>
-                <span><strong>{answerInsights.counts.needs_work}</strong>{en ? "Needs work" : "보완 필요"}</span>
-                <span><strong>{answerInsights.counts.passed}</strong>{en ? "Passed" : "통과"}</span>
-                <span><strong>{answerInsights.counts.strength}</strong>{en ? "Strengths" : "강점"}</span>
+                {([["blocker", en ? "Required prerequisites" : "필수 선결 조건"], ["deferred", en ? "90-day validation" : "90일 검증 과제"], ["needs_work", en ? "Needs work" : "보완 필요"], ["passed", en ? "Passed" : "통과"], ["strength", en ? "Strengths" : "강점"]] as const).map(([key, label]) => (
+                  <span key={key} className={answerInsights.counts[key] === 0 ? "is-zero" : undefined}><strong>{answerInsights.counts[key]}</strong>{label}</span>
+                ))}
               </div>
 
               <article className="answer-insight-chart panel">

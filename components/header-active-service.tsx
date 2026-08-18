@@ -70,7 +70,7 @@ export async function HeaderActiveService({ locale, mobile = false }: { locale: 
       {/* summary의 접근 가능한 이름은 알약 텍스트 그대로 둔다 — aria-label로 덮으면 서비스명·상태가 사라진다. */}
       <summary title={c.more(rows.length)}>
         <Pill row={latest} locale={locale} />
-        <span className="active-service__count">+{rest.length}</span>
+        <span className="active-service__count">{locale === "en" ? `+${rest.length}` : `외 ${rest.length}건`}</span>
       </summary>
       {/* 키보드 roving focus가 없는 details 드롭다운이므로 menu 역할을 주장하지 않는다 — 평범한 링크 목록이다. */}
       <div className="active-service-menu__list" role="navigation" aria-label={c.menuLabel}>

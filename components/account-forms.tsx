@@ -37,7 +37,7 @@ export function AccountProfileForm({
       <label><span>{en ? "Job title" : "직위"}</span><input name="jobTitle" defaultValue={profile.jobTitle} required /></label>
       <label>
         <span>{en ? "Mobile phone" : "휴대전화"}</span>
-        <input name="phone" type="tel" placeholder={profile.maskedPhone || (en ? "+1 415 555 0123" : "010-1234-5678")} required={onboarding} />
+        <input name="phone" type="tel" placeholder={en ? "+1 415 555 0123" : "010-1234-5678"} required={onboarding} />
         {!onboarding && <small>{en ? `Enter a new number only to change it. Current number: ${profile.maskedPhone || "Not provided"}` : `변경할 때만 새 번호를 입력하세요. 현재 번호: ${profile.maskedPhone || "미등록"}`}</small>}
       </label>
       <label className="completion-check"><input name="marketingOptIn" type="checkbox" defaultChecked={profile.marketingOptIn} /><span>{en ? "Receive product and marketing emails" : "마케팅·제품 안내 메일 수신"}</span></label>

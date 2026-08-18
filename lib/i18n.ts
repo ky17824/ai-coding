@@ -124,8 +124,8 @@ const ko = {
   },
   ctaBand: {
     eyebrow: "준비된 글로벌 진출의 시작",
-    heading: "글로벌 진출 준비도를 확인해 보세요.",
-    button: "준비도 진단 시작"
+    heading: "3분 진단으로 지금 내 단계를 확인하세요.",
+    button: "내 단계 확인하기"
   }
 };
 
@@ -215,8 +215,8 @@ const en: typeof ko = {
   },
   ctaBand: {
     eyebrow: "Start Global Expansion Prepared",
-    heading: "Check Your Global Expansion Readiness.",
-    button: "Start the Assessment"
+    heading: "See your stage in a three-minute assessment.",
+    button: "See my stage"
   }
 };
 

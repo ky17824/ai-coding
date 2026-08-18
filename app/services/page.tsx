@@ -39,10 +39,6 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         <p className="page-description">
           {aiEnabled ? (en ? "Your saved readiness answers carry over. After a few material follow-ups, a frontier model produces a sourced report and action plan." : "이미 입력한 준비도 진단 답변을 그대로 이어받습니다. 결론이 달라질 내용만 몇 가지 더 확인한 뒤, 출처를 밝힌 보고서와 실행계획을 만들어 드립니다.") : (en ? "Only standardized services from admin-approved mentors and consultants are listed." : "관리자 승인을 거친 멘토·컨설턴트의 표준화된 서비스만 공개됩니다.")}
         </p>
-        {aiEnabled && <div className="ai-service-boundary notice-banner">
-          <strong>{en ? "AI handles research, calculations, and first drafts." : "조사와 계산, 초안 작성까지는 AI가 맡습니다."}</strong>
-          <span>{en ? "Legal, tax and regulatory interpretation, contract effectiveness, actual interviews, and partner intent are marked for expert verification." : "법률·세무·규제 해석과 계약의 효력, 실제 인터뷰와 파트너 의향은 사람이 확인해야 할 항목으로 따로 표시합니다."}</span>
-        </div>}
         {requestedTag && <p className="notice-banner" role="status">{matched.length
           ? en ? `${matched.length} matching service${matched.length === 1 ? "" : "s"} found.` : `관련 ${aiEnabled ? "AI 전문가 " : ""}서비스 ${matched.length}개를 찾았습니다.`
           : en ? "No exact match is available, so the full catalog is shown." : "딱 맞는 서비스가 없어 전체 목록을 보여 드립니다."}</p>}
@@ -56,6 +52,10 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         {aiEnabled ? <>
           {specialists.length > 0 && <section className="service-catalog-section" aria-labelledby="specialist-services-title">
             <h2 id="specialist-services-title">{en ? "Choose only what you need" : "필요한 항목만 골라 진행하세요"}</h2>
+            <div className="ai-service-boundary notice-banner">
+              <strong>{en ? "AI handles research, calculations, and first drafts." : "조사와 계산, 초안 작성까지는 AI가 맡습니다."}</strong>
+              <span>{en ? "Legal, tax and regulatory interpretation, contract effectiveness, actual interviews, and partner intent are marked for expert verification." : "법률·세무·규제 해석과 계약의 효력, 실제 인터뷰와 파트너 의향은 사람이 확인해야 할 항목으로 따로 표시합니다."}</span>
+        </div>
             <div className="service-grid">{specialists.map((service) => <ServiceCard key={service.id} service={service} locale={locale} />)}</div>
           </section>}
           {packages.length > 0 && <section className="service-catalog-section" aria-labelledby="package-services-title">
