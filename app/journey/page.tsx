@@ -5,6 +5,7 @@ import { ServiceCard } from "@/components/service-card";
 import { JOURNEY_PHASES } from "@/lib/readiness-data";
 import { StageGateBar } from "@/components/stage-gate-bar";
 import { getIntakeStages } from "@/lib/intake-questions";
+import { formatReadinessStatus } from "@/lib/readiness";
 import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
@@ -94,7 +95,7 @@ export default async function JourneyPage() {
       if (assessment) {
         const scores = (assessment.domain_scores ?? {}) as Record<string, number>;
         readinessStages = getIntakeStages(locale).map((stage) => ({ id: stage.id, label: stage.label, value: scores[stage.id] ?? 0 }));
-        currentStageId = getIntakeStages(locale).find((stage) => stage.label === assessment.status_label)?.id;
+        currentStageId = getIntakeStages(locale).find((stage) => stage.label === formatReadinessStatus(assessment.status_label, locale))?.id;
         const { data: actions } = await admin.from("action_items")
           .select("service_tag")
           .eq("assessment_id", assessment.id);

@@ -55,14 +55,8 @@
   --shadow: 0 0 0.5px rgba(16, 34, 27, 0.14), 0 2px 6px rgba(16, 34, 27, 0.08);
   --shadow-raised: 0 1px 3px rgba(16, 34, 27, 0.12), 0 8px 22px rgba(16, 34, 27, 0.1);
   --success-bg: #edf7f0;
-  /* 경고(보류·주의)·오류·중립 트랙. 페이지 CSS는 이 토큰만 쓴다(lib/design-tokens.test.ts). */
-  --warning-bg: #fff0dc;
-  --warning-ink: #92550e;
-  --warning-muted: #704b2a;
-  --warning-line: #f1c7a0;
+  /* 경고(보류·주의)·오류 팔레트는 아래 --warning-*/--danger-* 한 벌뿐이다. 페이지 CSS는 이 토큰만 쓴다(lib/design-tokens.test.ts). */
   --amber: #d48a2e;
-  --danger-ink: #b42318;
-  --danger-bg: #ffe8e5;
   --track: #e9eeeb;
   --ink-soft: #45554e;
   --radius-small: 8px;
@@ -1028,9 +1022,9 @@ main[lang="en"] .hero h1 {
 }
 
 .notice-banner--warning {
-  border-color: var(--warning-line);
+  border-color: var(--warning-border);
   background: var(--warning-bg);
-  color: var(--warning-muted);
+  color: var(--warning-ink);
 }
 
 .notice-banner--error {
@@ -4453,7 +4447,7 @@ fieldset.offering-picker {
 .hold-banner ul {
   margin: 0;
   padding-left: 18px;
-  color: var(--warning-muted);
+  color: var(--warning-ink);
   font-size: 13px;
   line-height: 1.8;
 }
@@ -4478,14 +4472,14 @@ fieldset.offering-picker {
 
 .hold-banner__content p {
   margin: 8px 0 0;
-  color: var(--warning-muted);
+  color: var(--warning-ink);
   font-size: 14px;
 }
 
 .gate-prerequisites {
   display: grid;
   gap: 10px;
-  border-bottom: 1px solid var(--warning-line);
+  border-bottom: 1px solid var(--warning-border);
   padding-bottom: 16px;
 }
 

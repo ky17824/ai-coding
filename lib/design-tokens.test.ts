@@ -16,6 +16,12 @@ const body = raw
 const FONT_SCALE = new Set([12, 13, 14, 16, 20, 24, 30, 36, 48]);
 
 describe("디자인 토큰", () => {
+  it(":root 안에서 같은 토큰 이름이 두 번 선언되지 않는다(뒤 선언이 앞을 덮어 쓰므로)", () => {
+    const names = [...raw.slice(rootStart, rootEnd).matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1]);
+    const dupes = names.filter((name, index) => names.indexOf(name) !== index);
+    expect([...new Set(dupes)]).toEqual([]);
+  });
+
   it(":root 밖에는 리터럴 hex 색이 없다", () => {
     expect(body.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).toEqual([]);
   });
