@@ -52,6 +52,10 @@ export function openaiAdapter(model: string): Adapter {
         input: JSON.stringify({ product: serviceTitle, deliverables, publicBrief, reportDate }),
         tools: [{ type: "web_search" }],
         max_tool_calls: 8,
+        // 검색이 반환한 URL(action.sources)은 이걸 요청해야만 응답에 실린다. 없으면 url_citation
+        // 주석에만 기대는데, 구조화 JSON 출력에서는 모델이 주석을 안 붙일 때가 있다
+        // (실측 2026-08-18 주문 22e8aa96: 검색 5회, 허용 URL 0건 → 출처 10건 전부 탈락).
+        include: ["web_search_call.action.sources"],
         text: { format: zodTextFormat(aiPublicResearchSchema, "ai_public_research") }
       });
       return {
