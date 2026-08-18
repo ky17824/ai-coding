@@ -1927,26 +1927,6 @@ main[lang="en"] .hero h1 {
   color: var(--green);
 }
 
-.stage-summary__body footer {
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
-  display: grid;
-  gap: 7px;
-}
-
-.stage-summary__body footer span {
-  color: var(--green);
-  font-size: 13px;
-  font-weight: 850;
-  letter-spacing: 0.1em;
-}
-
-.stage-summary__body footer strong {
-  font-weight: 400;
-  line-height: 1.55;
-  overflow-wrap: anywhere;
-}
-
 .dashboard-page .button {
   min-height: 42px;
   padding: 0 18px;

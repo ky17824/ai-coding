@@ -34,7 +34,9 @@ describe("stage summary panel", () => {
     expect(html).toContain(summary.priorityActions[0].title);
     expect(html).toContain(summary.priorityActions[0].reason);
     expect(html).toContain(summary.priorityActions[0].direction);
-    expect(html).toContain(summary.nextMilestone);
+    expect(html).toContain("다음 이정표");
+    expect(html).toContain("아래 ‘내 응답 진단’에서 문항별 응답 수준을 확인하시고");
+    expect(html).not.toContain(summary.nextMilestone);
     expect(html).toContain("67%");
     expect(html).not.toContain("먼저 해결해야 할 선결 조건");
   });
@@ -55,7 +57,7 @@ describe("stage summary panel", () => {
     expect(html).toContain("aria-live=\"polite\"");
   });
 
-  it("replaces internal Gate A wording in a stored summary", () => {
+  it("does not show the model's milestone sentence, so stored Gate A wording never reaches the screen", () => {
     const html = renderToStaticMarkup(
       <StageSummaryPanel
         assessmentId="assessment-1"
@@ -66,7 +68,7 @@ describe("stage summary panel", () => {
       />
     );
 
-    expect(html).toContain("준비 1단계 통과 기준을 다시 점검하세요.");
+    expect(html).not.toContain("다시 점검하세요");
     expect(html).toContain("아래 ‘내 응답 진단’에서 문항별 응답 수준을 확인하시고 부족한 내용을 보완해 재진단하거나, AI와 함께 실행계획을 만들어 보세요.");
     expect(html).not.toContain("Gate A");
   });

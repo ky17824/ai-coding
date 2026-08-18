@@ -24,16 +24,10 @@ export function StageSummaryPanel({
   const [status, setStatus] = useState(initialStatus);
   const [message, setMessage] = useState("");
   const passed = score >= 80;
-  const hasInternalGateLabel = Boolean(summary && /\bGate A\b/i.test(summary.nextMilestone));
-  const nextMilestone = summary
-    ? `${summary.nextMilestone
-      .replace(/\bGate A를/gi, en ? "Stage 1 readiness criteria" : "준비 1단계 통과 기준을")
-      .replace(/\bGate A\b/gi, en ? "Stage 1 readiness criteria" : "준비 1단계 통과 기준")}${hasInternalGateLabel
-      ? (en
-        ? " Review each response below. Improve the gaps and retake the assessment, or create an action plan with AI."
-        : " 아래 ‘내 응답 진단’에서 문항별 응답 수준을 확인하시고 부족한 내용을 보완해 재진단하거나, AI와 함께 실행계획을 만들어 보세요.")
-      : ""}`
-    : undefined;
+  // 다음 이정표는 모델이 쓴 문장을 보여 주지 않고 고정 안내 한 문장만 둔다(내부 용어 Gate A 노출 문제도 함께 사라진다).
+  const nextMilestone = en
+    ? "Review each response below. Improve the gaps and retake the assessment, or create an action plan with AI."
+    : "아래 ‘내 응답 진단’에서 문항별 응답 수준을 확인하시고 부족한 내용을 보완해 재진단하거나, AI와 함께 실행계획을 만들어 보세요.";
 
   async function generate() {
     setStatus("generating");
@@ -98,10 +92,10 @@ export function StageSummaryPanel({
               ))}
             </ol>
           </section>
-          <footer>
-            <span>{en ? "NEXT MILESTONE" : "다음 이정표"}</span>
-            <strong>{nextMilestone}</strong>
-          </footer>
+          <section className="stage-summary__reason">
+            <h3>{en ? "Next milestone" : "다음 이정표"}</h3>
+            <p>{nextMilestone}</p>
+          </section>
         </div>
       )}
     </section>

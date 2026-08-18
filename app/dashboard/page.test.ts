@@ -54,7 +54,10 @@ describe("dashboard execution summary", () => {
     expect(css).toMatch(/\.next-session > small:last-of-type\s*\{[^}]*margin-bottom:\s*24px;/s);
   });
 
-  it("uses normal weight for the next milestone narrative", () => {
-    expect(css).toMatch(/\.stage-summary__body footer strong\s*\{[^}]*font-weight:\s*400;/s);
+  it("renders the next milestone as a reason-style box with no divider line", () => {
+    const panel = readFileSync(new URL("../../components/stage-summary-panel.tsx", import.meta.url), "utf8");
+    expect(panel).toContain('<section className="stage-summary__reason">\n            <h3>{en ? "Next milestone" : "다음 이정표"}</h3>');
+    expect(panel).not.toContain("<footer>");
+    expect(css).not.toMatch(/\.stage-summary__body footer/);
   });
 });
