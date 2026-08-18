@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -55,6 +56,21 @@ describe("stage summary panel", () => {
     expect(html).toContain("진단 총평을 생성하지 못했습니다");
     expect(html).toContain("총평 다시 생성");
     expect(html).toContain("aria-live=\"polite\"");
+  });
+
+  it("splits a 'verdict: reason' headline into two lines at Section-title size", () => {
+    const html = renderToStaticMarkup(
+      <StageSummaryPanel
+        assessmentId="assessment-1"
+        locale="ko"
+        initialSummary={{ ...summary, headline: "준비 1단계 통과 전입니다: 시장 검증을 먼저 숫자로 바꿔야 합니다." }}
+        initialStatus="complete"
+        score={4}
+      />
+    );
+    expect(html).toContain("<span>준비 1단계 통과 전입니다:</span><span>시장 검증을 먼저 숫자로 바꿔야 합니다.</span>");
+    const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+    expect(css).toMatch(/\.stage-summary__intro h2\s*\{[^}]*font-size:\s*24px;/s);
   });
 
   it("does not show the model's milestone sentence, so stored Gate A wording never reaches the screen", () => {

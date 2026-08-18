@@ -24,6 +24,12 @@ export function StageSummaryPanel({
   const [status, setStatus] = useState(initialStatus);
   const [message, setMessage] = useState("");
   const passed = score >= 80;
+  const headline = summary?.headline ?? (status === "generating"
+    ? (en ? "Reviewing all Stage 1 responses" : "1단계 전체 답변을 검토하고 있습니다")
+    : (en ? "A founder-ready assessment summary is needed" : "창업자가 이해할 수 있는 진단 총평이 필요합니다"));
+  // "준비 1단계 통과 전입니다: 시장 검증과 …" 처럼 판정과 이유가 콜론으로 이어지면 두 줄로 나눠 보여 준다.
+  const colon = headline.search(/[:：]/);
+  const headlineLines = colon > 0 ? [headline.slice(0, colon + 1), headline.slice(colon + 1).trim()] : [headline];
   // 다음 이정표는 모델이 쓴 문장을 보여 주지 않고 고정 안내 한 문장만 둔다(내부 용어 Gate A 노출 문제도 함께 사라진다).
   const nextMilestone = en
     ? "Review each response below. Improve the gaps and retake the assessment, or create an action plan with AI."
@@ -54,9 +60,7 @@ export function StageSummaryPanel({
           <small>{passed ? (en ? "Threshold met" : "통과 점수 충족") : (en ? "Needs reinforcement" : "보완 필요")}</small>
         </div>
         <h2 id="stage-summary-title">
-          {summary?.headline ?? (status === "generating"
-            ? (en ? "Reviewing all Stage 1 responses" : "1단계 전체 답변을 검토하고 있습니다")
-            : (en ? "A founder-ready assessment summary is needed" : "창업자가 이해할 수 있는 진단 총평이 필요합니다"))}
+          {headlineLines.map((line, index) => <span key={index}>{line}</span>)}
         </h2>
         <p>{summary?.overview ?? (status === "failed"
           ? (en ? "We couldn't create the assessment summary. Your assessment and answers are safely stored." : "진단 총평을 생성하지 못했습니다. 진단 결과와 답변은 정상적으로 저장되어 있습니다.")

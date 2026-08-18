@@ -1838,13 +1838,17 @@ main[lang="en"] .hero h1 {
   font-weight: 750;
 }
 
+/* 카드 안 헤드라인은 페이지 제목(h1)보다 작은 Section title 24px — "단계별 준비도"와 같은 급.
+   판정과 이유는 span 두 줄로 나뉜다. */
 .stage-summary__intro h2 {
   margin: 0;
   max-width: 520px;
-  font-size: clamp(24px, 3vw, 32px);
-  letter-spacing: -0.045em;
-  line-height: 1.25;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
 }
+
+.stage-summary__intro h2 span { display: block; }
 
 .stage-summary__intro p {
   margin: 16px 0 0;
