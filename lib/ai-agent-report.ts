@@ -62,8 +62,18 @@ const sourceSchema = z.object({
   checkedAt: z.string().date()
 });
 
-const sizingRange = z.object({ low: z.number().nonnegative(), base: z.number().nonnegative(), high: z.number().nonnegative() })
-  .refine((value) => value.low <= value.base && value.base <= value.high, "low ≤ base ≤ high가 필요합니다.");
+// 단계별 근거를 구조로 받는다 — 화면이 산식·가정을 불렛으로 그리려면 텍스트를 파싱하지 않고
+// 모델이 나눠 줘야 한다(파싱은 틀리면 근거를 왜곡한다). formula는 "1,300억 × 0.92% = 12.0억" 한 줄,
+// assumptions는 저/기준/고 가정 항목이다.
+const sizingRange = z.object({
+  low: z.number().nonnegative(),
+  base: z.number().nonnegative(),
+  high: z.number().nonnegative(),
+  method: z.enum(["top_down", "bottom_up", "cross_check"]),
+  formula: z.string().trim().min(1).max(300),
+  assumptions: z.array(z.string().trim().min(1).max(300)).max(6)
+}).refine((value) => value.low <= value.base && value.base <= value.high, "low ≤ base ≤ high가 필요합니다.");
+export type SizingRange = z.infer<typeof sizingRange>;
 
 export const aiReadinessSnapshotSchema = z.object({
   assessmentId: z.string().uuid().nullable(),
@@ -182,7 +192,8 @@ export const aiAgentReportSchema = z.object({
     sam: sizingRange,
     som: sizingRange,
     beachhead: sizingRange,
-    formula: reportText
+    /** 정합성(TAM ≥ SAM ≥ 교두보 ≥ SOM)과 전체 한계를 한 줄로. 이전 형식의 자유 텍스트 formula를 대체한다. */
+    consistencyNote: reportText
   }).nullable(),
   sources: z.array(sourceSchema).min(1).max(60),
   evidenceGaps: z.array(reportText).max(30),
@@ -191,6 +202,7 @@ export const aiAgentReportSchema = z.object({
 });
 
 export type AiAgentReport = z.infer<typeof aiAgentReportSchema>;
+export type MarketSizing = NonNullable<AiAgentReport["marketSizing"]>;
 
 export function auditAiAgentIntake(intake: Record<string, unknown>, baseline: Record<string, unknown> = {}, confirmedFields: string[] = []): AiInputAudit {
   const unknown = new Set(Array.isArray(intake.unknownFields) ? intake.unknownFields : []);

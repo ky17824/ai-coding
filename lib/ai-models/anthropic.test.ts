@@ -208,8 +208,8 @@ describe("anthropicAdapter", () => {
 });
 
 function sizing() {
-  const range = { low: 1, base: 2, high: 3 };
-  return { currency: "USD", referenceYear: 2026, tam: range, sam: range, som: range, beachhead: range, formula: "f" };
+  const range = { low: 1, base: 2, high: 3, method: "top_down", formula: "a × b", assumptions: ["가정"] };
+  return { currency: "USD", referenceYear: 2026, tam: range, sam: range, som: range, beachhead: range, consistencyNote: "f" };
 }
 
 function minimalReport() {

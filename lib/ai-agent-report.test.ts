@@ -18,6 +18,8 @@ import {
   ReportValidationError
 } from "@/lib/ai-agent-report";
 
+const r = (low: number, base: number, high: number) => ({ low, base, high, method: "top_down" as const, formula: "a × b", assumptions: ["가정"] });
+
 describe("AI expert execution rules", () => {
   it("validates an immutable readiness snapshot for paid AI work", () => {
     expect(aiReadinessSnapshotSchema.parse({
@@ -165,13 +167,13 @@ describe("AI expert execution rules", () => {
       findings: [{ title: "시장", status: "estimate" as const, confidence: "medium" as const, summary: "추정", evidence: [], counterEvidence: [], questionIds: ["q1"], sourceUrls: ["https://example.com/report"], actions: [] }],
       actionPlan: [{ title: "검증", why: "정밀화", owner: "대표", timing: "30일", successMetric: "3건", stopCondition: "0건" }],
       assumptions: [], questionCoverage: [{ questionId: "q1", disposition: "used" as const, priority: "low_score" as const, reason: "근거" }], contradictions: [],
-      marketSizing: { currency: "USD", referenceYear: 2026, tam: { low: 100, base: 120, high: 140 }, sam: { low: 60, base: 80, high: 100 }, som: { low: 5, base: 8, high: 10 }, beachhead: { low: 1, base: 2, high: 3 }, formula: "공개자료 삼각검증" },
+      marketSizing: { currency: "USD", referenceYear: 2026, tam: r(100, 120, 140), sam: r(60, 80, 100), som: r(5, 8, 10), beachhead: r(1, 2, 3), consistencyNote: "TAM ≥ SAM ≥ SOM" },
       sources: [{ title: "자료", url: "https://example.com/report", publisher: "Agency", kind: "official" as const, publishedAt: "2026-08-01", checkedAt: "2026-08-14" }],
       evidenceGaps: [], humanVerification: [], limitations: ["추정"]
     };
     const report = aiAgentReportSchema.parse(base);
     expect(() => validateAiAgentReport(report, { questionIds: ["q1"], includedAgentIds: ["ai-market-intelligence"] }, "2026-08-14")).not.toThrow();
-    const invalid = aiAgentReportSchema.parse({ ...base, marketSizing: { ...base.marketSizing, sam: { low: 110, base: 130, high: 150 } } });
+    const invalid = aiAgentReportSchema.parse({ ...base, marketSizing: { ...base.marketSizing, sam: r(110, 130, 150) } });
     expect(() => validateAiAgentReport(invalid, { questionIds: ["q1"], includedAgentIds: ["ai-market-intelligence"] }, "2026-08-14")).toThrow();
     expect(() => validateAiAgentReport(report, { questionIds: ["q1"], includedAgentIds: ["ai-market-entry-requirements"] }, "2026-08-14")).toThrow();
     const regulation = aiAgentReportSchema.parse({
@@ -394,11 +396,11 @@ describe("validateAiAgentReport / validateAiAgentSources 진단 정보", () => {
       assumptions: [], questionCoverage: [{ questionId: "q1", disposition: "used", priority: "other", reason: "r" }], contradictions: [],
       marketSizing: {
         currency: "USD", referenceYear: 2026,
-        tam: { low: 100, base: 120, high: 140 },
-        sam: { low: 110, base: 115, high: 120 },
-        som: { low: 5, base: 8, high: 10 },
-        beachhead: { low: 1, base: 2, high: 3 },
-        formula: "f"
+        tam: r(100, 120, 140),
+        sam: r(110, 115, 120),
+        som: r(5, 8, 10),
+        beachhead: r(1, 2, 3),
+        consistencyNote: "f"
       },
       sources: [{ title: "src", url: "https://example.com/report", publisher: "Agency", kind: "official", publishedAt: "2026-08-01", checkedAt: "2026-08-14" }],
       evidenceGaps: [], humanVerification: [], limitations: ["l"]
