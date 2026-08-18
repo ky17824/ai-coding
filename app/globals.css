@@ -55,7 +55,7 @@
   --shadow: 0 0 0.5px rgba(16, 34, 27, 0.14), 0 2px 6px rgba(16, 34, 27, 0.08);
   --shadow-raised: 0 1px 3px rgba(16, 34, 27, 0.12), 0 8px 22px rgba(16, 34, 27, 0.1);
   --success-bg: #edf7f0;
-  /* 경고(보류·주의)·오류 팔레트는 아래 --warning-*/--danger-* 한 벌뿐이다. 페이지 CSS는 이 토큰만 쓴다(lib/design-tokens.test.ts). */
+  /* 경고(보류·주의)·오류 팔레트는 아래 --warning-… / --danger-… 한 벌뿐이다. 페이지 CSS는 이 토큰만 쓴다(lib/design-tokens.test.ts). */
   --amber: #d48a2e;
   --track: #e9eeeb;
   --ink-soft: #45554e;
