@@ -206,7 +206,7 @@ export default async function AdminPage({
             <input aria-label={en ? "Assessment start date" : "진단 시작일"} name="from" type="date" defaultValue={query.from} />
             <input aria-label={en ? "Assessment end date" : "진단 종료일"} name="to" type="date" defaultValue={query.to} />
             <select name="sort" defaultValue={query.sort ?? "recent"}><option value="recent">{en ? "Most recent assessment" : "최근 진단순"}</option><option value="score">{en ? "Highest score" : "총점순"}</option><option value="activity">{en ? "Most recent activity" : "최근 활동순"}</option></select>
-            <button className="button button--dark">{en ? "Apply" : "조회"}</button>
+            <button className="button button--primary">{en ? "Apply" : "조회"}</button>
           </form>
           <div className="table-scroll panel">
             <table className="admin-table"><thead><tr><th>{en ? "Company" : "회사"}</th><th>{en ? "Contact" : "담당자"}</th><th>{en ? "Latest assessment" : "최근 진단"}</th><th>{en ? "Score" : "점수"}</th><th>{en ? "Gate issues" : "단계 통과 기준(Stage Gate)"}</th><th>{en ? "Actions" : "액션"}</th><th>{en ? "Orders" : "주문"}</th><th>{en ? "Last activity" : "최근 활동"}</th></tr></thead><tbody>

@@ -66,7 +66,7 @@ export function StageSummaryPanel({
           ? (en ? "We couldn't create the assessment summary. Your assessment and answers are safely stored." : "진단 총평을 생성하지 못했습니다. 진단 결과와 답변은 정상적으로 저장되어 있습니다.")
           : (en ? "Create it once from the stored assessment. Reopening the dashboard will reuse the same summary." : "저장된 진단으로 한 번 작성하면 대시보드를 다시 열어도 같은 총평을 사용합니다."))}</p>
         {!summary && status !== "generating" && (
-          <button type="button" className="button button--primary" onClick={generate}>
+          <button type="button" className="button button--primary button--small" onClick={generate}>
             {status === "failed"
               ? (en ? "Retry summary" : "총평 다시 생성")
               : (en ? "Create Stage 1 summary" : "1단계 총평 생성")}

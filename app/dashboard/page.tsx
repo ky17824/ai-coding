@@ -58,7 +58,7 @@ export default async function DashboardPage({
           <div className="empty-state panel">
             <strong>{en ? `Start ${organization?.name ?? "your company's"} first assessment.` : `${organization?.name ?? "우리 회사"}의 첫 진단을 시작하세요.`}</strong>
             <p>{en ? "Complete the current stage to save your stage-gate result and next actions here." : "현재 단계의 문항을 마치면 단계 통과 기준(Stage Gate) 결과와 실행 액션이 여기에 저장됩니다."}</p>
-            <Link href={path("/assessment")} className="button button--primary">{en ? "Start readiness assessment" : "무료 준비도 진단"}</Link>
+            <Link href={path("/assessment")} className="button button--primary button--small">{en ? "Start readiness assessment" : "무료 준비도 진단"}</Link>
           </div>
         </div>
       </main>
@@ -154,7 +154,7 @@ export default async function DashboardPage({
             <h1 className="page-title">{en ? `${profile.display_name}, continue your global expansion journey.` : "준비도를 확인하시고 AI와 함께 실행계획을 작성하세요"}</h1>
             <p className="page-description">{en ? "Your latest assessment and open actions are organized below." : "최근 진단 결과와 아직 완료하지 않은 액션을 기준으로 정리해 드렸습니다."}</p>
           </span>
-          <Link href={path("/assessment?new=1")} className="button button--primary">{en ? "Retake assessment" : "재진단 시작"}</Link>
+          <Link href={path("/assessment?new=1")} className="button button--primary button--small">{en ? "Retake assessment" : "재진단 시작"}</Link>
         </div>
 
         <section className="dashboard-overview">
@@ -178,7 +178,7 @@ export default async function DashboardPage({
             <p>{displayIsOnHold ? (en ? `${gateMessages.length} prerequisite${gateMessages.length === 1 ? "" : "s"} need attention` : `확인이 필요한 선결 조건 ${gateMessages.length}건`) : (en ? "You have passed every prerequisite for this stage." : "현재 단계의 선결 조건을 모두 통과했습니다.")}</p>
             {surveyVersion === "5.0" && <small>{en ? `${readinessAnswers.length} responses · ${resolved.deferredIds.length} deferred · ${resolved.notApplicableIds.length} not applicable` : `응답 ${readinessAnswers.length}개 · 보류 ${resolved.deferredIds.length}개 · 해당 없음 ${resolved.notApplicableIds.length}개`}</small>}
             {notApplicableReasons.map((reason) => <small key={reason}>{reason}</small>)}
-            <Link href={path("/dashboard#answer-insights")} className="button button--ghost button--full">{en ? "Review previous answers" : "지난 응답 보기"}</Link>
+            <Link href={path("/dashboard#answer-insights")} className="button button--soft button--full button--small">{en ? "Review previous answers" : "지난 응답 보기"}</Link>
           </article>
         </section>
 
@@ -257,7 +257,7 @@ export default async function DashboardPage({
 
               <div className="answer-insights__cta panel">
                 <span><strong>{en ? "Turn responses that need work into an execution plan." : "보완이 필요한 답변을 실행 계획으로 전환하세요."}</strong><small>{en ? "Build a plan with the AI GTM Assistant from your current assessment." : "현재 진단 결과를 바탕으로 AI GTM 어시스턴트와 계획을 만듭니다."}</small></span>
-                <Link href={path(planHref)} className="button button--primary">{planCta}<span aria-hidden="true">→</span></Link>
+                <Link href={path(planHref)} className="button button--primary button--small">{planCta}<span aria-hidden="true">→</span></Link>
               </div>
             </>
           )}
@@ -273,7 +273,7 @@ function IncompleteProfile({ locale }: { locale: Locale }) {
   return (
     <div className="notice-banner dashboard-profile-notice">
       <span>{en ? "Add your company details and contact information before ordering AI expert services." : "AI 전문가 서비스를 주문하시려면 회사 정보와 연락처를 먼저 입력해 주세요."}</span>
-      <Link className="button button--small" href={`${localizedPath("/account/onboarding", locale)}?next=${encodeURIComponent(localizedPath("/dashboard", locale))}`}>
+      <Link className="button button--primary button--small" href={`${localizedPath("/account/onboarding", locale)}?next=${encodeURIComponent(localizedPath("/dashboard", locale))}`}>
         {en ? "Complete profile" : "지금 입력"}<span aria-hidden="true">→</span>
       </Link>
     </div>

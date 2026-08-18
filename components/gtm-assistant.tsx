@@ -495,7 +495,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
                 <p>{en ? "Add up to three PDF, PNG, or JPG files (4MB each). We privately sanitize them, delete the originals, and use only structured evidence in public research." : "PDF·PNG·JPG 자료를 최대 3개(각 4MB) 첨부할 수 있습니다. 비공개로 정제한 뒤 원본을 삭제하고, 공개 조사에는 구조화된 근거만 사용합니다."}</p>
               </div>
               <div className="assistant-research-files__actions">
-                <label className="button button--ghost" htmlFor="gtm-research-file">{fileBusy ? (en ? "Uploading…" : "업로드 중…") : (en ? "Add document" : "자료 추가")}</label>
+                <label className="button button--soft button--small" htmlFor="gtm-research-file">{fileBusy ? (en ? "Uploading…" : "업로드 중…") : (en ? "Add document" : "자료 추가")}</label>
                 <input
                   className="sr-only"
                   id="gtm-research-file"
@@ -523,7 +523,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
           </button>}
           {(researchBusy || researchError) && <div className="assistant-research-status" role={researchError ? "alert" : "status"} aria-live="polite">
             <span>{researchError || researchStatus}</span>
-            {researchError && <button className="button button--ghost button--small" type="button" onClick={runResearch}>{en ? "Try research again" : "다시 조사"}</button>}
+            {researchError && <button className="button button--soft button--small" type="button" onClick={runResearch}>{en ? "Try research again" : "다시 조사"}</button>}
           </div>}
           {researchLimitReached && <section id="research-limit-options" className="research-limit-options" role="status" aria-live="polite" tabIndex={-1}>
             <header>
@@ -544,7 +544,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
                 <p>{recommendedResearchService.description}</p>
                 <ul>{recommendedResearchService.deliverables.map((deliverable) => <li key={deliverable}>{deliverable}</li>)}</ul>
                 <small>{en ? `₩${won.format(recommendedResearchService.price)}` : `${won.format(recommendedResearchService.price)}원`} · {recommendedResearchService.durationLabel}</small>
-                <Link className="button button--ghost" href={localizedPath(`/services/${recommendedResearchService.id}`, locale)}>{en ? "Explore the AI market research specialist →" : "AI 시장조사 전문가 알아보기 →"}</Link>
+                <Link className="button button--soft" href={localizedPath(`/services/${recommendedResearchService.id}`, locale)}>{en ? "Explore the AI market research specialist" : "AI 시장조사 전문가 알아보기"}<span aria-hidden="true">→</span></Link>
               </article>}
             </div> : <p className="research-limit-options__recovery">{en ? "We couldn't load your saved report. Refresh this page; if it still does not appear, contact the operations team." : "저장된 조사 결과를 불러오지 못했습니다. 페이지를 새로고침한 뒤에도 보이지 않으면 운영팀에 문의해 주세요."}</p>}
           </section>}
@@ -554,7 +554,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
           <section className="assistant-research panel">
             <div className="dashboard-section__heading">
               <span><span className="page-kicker">{en ? "AI MARKET & COMPETITIVE RESEARCH" : "AI 시장·경쟁 사전조사"}</span><h2>{marketResearch.offeringName} · {marketResearch.targetCountry}</h2></span>
-              {researchNeedsInputs ? <strong>{en ? "Evidence needed · add inputs and rerun" : "근거 보완 필요 · 입력 후 다시 조사"}</strong> : researchMatchesContext && researchConfirmed ? <strong className="research-confirmed">{en ? "Confirmed" : "확인 완료"}</strong> : researchMatchesContext ? <button className="button button--dark" type="button" onClick={confirmResearch}>{en ? "Confirm research" : "조사 결과 확인"}</button> : <strong>{en ? "Inputs changed · run research again" : "입력 변경됨 · 다시 조사 필요"}</strong>}
+              {researchNeedsInputs ? <strong>{en ? "Evidence needed · add inputs and rerun" : "근거 보완 필요 · 입력 후 다시 조사"}</strong> : researchMatchesContext && researchConfirmed ? <strong className="research-confirmed">{en ? "Confirmed" : "확인 완료"}</strong> : researchMatchesContext ? <button className="button button--primary" type="button" onClick={confirmResearch}>{en ? "Confirm research" : "조사 결과 확인"}</button> : <strong>{en ? "Inputs changed · run research again" : "입력 변경됨 · 다시 조사 필요"}</strong>}
             </div>
             <p>{marketResearch.executiveSummary}</p>
             {marketResearch.scope === "market_preresearch" && <p className="notice-banner">{en ? "At Readiness Stages 1 and 2, this report does not judge commercial viability. It provides preliminary market research and the next validation tasks." : "준비 1단계와 준비 2단계에서는 실제 판매 가능성을 판정하지 않고, 시장·경쟁 사전조사와 다음 검증 과제만 제공합니다."}</p>}
@@ -574,8 +574,8 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
               <span><span className="page-kicker">COMPREHENSIVE MARKET REPORT</span><strong>{en ? "Review the market, evidence, competitors, and validation tasks in one report." : "시장 범위부터 경쟁 구도와 검증 과제까지 하나의 보고서로 검토하세요."}</strong></span>
               {planId && researchMatchesContext ? (
                 <span className="assistant-plan-actions">
-                  <a className="button button--primary" href={`${localizedPath(`/api/gtm-plans/${planId}/export`, locale)}?view=1`} target="_blank" rel="noreferrer">{en ? "View comprehensive market report ↗" : "종합 시장보고서 보기 ↗"}</a>
-                  <a className="button button--ghost" href={localizedPath(`/api/gtm-plans/${planId}/export`, locale)}>{en ? "Download HTML" : "HTML 다운로드"}</a>
+                  <a className="button button--light" href={`${localizedPath(`/api/gtm-plans/${planId}/export`, locale)}?view=1`} target="_blank" rel="noreferrer">{en ? "View comprehensive market report ↗" : "종합 시장보고서 보기 ↗"}</a>
+                  <a className="button button--light" href={localizedPath(`/api/gtm-plans/${planId}/export`, locale)}>{en ? "Download HTML" : "HTML 다운로드"}</a>
                 </span>
               ) : <small>{en ? "Run research with the current inputs to open the report." : "현재 입력으로 다시 조사하면 보고서를 열 수 있습니다."}</small>}
             </div>
@@ -610,12 +610,12 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
               {workshopBusy ? (en ? "Drafting your plan…" : "계획을 작성하고 있습니다…") : question ? (en ? "Answer and continue" : "답변하고 계속") : (en ? "Create AI GTM plan" : "AI GTM 계획 만들기")}
             </button>
             {question && (
-              <button className="button button--ghost" type="button" onClick={() => runWorkshop(en ? "Needs verification" : "확인 필요")} disabled={workshopBusy || researchBusy}>
+              <button className="button button--soft" type="button" onClick={() => runWorkshop(en ? "Needs verification" : "확인 필요")} disabled={workshopBusy || researchBusy}>
                 {en ? "Needs verification" : "확인 필요"}
               </button>
             )}
             {workshopFailed && (
-              <button className="button button--ghost" type="button" onClick={() => runWorkshop(undefined, true)} disabled={workshopBusy || researchBusy}>
+              <button className="button button--soft" type="button" onClick={() => runWorkshop(undefined, true)} disabled={workshopBusy || researchBusy}>
                 {en ? "Create plan with current information" : "현재 정보로 계획 만들기"}
               </button>
             )}
@@ -628,15 +628,15 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
             <div className="dashboard-section__heading">
               <span><span className="page-kicker">{en ? "30 · 60 · 90 DAY PLAN" : "단계별 실행계획(30·60·90 Day Plan)"}</span><h2 className="plan-summary">{summary}</h2></span>
               {planStatus === "active" ? (
-                <span className="assistant-plan-actions"><a className="button button--ghost" href={localizedPath(`/api/gtm-plans/${planId}/export`, locale)}>{en ? "Download report" : "보고서 다운로드"}</a><Link className="button button--dark" href={localizedPath("/journey", locale)}>{en ? "View approved journey →" : "승인된 여정 보기 →"}</Link></span>
+                <span className="assistant-plan-actions"><a className="button button--soft" href={localizedPath(`/api/gtm-plans/${planId}/export`, locale)}>{en ? "Download report" : "보고서 다운로드"}</a><Link className="button button--primary" href={localizedPath("/journey", locale)}>{en ? "View approved journey" : "승인된 여정 보기"}<span aria-hidden="true">→</span></Link></span>
               ) : (
-                <span className="assistant-plan-actions"><a className="button button--ghost" href={localizedPath(`/api/gtm-plans/${planId}/export`, locale)}>{en ? "Download report" : "보고서 다운로드"}</a><button className="button button--dark" type="button" onClick={approve}>{en ? "Approve plan" : "계획 승인"}</button></span>
+                <span className="assistant-plan-actions"><a className="button button--soft" href={localizedPath(`/api/gtm-plans/${planId}/export`, locale)}>{en ? "Download report" : "보고서 다운로드"}</a><button className="button button--primary" type="button" onClick={approve}>{en ? "Approve plan" : "계획 승인"}</button></span>
               )}
             </div>
             <div className="assistant-plan-list">
               {items.map((item, index) => (
                 <article className="assistant-plan-item panel" key={item.id ?? `${item.title}-${index}`}>
-                  <header><span className={`priority priority--${item.priority}`}>{en ? `Priority ${item.priority === "P0" ? "0" : "1"}` : item.priority === "P0" ? "우선순위 0" : "우선순위 1"}</span><strong>{item.horizon} {en ? "days" : "일"}</strong>{item.expertRequired && <Link className="button button--ghost button--small" href={localizedPath(`/services?tag=${encodeURIComponent(item.serviceTag)}`, locale)}>{en ? "Use an AI expert →" : "AI 전문가 사용 →"}</Link>}</header>
+                  <header><span className={`priority priority--${item.priority}`}>{en ? `Priority ${item.priority === "P0" ? "0" : "1"}` : item.priority === "P0" ? "우선순위 0" : "우선순위 1"}</span><strong>{item.horizon} {en ? "days" : "일"}</strong>{item.expertRequired && <Link className="button button--soft button--small" href={localizedPath(`/services?tag=${encodeURIComponent(item.serviceTag)}`, locale)}>{en ? "Use an AI expert" : "AI 전문가 사용"}<span aria-hidden="true">→</span></Link>}</header>
                   <h3>{item.title}</h3>
                   <p>{item.rationale}</p>
                   <div className="assistant-plan-fields">
@@ -645,7 +645,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
                     <label>{en ? "Status" : "상태"}<select value={item.status} onChange={(event) => updateItem(index, { status: event.target.value as GtmPlanItem["status"] })}><option value="not_started">{en ? "Not started" : "진행 전"}</option><option value="in_progress">{en ? "In progress" : "진행 중"}</option><option value="blocked">{en ? "Blocked" : "막힘"}</option><option value="completed">{en ? "Completed" : "완료"}</option></select></label>
                     <label className="assistant-context__wide">{en ? "Completion evidence" : "완료 근거"}<input value={item.completionEvidence} onChange={(event) => updateItem(index, { completionEvidence: event.target.value })} /></label>
                   </div>
-                  <footer><small>{en ? "Sources" : "근거"}: {item.sources.map((source) => source.title).join(" · ")}</small><button type="button" className="button button--small" onClick={() => saveItem(index)}>{en ? "Save item" : "항목 저장"}</button></footer>
+                  <footer><small>{en ? "Sources" : "근거"}: {item.sources.map((source) => source.title).join(" · ")}</small><button type="button" className="button button--primary button--small" onClick={() => saveItem(index)}>{en ? "Save item" : "항목 저장"}</button></footer>
                 </article>
               ))}
             </div>

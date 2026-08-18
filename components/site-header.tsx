@@ -9,14 +9,14 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 async function HeaderAccount({ locale, mobile = false }: { locale: Locale; mobile?: boolean }) {
   const m = t(locale);
   const { user, profile } = await getCurrentProfile();
-  if (!user) return <Link href={localizedPath("/signin", locale)} className={mobile ? undefined : "button button--small button--dark"}>{m.header.signIn}</Link>;
+  if (!user) return <Link href={localizedPath("/signin", locale)} className={mobile ? undefined : "button button--small button--primary"}>{m.header.signIn}</Link>;
   return (
     <>
       {profile?.role === "admin" && <Link href={localizedPath("/admin", locale)} className={mobile ? undefined : "button button--small button--ghost"}>{m.header.admin}</Link>}
       <Link href={localizedPath("/account", locale)} className={mobile ? undefined : "button button--small button--ghost"}>{m.header.account}</Link>
       <form action={signOut}>
         <input type="hidden" name="locale" value={locale} />
-        <button className={mobile ? undefined : "button button--small button--dark"}>{m.header.signOut}</button>
+        <button className={mobile ? undefined : "button button--small button--primary"}>{m.header.signOut}</button>
       </form>
     </>
   );

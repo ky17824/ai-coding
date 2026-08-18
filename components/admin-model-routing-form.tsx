@@ -206,7 +206,7 @@ export function AdminModelRoutingForm(props: {
                             <span>{en ? "Reason" : "사유"}</span>
                             <textarea name="reason" minLength={10} maxLength={500} rows={2} required disabled={rollbackPending} />
                           </label>
-                          <button type="submit" className="button button--small" disabled={rollbackPending}>
+                          <button type="submit" className="button button--primary button--small" disabled={rollbackPending}>
                             {rollbackPending ? (en ? "Restoring…" : "되돌리는 중…") : (en ? "Confirm" : "확인")}
                           </button>
                         </form>

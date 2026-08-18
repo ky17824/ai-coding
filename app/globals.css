@@ -16,6 +16,7 @@
   --surface-soft: #f8f7f4;
   --white: #ffffff;
   --mint: #d4e9e2;
+  --mint-strong: #c3e0d6;
   --green: #1d7b4c;
   --green-dark: #0e3b2b;
   --green-uplift: #2b5148;
@@ -223,11 +224,6 @@ svg {
   color: var(--green);
 }
 
-.landing-shell .button--dark {
-  border-color: var(--button-green);
-  background: var(--button-green);
-}
-
 .landing-shell .brand-mark {
   background: var(--green-dark);
   color: var(--mint);
@@ -378,11 +374,19 @@ svg {
   font-weight: 750;
 }
 
-.button--primary,
-.button--dark {
+/* 변형은 넷뿐이다 — primary(주요) · soft(흰 카드 위 보조) · ghost(되돌리기·크림 캔버스 위 보조) · light(짙은 밴드).
+   색·높이·그림자·모션은 여기서만 정하고, 페이지 CSS는 여백·폭·grid 배치만 건드린다(lib/button-rules.test.ts가 지킨다). */
+.button--primary {
   border-color: var(--button-green);
   background: var(--button-green);
   color: var(--white);
+}
+
+.button--soft {
+  border-color: var(--mint);
+  background: var(--mint);
+  color: var(--green-dark);
+  box-shadow: var(--button-shadow-small);
 }
 
 .button--ghost {
@@ -390,6 +394,13 @@ svg {
   background: var(--white);
   color: var(--green-dark);
   box-shadow: var(--button-shadow-small);
+}
+
+.button--light {
+  border-color: var(--white);
+  background: var(--white);
+  color: var(--green-dark);
+  box-shadow: var(--button-inverted-shadow);
 }
 
 /* 공통 표면: 색과 얕은 elevation만 바꾸고 레이아웃 위치는 움직이지 않는다. */
@@ -408,6 +419,23 @@ svg {
   background: var(--surface-soft);
   color: var(--green-dark);
 }
+
+.button--soft:hover:not(:disabled) {
+  border-color: var(--green);
+  background: var(--mint-strong);
+  color: var(--green-dark);
+}
+
+.button--light:hover:not(:disabled) {
+  border-color: var(--white);
+  background: var(--surface-soft);
+  color: var(--green-dark);
+  box-shadow: var(--button-inverted-hover);
+}
+
+/* 이동 버튼의 화살표(aria-hidden span)는 hover 때 4px 앞으로 — 어느 페이지든 같은 모션. */
+.button > span[aria-hidden="true"] { transition: transform 160ms ease; }
+.button:hover:not(:disabled) > span[aria-hidden="true"] { transform: translateX(4px); }
 
 .button:active:not(:disabled),
 .icon-button:active,
@@ -540,20 +568,6 @@ main[lang="en"] .hero h1 {
   align-items: center;
   gap: 22px;
   margin-top: 34px;
-}
-
-.hero__actions .button--primary {
-  border: 1px solid var(--button-green);
-  background: var(--button-green);
-  color: var(--white);
-  box-shadow: var(--button-shadow);
-}
-
-.cta-band .button--light {
-  border-color: var(--white);
-  background: var(--white);
-  color: var(--green-dark);
-  box-shadow: var(--button-inverted-shadow);
 }
 
 .landing-shell .hero__copy > p,
@@ -1931,19 +1945,10 @@ main[lang="en"] .hero h1 {
   color: var(--green);
 }
 
-.dashboard-page .button {
-  min-height: 42px;
-  padding: 0 18px;
-  font-size: 13px;
-  box-shadow: var(--button-shadow-small);
-}
-
-.dashboard-page .button > span,
 .dashboard-page .service-card .icon-button svg {
   transition: transform 160ms ease;
 }
 
-.dashboard-page .button:hover > span,
 .dashboard-page .service-card .icon-button:hover svg {
   transform: translateX(4px);
 }
@@ -4470,10 +4475,6 @@ fieldset.offering-picker {
   gap: 12px;
 }
 
-.assistant-research-files__actions .button {
-  min-height: 42px;
-}
-
 .assistant-research-files ul {
   display: grid;
   gap: 8px;
@@ -4960,21 +4961,6 @@ article.research-overview-card {
 
 .research-report-cta .button {
   width: 100%;
-  border-color: #d9e1dd;
-  background: var(--white);
-  color: var(--green-dark);
-  box-shadow: var(--button-inverted-shadow);
-}
-
-.research-report-cta .button:hover:not(:disabled) {
-  border-color: #fff;
-  background: #f7faf8;
-  color: var(--green-dark);
-  box-shadow: var(--button-inverted-hover);
-}
-
-.research-report-cta .button:active:not(:disabled) {
-  box-shadow: var(--button-shadow-pressed);
 }
 
 .assistant-plan-actions {
@@ -5497,7 +5483,7 @@ h2.plan-summary {
   .domain-nav button:hover,
   .domain-nav button:active,
   .text-link:hover,
-  .dashboard-page .button:hover > span,
+  .button:hover:not(:disabled) > span[aria-hidden="true"],
   .dashboard-page .service-card .icon-button:hover svg,
   .journey-expert-cta:hover span {
     transform: none !important;
