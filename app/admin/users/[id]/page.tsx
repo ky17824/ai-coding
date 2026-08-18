@@ -72,7 +72,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
         </section>
 
         <section className="admin-section panel admin-access-panel">
-          <span className="page-kicker">ACCESS CONTROL</span>
+          <span className="page-kicker">{en ? "ACCESS CONTROL" : "권한 관리"}</span>
           <h2>{en ? "Role and administrator purpose" : "역할 및 관리자 계정 용도"}</h2>
           <p>{en ? "Access changes are atomic and retained in an immutable audit history." : "권한 변경은 원자적으로 처리되며 수정할 수 없는 감사 이력에 남습니다."}</p>
           <AdminRoleForm locale={locale} targetUserId={subject.id} currentRole={subject.role} currentPurpose={subject.admin_account_purpose} canDemote={(adminCountResult.count ?? 0) > 1} disabledReason={disabledReason} />

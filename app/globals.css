@@ -1474,7 +1474,7 @@ main[lang="en"] .hero h1 {
   padding: 28px;
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  background: var(--paper);
+  background: var(--white);
   box-shadow: var(--shadow);
   transition:
     transform 160ms ease,
@@ -1488,15 +1488,21 @@ main[lang="en"] .hero h1 {
   box-shadow: var(--shadow-raised);
 }
 
+/* 순서 마커는 대시보드 우선 행동과 같은 채운 원 하나로 — 이탤릭 숫자 스타일은 쓰지 않는다. */
 .step-card > span {
-  color: var(--green);
-  font-family: var(--font-sans);
-  font-size: 36px;
-  font-style: italic;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--green-dark);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .step-card h3 {
-  margin: 36px 0 14px;
+  margin: 24px 0 14px;
   font-size: 20px;
 }
 
@@ -1616,9 +1622,8 @@ main[lang="en"] .hero h1 {
 
 .cta-band {
   width: min(1180px, calc(100% - 48px));
-  min-height: 80px;
   margin: 18px auto 56px;
-  padding: 10px 32px;
+  padding: 24px 28px;
   border-radius: var(--radius-band);
   display: flex;
   align-items: center;
@@ -2517,7 +2522,7 @@ main[lang="en"] .hero h1 {
 
 .journey-column > header {
   min-height: 170px;
-  padding: 26px;
+  padding: 24px 28px;
   display: flex;
   gap: 15px;
   background: var(--green-dark);
@@ -4956,7 +4961,7 @@ article.research-overview-card {
   justify-content: space-between;
   gap: 24px;
   border-radius: var(--radius-band);
-  padding: 24px;
+  padding: 24px 28px;
   background: var(--green-dark);
   color: var(--white);
 }

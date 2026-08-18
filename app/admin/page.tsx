@@ -231,7 +231,7 @@ export default async function AdminPage({
         <section className="admin-section" id="provider-review">
           <h2>{en ? "Expert approvals pending" : "전문가 승인 대기"}</h2>
           {!pendingProviders.length ? <div className="empty-state panel"><strong>{en ? "No applications to review." : "검토할 신청이 없습니다."}</strong></div> : <div className="provider-review-list">{pendingProviders.map((provider) => (
-            <article className="provider-review panel" key={provider.id}><div><span className="page-kicker">PENDING EXPERT</span><h3>{provider.headline}</h3><p>{provider.biography}</p><small>{provider.expertise.join(" · ")}</small><blockquote>{provider.verification_note}</blockquote></div><form action={approveProvider}><input type="hidden" name="providerId" value={provider.id} /><button className="button button--ghost" name="decision" value="rejected">{en ? "Request changes" : "보완 요청"}</button><button className="button button--primary" name="decision" value="approved">{en ? "Approve" : "승인"}</button></form></article>
+            <article className="provider-review panel" key={provider.id}><div><span className="page-kicker">{en ? "PENDING EXPERT" : "승인 대기 전문가"}</span><h3>{provider.headline}</h3><p>{provider.biography}</p><small>{provider.expertise.join(" · ")}</small><blockquote>{provider.verification_note}</blockquote></div><form action={approveProvider}><input type="hidden" name="providerId" value={provider.id} /><button className="button button--ghost" name="decision" value="rejected">{en ? "Request changes" : "보완 요청"}</button><button className="button button--primary" name="decision" value="approved">{en ? "Approve" : "승인"}</button></form></article>
           ))}</div>}
         </section>
       </div>

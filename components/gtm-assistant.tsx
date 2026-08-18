@@ -571,7 +571,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
             <details className="research-coverage-details"><summary>{en ? "Research coverage and source mix" : "조사 범위와 출처 구성"}</summary><p>{en ? "Source mix" : "출처 구성"}: {Object.entries(marketResearch.researchCoverage.sourceTypes).map(([kind, count]) => `${en ? kind : ({ government: "정부·규제", industry: "산업자료", retail: "현지 유통", company: "기업 공식", consumer: "소비자", media: "미디어" }[kind] ?? kind)} ${count}`).join(" · ")}</p>{marketResearch.researchCoverage.coverageGaps.length > 0 && <p>{en ? "Coverage gaps" : "보완할 조사 범위"}: {marketResearch.researchCoverage.coverageGaps.map((gap) => coverageGapLabel(gap, en)).join(" · ")}</p>}</details>
             <div><h3>{en ? "Next validation tasks" : "다음 검증 과제"}</h3><ol>{marketResearch.nextExperiments.map((entry) => <li key={entry}>{entry}</li>)}</ol></div>
             <div className="research-report-cta">
-              <span><span className="page-kicker">COMPREHENSIVE MARKET REPORT</span><strong>{en ? "Review the market, evidence, competitors, and validation tasks in one report." : "시장 범위부터 경쟁 구도와 검증 과제까지 하나의 보고서로 검토하세요."}</strong></span>
+              <span><span className="page-kicker">{en ? "COMPREHENSIVE MARKET REPORT" : "종합 시장보고서"}</span><strong>{en ? "Review the market, evidence, competitors, and validation tasks in one report." : "시장 범위부터 경쟁 구도와 검증 과제까지 하나의 보고서로 검토하세요."}</strong></span>
               {planId && researchMatchesContext ? (
                 <span className="assistant-plan-actions">
                   <a className="button button--light" href={`${localizedPath(`/api/gtm-plans/${planId}/export`, locale)}?view=1`} target="_blank" rel="noreferrer">{en ? "View comprehensive market report ↗" : "종합 시장보고서 보기 ↗"}</a>

@@ -34,7 +34,7 @@ export default async function ProviderPage() {
         {application ? (
           <>
             <section className="application-status panel">
-              <span className="page-kicker">APPLICATION STATUS</span>
+              <span className="page-kicker">{en ? "APPLICATION STATUS" : "신청 상태"}</span>
               <h2>{application.headline}</h2>
               <strong>
                 {application.approval_status === "approved"
