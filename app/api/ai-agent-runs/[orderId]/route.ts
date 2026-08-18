@@ -18,7 +18,7 @@ import {
   validateAiAgentSources,
   ReportValidationError
 } from "@/lib/ai-agent-report";
-import { collectCitedUrls, stripUnverifiedSources } from "@/lib/research-sources";
+import { canonicalResearchUrl, collectCitedUrls, stripUnverifiedSources } from "@/lib/research-sources";
 import { createSupabaseAdminClient, requireUser } from "@/lib/supabase/server";
 import { getIntakeQuestions, INTAKE_ITEMS, INTAKE_STAGES } from "@/lib/intake-questions";
 import { costOf, modelSpec, type ModelKey } from "@/lib/ai-models/catalog";
@@ -448,6 +448,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     if (strayCoverage.length) {
       console.warn("[ai-agent-run] stray questionCoverage dropped", { orderId, dropped: strayCoverage.map((item) => item.questionId) });
       report.questionCoverage = report.questionCoverage.filter((item) => contractSet.has(item.questionId));
+    }
+    // 발견 항목이 인용했는데 보고서 출처 원장에는 빠진 URL이 있다 (실측 2026-08-18, Opus가
+    // 검증된 McKinsey URL을 인용하고 sources에는 안 적음). 조사 단계 원장(publicEvidence.sources,
+    // 같은 스키마)에 그 항목이 있으면 그대로 옮겨 채운다. 없으면 아래 검증이 잡는다.
+    const ledger = new Set(report.sources.map((source) => canonicalResearchUrl(source.url)));
+    for (const finding of report.findings) {
+      for (const url of finding.sourceUrls) {
+        const key = canonicalResearchUrl(url);
+        if (ledger.has(key)) continue;
+        const known = publicEvidence.sources.find((source) => canonicalResearchUrl(source.url) === key);
+        if (!known || report.sources.length >= 60) continue;
+        report.sources.push(known);
+        ledger.add(key);
+        console.warn("[ai-agent-run] source backfilled from research ledger", { orderId, url });
+      }
     }
     validateAiAgentSources([...collectCitedUrls(report)], allowedUrls);
     validateAiAgentReport(report, {
