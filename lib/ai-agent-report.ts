@@ -403,15 +403,17 @@ export function validateAiAgentReport(report: AiAgentReport, contract: { questio
     const violations: string[] = [];
     if (!sizing) violations.push("marketSizing_missing");
     else {
-      if (sizing.tam.low < sizing.sam.low) violations.push("tam.low<sam.low");
-      if (sizing.sam.low < sizing.som.low) violations.push("sam.low<som.low");
-      if (sizing.tam.base < sizing.sam.base) violations.push("tam.base<sam.base");
-      if (sizing.sam.base < sizing.som.base) violations.push("sam.base<som.base");
-      if (sizing.tam.high < sizing.sam.high) violations.push("tam.high<sam.high");
-      if (sizing.sam.high < sizing.som.high) violations.push("sam.high<som.high");
+      // 정의(MIT Aulet·Wharton Ulrich): 교두보는 SAM 안의 최초 공략 세그먼트 "전체" 규모(100% 점유 가정)이고,
+      // SOM은 3~5년 안에 실제로 획득 가능한 매출이다. SOM은 그 기간에 대체로 교두보 안에서 실현되므로
+      // 저·기준·고 모두 TAM ≥ SAM ≥ 교두보 ≥ SOM이어야 한다. 교두보 ⊂ SAM은 정의상 항상 성립한다.
+      for (const level of ["low", "base", "high"] as const) {
+        if (sizing.tam[level] < sizing.sam[level]) violations.push(`tam.${level}<sam.${level}`);
+        if (sizing.sam[level] < sizing.beachhead[level]) violations.push(`sam.${level}<beachhead.${level}`);
+        if (sizing.beachhead[level] < sizing.som[level]) violations.push(`beachhead.${level}<som.${level}`);
+      }
     }
     if (violations.length) {
-      throw new ReportValidationError("시장규모 결과는 TAM ≥ SAM ≥ SOM을 충족해야 합니다.", { violations, marketSizing: sizing });
+      throw new ReportValidationError("시장규모 결과는 TAM ≥ SAM ≥ 교두보 ≥ SOM을 충족해야 합니다.", { violations, marketSizing: sizing });
     }
   }
 }

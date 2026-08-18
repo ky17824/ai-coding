@@ -190,13 +190,13 @@ describe("AI expert execution rules", () => {
     expect(aiAgentReportSchema.safeParse({ sources: [{ title: "x", url: "data:text/html,x", publisher: "x", kind: "news", publishedAt: "2026-08-01", checkedAt: "2026-08-14" }] }).success).toBe(false);
   });
 
-  it("enforces question traceability and TAM ≥ SAM ≥ SOM", () => {
+  it("enforces question traceability and TAM ≥ SAM ≥ beachhead ≥ SOM", () => {
     const base = {
       title: "시장 보고서", executiveSummary: "요약", methodology: "방법",
       findings: [{ title: "시장", status: "estimate" as const, confidence: "medium" as const, summary: "추정", evidence: [], counterEvidence: [], questionIds: ["q1"], sourceUrls: ["https://example.com/report"], actions: [] }],
       actionPlan: [{ title: "검증", why: "정밀화", owner: "대표", timing: "30일", successMetric: "3건", stopCondition: "0건" }],
       assumptions: [], questionCoverage: [{ questionId: "q1", disposition: "used" as const, priority: "low_score" as const, reason: "근거" }], contradictions: [],
-      marketSizing: { currency: "USD", referenceYear: 2026, tam: r(100, 120, 140), sam: r(60, 80, 100), som: r(5, 8, 10), beachhead: r(1, 2, 3), consistencyNote: "TAM ≥ SAM ≥ SOM" },
+      marketSizing: { currency: "USD", referenceYear: 2026, tam: r(100, 120, 140), sam: r(60, 80, 100), som: r(5, 8, 10), beachhead: r(20, 30, 40), consistencyNote: "TAM ≥ SAM ≥ 교두보 ≥ SOM" },
       sources: [{ title: "자료", url: "https://example.com/report", publisher: "Agency", kind: "official" as const, publishedAt: "2026-08-01", checkedAt: "2026-08-14" }],
       evidenceGaps: [], humanVerification: [], limitations: ["추정"]
     };
@@ -417,7 +417,7 @@ describe("validateAiAgentReport / validateAiAgentSources 진단 정보", () => {
     ]);
   });
 
-  it("TAM ≥ SAM ≥ SOM을 어긴 구체적인 비교식을 detail에 남긴다", () => {
+  it("TAM ≥ SAM ≥ 교두보 ≥ SOM을 어긴 구체적인 비교식을 detail에 남긴다", () => {
     const report = aiAgentReportSchema.parse({
       title: "t", executiveSummary: "e", methodology: "m",
       findings: [{ title: "f", status: "estimate", confidence: "medium", summary: "s", evidence: [], counterEvidence: [], questionIds: ["q1"], sourceUrls: ["https://example.com/report"], actions: [] }],
@@ -428,7 +428,7 @@ describe("validateAiAgentReport / validateAiAgentSources 진단 정보", () => {
         tam: r(100, 120, 140),
         sam: r(110, 115, 120),
         som: r(5, 8, 10),
-        beachhead: r(1, 2, 3),
+        beachhead: r(1, 30, 40),
         consistencyNote: "f"
       },
       sources: [{ title: "src", url: "https://example.com/report", publisher: "Agency", kind: "official", publishedAt: "2026-08-01", checkedAt: "2026-08-14" }],
@@ -436,7 +436,8 @@ describe("validateAiAgentReport / validateAiAgentSources 진단 정보", () => {
     });
     const contract = { questionIds: ["q1"], includedAgentIds: ["ai-market-intelligence"] };
     const error = captureError(() => validateAiAgentReport(report, contract, "2026-08-14"));
-    expect(error.message).toBe("시장규모 결과는 TAM ≥ SAM ≥ SOM을 충족해야 합니다.");
-    expect(error.detail.violations).toEqual(["tam.low<sam.low"]);
+    expect(error.message).toBe("시장규모 결과는 TAM ≥ SAM ≥ 교두보 ≥ SOM을 충족해야 합니다.");
+    // low: TAM 100 < SAM 110, 교두보 1 < SOM 5. base·high는 정상.
+    expect(error.detail.violations).toEqual(["tam.low<sam.low", "beachhead.low<som.low"]);
   });
 });
