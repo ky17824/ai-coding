@@ -59,12 +59,12 @@ describe("model routing", () => {
     expect(source).toContain("ensureBudget(stage)");
     expect((source.match(/runStage\("(classification|public_research|final_report)"/g) ?? []).length).toBe(3);
   });
-  it("패키지 상품은 조사·보고서 단계를 high effort로 승격한다(분류 단계는 그대로)", () => {
-    // 020 이전 동작(4b19b47)은 research·report 모두 package면 high였다 — 라우팅 도입으로
-    // final_report만 승격되던 회귀를 다시 두 단계로 되돌린다. classification은 원래도
-    // 항상 medium이라 이 조건에 들어가면 안 된다.
-    expect(source).toContain('(stage === "public_research" || stage === "final_report") && service.productKind === "package" ? "high" : route.effort');
-    expect(source).not.toContain('stage === "classification" && service.productKind === "package"');
+  it("패키지 노력 승격은 코드가 아니라 025 오버라이드(스냅샷)가 맡는다", () => {
+    // 020 이전(4b19b47)~024까지는 package면 research·report를 코드로 high 승격했다.
+    // 025부터는 활성 설정의 product_overrides에 시드되어 예약 RPC가 스냅샷에 병합한다 —
+    // 라우트는 스냅샷의 effort를 그대로 쓴다. (lib/ai-models/routing-migration.test.ts가 SQL 쪽을 잠근다.)
+    expect(source).not.toContain('service.productKind === "package" ? "high"');
+    expect(source).toContain("const effort = route.effort;");
   });
   it("실패한 단계의 usage도 실행 합계에 반영한다", () => {
     expect(source).toContain("error instanceof StageError ? error.usage : EMPTY_USAGE");

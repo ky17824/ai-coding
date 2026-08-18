@@ -352,10 +352,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   let modelCostUsd = 0;
   const runStage = async <T>(stage: Stage, fn: (adapter: Adapter, effort: "low" | "medium" | "high") => Promise<{ parsed: T; usage: typeof EMPTY_USAGE; allowedUrls?: Set<string> }>) => {
     ensureBudget(stage);
+    // 스냅샷은 이미 이 상품의 유효 라우팅이다(025: 기본값 || 상품 오버라이드를 예약 RPC가 병합).
+    // 패키지의 조사·보고서 high 승격도 025가 오버라이드로 옮겼으므로 여기서 따로 올리지 않는다.
     const route = routes.data[stage];
-    // 패키지 상품은 조사·보고서 단계를 high로 승격한다(020 이전 동작과 동일 — 4b19b47).
-    // 분류 단계는 원래도 늘 medium이었으므로 승격 대상이 아니다.
-    const effort = (stage === "public_research" || stage === "final_report") && service.productKind === "package" ? "high" : route.effort;
+    const effort = route.effort;
     const began = Date.now();
     try {
       const result = await fn(adapterFor(route.model), effort);
