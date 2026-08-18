@@ -410,9 +410,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     // 모델이 URL 하나만 잘못 적어도 4분짜리 실행을 통째로 날렸다(주문 6d76942a).
     // 다만 남는 것이 없으면 조사가 무의미하므로 그때는 실패한다.
     const droppedUrls: string[] = [];
+    const returnedSources = publicEvidence.sources.length;
     stripUnverifiedSources(publicEvidence, allowedUrls, droppedUrls);
     if (droppedUrls.length) console.warn("[ai-agent-run] unverified sources dropped", { orderId, dropped: droppedUrls });
-    if (publicEvidence.sources.length === 0) throw new Error("검색 도구로 확인된 출처가 하나도 없습니다.");
+    // 두 경우를 구분해 남긴다 — 모델이 출처를 아예 안 적은 것과 검증에서 전부 탈락한 것은 원인이 다르다.
+    if (publicEvidence.sources.length === 0) {
+      throw new Error(returnedSources === 0
+        ? `검색 도구로 확인된 출처가 하나도 없습니다. (모델이 출처 0건 반환, 검색 ${allowedUrls.size}건)`
+        : `검색 도구로 확인된 출처가 하나도 없습니다. (모델 출처 ${returnedSources}건 모두 검색 결과에 없음, 검색 ${allowedUrls.size}건)`);
+    }
     // 개별 발견 항목의 출처가 전부 걸러졌을 수 있다. 근거 없는 발견은 남기지 않는다.
     publicEvidence.findings = publicEvidence.findings.filter((finding) => finding.sourceUrls.length > 0);
     if (publicEvidence.findings.length === 0) throw new Error("검색 도구로 확인된 출처를 가진 발견이 없습니다.");
