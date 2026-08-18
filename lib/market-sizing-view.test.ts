@@ -88,4 +88,9 @@ describe("시장규모 섹션 렌더", () => {
     const allZero = { ...sizing, tam: range(0, 0, 0), sam: range(0, 0, 0), som: range(0, 0, 0), beachhead: range(0, 0, 0) };
     expect(sizingChartSvg(allZero, "ko")).toBe("");
   });
+  it("차트 svg는 전역 아이콘 규칙(stroke:currentColor)을 물려받지 않는다 — 글자를 윤곽선으로 그리면 안 된다", () => {
+    const html = marketSizingHtml(sizing, "ko");
+    expect(html).toContain(".ms-chart svg{display:block;width:100%;height:auto;fill:#10221b;stroke:none;stroke-width:0;font-weight:400}");
+    expect(html).toContain(".ms-chart svg text{stroke:none");
+  });
 });
