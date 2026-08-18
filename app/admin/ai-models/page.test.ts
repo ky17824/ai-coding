@@ -42,13 +42,15 @@ describe("/admin/ai-models", () => {
     expect(actions).toContain('rpc("apply_ai_model_routing"');
   });
 
-  it("폼은 바뀐 값이 없으면 버튼을 막고 이유를 보여 준다", () => {
+  it("폼은 바뀐 값이 없으면 버튼을 막고 이유를 보여 준다 — 공통 기본값과 상품 조정 둘 다 diff에 든다", () => {
     expect(form).toContain("admin-role-form__hint");
-    expect(form).toContain("diffRoutes(");
+    expect(form).toContain("diffRouting(");
+    expect(form).toContain("diff.stages.length + diff.products.length");
   });
 
-  it("키 미설정 공급자·웹검색 없는 모델은 disabled 옵션이다", () => {
-    expect(form).toMatch(/disabled=\{[^}]*hasAnthropicKey[^}]*\}/);
+  it("키 미설정 공급자·웹검색 없는 모델은 disabled 옵션이다 (기본값 select와 상품 셀이 같은 옵션 목록을 쓴다)", () => {
+    expect(form).toMatch(/keyMissing = [^;]*hasAnthropicKey/);
+    expect(form).toContain("disabled={keyMissing || noSearch}");
     expect(form).toContain('stage === "public_research" && !spec.webSearch');
   });
 
@@ -65,7 +67,7 @@ describe("/admin/ai-models", () => {
   it("활성 설정이 없을 때는 시드값 그대로도 저장할 수 있어야 한다 (빈 상태 탈출구)", () => {
     // activeVersion이 null이면(활성 설정 없음) draft==activeRoutes(시드값)이어도 unchanged가
     // true가 되면 안 된다 — 그러면 배너는 "아래에서 저장하세요"라면서 버튼은 막혀 있게 된다.
-    expect(form).toContain("props.activeVersion !== null && changes.length === 0");
+    expect(form).toContain("props.activeVersion !== null && changeCount === 0");
   });
 
   it("단계 도움말은 aria-describedby로 모델·추론 강도 선택과 연결된다", () => {
@@ -92,13 +94,24 @@ describe("/admin/ai-models", () => {
     expect(form).not.toContain("admin-section panel admin-model-routing__stage");
   });
 
-  it("추론 강도 열은 고정폭이라 모델 select와 반씩 나누지 않는다", () => {
+  it("공통 기본값 3단계는 한 줄 3열이고, 각 패널 안에서 모델·추론 강도는 세로로 쌓인다 (2026-08-19 확정 샘플)", () => {
+    const stages = css.match(/\.admin-model-routing__stages\s*\{[^}]*\}/s)?.[0] ?? "";
+    expect(stages).toMatch(/repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
     const fields = css.match(/\.admin-model-routing__fields\s*\{[^}]*\}/s)?.[0] ?? "";
-    expect(fields).not.toContain("1fr 1fr");
-    expect(fields).toMatch(/minmax\(0,\s*220px\)/);
+    expect(fields).toMatch(/grid-template-columns:\s*1fr;/);
+    expect(form).toContain('className="admin-model-routing__stages"');
   });
 
-  it("편집 폼은 읽기 폭으로 묶고 .provider-form 패딩을 걷어 상태 칩과 정렬한다", () => {
-    expect(css).toMatch(/\.admin-model-routing \.provider-form\s*\{[^}]*padding:\s*0;[^}]*max-width:\s*820px;/s);
+  it("편집 폼은 전폭이라 기본값 3열과 상품별 조정 표가 같은 폭이고, .provider-form 패딩을 걷어 상태 칩과 정렬한다", () => {
+    expect(css).toMatch(/\.admin-model-routing \.provider-form\s*\{[^}]*padding:\s*0;[^}]*max-width:\s*none;/s);
+  });
+
+  it("상품별 조정은 hidden input(product_overrides) JSON 하나로 보내고, 표는 상품 × 3단계 + 최근 30일 열이다", () => {
+    expect(form).toContain('name="product_overrides"');
+    expect(form).toContain('className="admin-model-routing__table"');
+    expect(form).toContain("productStats");
+    expect(page).toContain('orders!inner(product_key)');
+    expect(page).toContain("aggregateProductStats(");
+    expect(page).toContain("product_overrides");
   });
 });
