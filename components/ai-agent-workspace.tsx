@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { AiAgentReport } from "@/lib/ai-agent-report";
 import { AiGenerationFlow, type GenerationStage } from "@/components/ai-generation-flow";
 // 순수 데이터 모듈이라 서버 전용 의존성이 없다 — 클라이언트 번들에 넣어도 안전하다.
@@ -82,6 +83,17 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
   const L = reportLabels[locale];
   const questionLabel = (id: string) => questionLabels[id] ?? id;
   const [run, setRun] = useState(initialRun);
+  // 헤더의 "진행 중 서비스" 알약은 서버 컴포넌트라 이 화면이 상태를 바꿔도 저절로 안 바뀐다.
+  // 서버가 확인해 준 상태가 헤더가 마지막으로 그린 상태와 달라지면 router.refresh()로 서버
+  // 컴포넌트만 다시 그린다(클라이언트 상태는 유지). 낙관적 표시가 아니라 서버 응답을 기준으로
+  // 삼는 이유: 예약 RPC가 끝나기 전에 새로 고치면 헤더는 여전히 옛 상태를 읽는다.
+  const router = useRouter();
+  const headerStatus = useRef<string | null>(initialRun.status);
+  const syncHeader = (status: string | null) => {
+    if (headerStatus.current === status) return;
+    headerStatus.current = status;
+    router.refresh();
+  };
   const [intake, setIntake] = useState<Record<string, string>>(() => Object.fromEntries(fieldNames.map((field) => [field, String(initialRun.intake?.[field] ?? "")])));
   const [unknownFields, setUnknownFields] = useState<string[]>(() => Array.isArray(initialRun.intake?.unknownFields) ? initialRun.intake.unknownFields as string[] : []);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -103,6 +115,7 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
         if (!response.ok) return;
         const { run: latest } = await response.json() as { run: Run };
         if (cancelled || !latest) return;
+        syncHeader(latest.status);
         if (busy) {
           if (latest.status === "generating") setRun((current) => ({
             ...current,
@@ -151,13 +164,16 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
         setRun((current) => ({ ...current, status: "completed", report: result.report ?? current.report, generation_count: result.generationCount ?? current.generation_count }));
         setMessage(c.correctionFailed);
         setEditing(false);
+        syncHeader("completed");
         return;
       }
-      if (result.run) setRun(result.run);
-      if (result.report) setRun((current) => ({ ...current, status: "completed", report: result.report, generation_count: current.generation_count + 1 }));
+      if (result.run) { setRun(result.run); syncHeader(result.run.status); }
+      if (result.report) { setRun((current) => ({ ...current, status: "completed", report: result.report, generation_count: current.generation_count + 1 })); syncHeader("completed"); }
       setEditing(false);
     } catch (error) {
       setRun((current) => ({ ...current, status: previousStatus }));
+      // 서버가 실패를 기록했을 수 있다(status=failed). 헤더는 서버 값을 다시 읽게 한다.
+      syncHeader(null);
       setMessage(error instanceof Error ? error.message : locale === "en" ? "The request failed." : "요청을 처리하지 못했습니다.");
     } finally {
       setBusy(false);
