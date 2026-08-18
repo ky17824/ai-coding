@@ -4,7 +4,7 @@ import { OrderActions } from "@/components/order-actions";
 import { AiAgentWorkspace } from "@/components/ai-agent-workspace";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { getIntakeQuestions } from "@/lib/intake-questions";
-import { ATTACHMENT_HINT_BY_AGENT, PRODUCT_COPY, REQUIRED_INPUT_BY_AGENT } from "@/lib/catalog/copy";
+import { ATTACHMENT_HINT_BY_AGENT, ORDER_STATUS_LABEL, PRODUCT_COPY, REQUIRED_INPUT_BY_AGENT } from "@/lib/catalog/copy";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -107,7 +107,7 @@ export default async function OrderPage({
         <h1 className="page-title">{snapshot.title}</h1>
         <section className="order-detail panel">
           <div className="order-status-line">
-            <span className="pill">{isBetaOrder ? (en ? "Admin beta" : "관리자 베타") : shownOrder.status}</span>
+            <span className="pill">{isBetaOrder ? (en ? "Admin beta" : "관리자 베타") : ORDER_STATUS_LABEL[shownOrder.status]?.[locale] ?? shownOrder.status}</span>
             <strong>{isBetaOrder
               ? (en ? "KRW 0 charged" : "청구액 0원")
               : en ? `KRW ${won.format(shownOrder.amount_krw)}` : `${won.format(shownOrder.amount_krw)}원`}</strong>
@@ -156,7 +156,7 @@ export default async function OrderPage({
             questionLabels={Object.fromEntries(getIntakeQuestions(locale, "5.0").map((question) => [question.id, question.question]))}
           />
         )}
-        {isAiOrder && shownOrder.status === "paid" && !aiRun && <p className="notice-banner">{en ? "Payment confirmation is still being processed. Refresh in a moment." : "결제 확인을 처리 중입니다. 잠시 후 새로고침해 주세요."}</p>}
+        {isAiOrder && shownOrder.status === "paid" && !aiRun && <p className="notice-banner">{en ? "Payment confirmation is still being processed. Refresh in a moment." : "결제 확인을 처리 중입니다. 잠시 후 새로 고침해 주세요."}</p>}
       </div>
     </main>
   );

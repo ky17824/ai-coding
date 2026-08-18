@@ -185,7 +185,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       return NextResponse.json({ message: en ? "The included correction has already been used." : "포함된 사실 정정 재생성을 이미 사용했습니다." }, { status: 409 });
     }
     if (Number(activeRun.generation_count ?? 0) > 0 && (scopeUnknown || JSON.stringify(nextScope) !== JSON.stringify(savedScope))) {
-      return NextResponse.json({ message: en ? "Changing the offering, target country, or core customer requires a new order." : "제품·목표국가·핵심고객 변경은 새로운 유료 업무로 신청해야 합니다." }, { status: 409 });
+      return NextResponse.json({ message: en ? "Changing the offering, target country, or core customer requires a new order." : "제품·목표 국가·핵심 고객을 바꾸려면 새 주문이 필요합니다." }, { status: 409 });
     }
     const missing = missingFields(normalizedIntake, intakeBaseline, [], service.includedAgentIds);
     const inputAudit = auditAiAgentIntake(normalizedIntake, intakeBaseline, [], service.includedAgentIds);
@@ -202,7 +202,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       status: nextStatus,
       updated_at: new Date().toISOString()
     }).eq("order_id", orderId).in("status", ["intake", "ready", "failed", "completed"]).select("*").maybeSingle();
-    if (error) return NextResponse.json({ message: en ? "We couldn't save the intake." : "필요정보를 저장하지 못했습니다." }, { status: 500 });
+    if (error) return NextResponse.json({ message: en ? "We couldn't save the intake." : "필요 정보를 저장하지 못했습니다." }, { status: 500 });
     if (!data) return NextResponse.json({ message: en ? "The report is currently being generated." : "현재 보고서를 생성 중입니다." }, { status: 409 });
     return NextResponse.json({ run: data });
   }
@@ -230,7 +230,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     if (Number(activeRun.generation_count ?? 0) > 0) {
       const scopeUnknown = merged.unknownFields.some((field) => ["offering", "targetCountry", "targetCustomer"].includes(field));
       if (scopeUnknown || JSON.stringify(normalizeAiAgentScope(merged)) !== JSON.stringify(normalizeAiAgentScope(activeRun.scope_snapshot ?? {}))) {
-        return NextResponse.json({ message: en ? "Changing the offering, target country, or core customer requires a new order." : "제품·목표국가·핵심고객 변경은 새로운 유료 업무로 신청해야 합니다." }, { status: 409 });
+        return NextResponse.json({ message: en ? "Changing the offering, target country, or core customer requires a new order." : "제품·목표 국가·핵심 고객을 바꾸려면 새 주문이 필요합니다." }, { status: 409 });
       }
     }
     const round = Math.min(2, Number(activeRun.clarification_round ?? 0) + 1);
@@ -254,12 +254,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       status: nextStatus,
       updated_at: new Date().toISOString()
     }).eq("order_id", orderId).eq("status", "clarifying").select("*").maybeSingle();
-    if (error) return NextResponse.json({ message: en ? "We couldn't save the clarification." : "추가정보를 저장하지 못했습니다." }, { status: 500 });
-    if (!data) return NextResponse.json({ message: en ? "The run state changed. Refresh the order." : "작업 상태가 변경되었습니다. 주문을 새로고침해 주세요." }, { status: 409 });
+    if (error) return NextResponse.json({ message: en ? "We couldn't save the clarification." : "추가 정보를 저장하지 못했습니다." }, { status: 500 });
+    if (!data) return NextResponse.json({ message: en ? "The run state changed. Refresh the order." : "작업 상태가 변경되었습니다. 주문을 새로 고침해 주세요." }, { status: 409 });
     return NextResponse.json({ run: data });
   }
 
-  if (!["ready", "failed", "completed", "generating"].includes(activeRun.status)) return NextResponse.json({ message: en ? "Review the required information first." : "필요정보와 가정을 먼저 확인해 주세요." }, { status: 409 });
+  if (!["ready", "failed", "completed", "generating"].includes(activeRun.status)) return NextResponse.json({ message: en ? "Review the required information first." : "필요 정보와 가정을 먼저 확인해 주세요." }, { status: 409 });
   const { data: answers, error: answersError } = readiness.assessmentId
     ? await admin.from("readiness_answers").select("question_id,level,evidence_kind,evidence_value").eq("assessment_id", readiness.assessmentId).limit(55)
     : { data: [], error: null };
@@ -279,7 +279,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       console.error("[ai-agent-run] reserve refused: no active model routing config", { orderId, userId: user.id, runStatus: activeRun.status, orderStatus: order.status });
       return NextResponse.json({ message: en ? "The AI model is not configured yet. Please contact support." : "AI 모델 설정이 없어 보고서를 생성할 수 없습니다. 운영팀에 문의해 주세요." }, { status: 503 });
     }
-    return NextResponse.json({ message: en ? "A report is already being generated or the correction limit was reached." : "이미 보고서를 생성 중이거나 사실 정정 재생성 한도를 사용했습니다." }, { status: 409 });
+    return NextResponse.json({ message: en ? "A report is already being generated or the correction limit was reached." : "이미 보고서를 생성 중이거나 사실 정정 재생성 한도를 모두 사용했습니다." }, { status: 409 });
   }
 
   // 시도 기록과 실패 RPC 헬퍼. 예약 직후부터 필요하다 — 라우트 스냅샷이 깨져 있거나
@@ -408,7 +408,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       locale: parsed.data.locale,
       researchQuestions: [
         en ? `Current external evidence for ${service.type}` : `${service.type} 관련 최신 외부 근거`,
-        en ? `Comparable cases and counter-evidence for ${service.title}` : `${service.title} 관련 유사사례와 반대 근거`,
+        en ? `Comparable cases and counter-evidence for ${service.title}` : `${service.title} 관련 유사 사례와 반대 근거`,
         en ? `Implementation requirements for ${service.deliverables.join(", ")}` : `${service.deliverables.join(", ")} 실행 요건`
       ]
     });
@@ -507,9 +507,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       attempts.push({ stage: "finalize", model: finalModel, ok: false, errorClass: error.message, detail: error.detail, usage: EMPTY_USAGE, costUsd: 0, ms: 0 });
     }
     const { data: failed, error: failError } = await recordFailure(usage, error instanceof Error ? error.message : "generation_failed", attempts);
-    if (failError || !failed) return NextResponse.json({ message: en ? "The generation state needs an operations review." : "생성 상태를 저장하지 못해 운영 확인이 필요합니다." }, { status: 500 });
+    if (failError || !failed) return NextResponse.json({ message: en ? "The generation state needs an operations review." : "생성 상태를 저장하지 못했습니다. 운영팀 확인이 필요합니다." }, { status: 500 });
     if (reserved.report) {
-      return NextResponse.json({ report: reserved.report, correctionFailed: true, generationCount: reserved.generation_count, message: en ? "The correction attempt failed. The previous report is unchanged, and the included correction attempt was used." : "사실 정정 생성에 실패해 이전 보고서는 변경되지 않았으며, 포함된 정정 시도 1회는 사용되었습니다." });
+      return NextResponse.json({ report: reserved.report, correctionFailed: true, generationCount: reserved.generation_count, message: en ? "The correction attempt failed. The previous report is unchanged, and the included correction attempt was used." : "사실 정정 재생성에 실패했습니다. 이전 보고서는 그대로 유지되며, 포함된 정정 시도 1회는 사용된 것으로 처리됩니다." });
     }
     return NextResponse.json({ message: en ? "The report could not be completed. You can retry once." : "보고서를 완성하지 못했습니다. 한 번 다시 시도할 수 있습니다." }, { status: 502 });
   }

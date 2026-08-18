@@ -73,7 +73,7 @@ describe("생성 진행 플로우차트", () => {
     // "출처"라는 글자 자체는 단계 설명문(공개 자료 조사·출처 검증)에도 나오므로,
     // 요약 문구 "N건 · 발견 M건" 형태로 정확히 대조한다.
     const withSummary = render("report", { researchSummary: { sources: 6, findings: 4 } });
-    expect(withSummary).toContain("출처 6건 · 발견 4건");
+    expect(withSummary).toContain("출처 6건 · 조사 결과 4건");
     const withoutSummary = render("report");
     expect(withoutSummary).not.toContain("건 · 발견");
   });
@@ -85,7 +85,7 @@ describe("생성 진행 플로우차트", () => {
 
   it("활성 단계별 소요 예상 문구를 보여준다", () => {
     expect(render("research")).toContain("보통 1분 안팎");
-    expect(render("report")).toContain("가장 긴 단계입니다");
+    expect(render("report")).toContain("가장 긴 단계");
     expect(render("finalize")).toContain("몇 초");
     // 실측이 없는 단계는 지어내지 않는다.
     expect(render("context")).not.toContain("보통");

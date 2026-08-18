@@ -2,7 +2,7 @@ import { z } from "zod";
 import { getIntakeQuestions, type SurveyVersion } from "@/lib/intake-questions";
 import { resolveAssessmentQuestions } from "@/lib/readiness";
 import { canonicalResearchUrl } from "@/lib/research-sources";
-import { PRODUCT_COPY, REQUIRED_INPUT_BY_AGENT } from "@/lib/catalog/copy";
+import { INTAKE_FIELD_LABEL, PRODUCT_COPY, REQUIRED_INPUT_BY_AGENT } from "@/lib/catalog/copy";
 import type { ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
 
 /**
@@ -236,16 +236,11 @@ export function auditAiAgentIntake(intake: Record<string, unknown>, baseline: Re
   });
 }
 
-const intakeLabels = {
-  ko: { objective: "이번 업무의 의사결정 목표", offering: "제품·서비스", targetCountry: "목표국가", targetCustomer: "목표고객", currentEvidence: "현재 증거", constraints: "제약", resources: "가용자원", deadline: "계획기한" },
-  en: { objective: "decision objective", offering: "offering", targetCountry: "target country", targetCustomer: "target customer", currentEvidence: "current evidence", constraints: "constraints", resources: "available resources", deadline: "deadline" }
-} as const;
-
-/** 공통 필드는 짧은 라벨로, 특화 칸은 상세 페이지 "필요 정보"와 같은 문장으로 되묻는다. */
+/** 공통 칸은 입력 화면과 같은 이름(INTAKE_FIELD_LABEL)으로, 특화 칸은 상세 페이지 "필요 정보"와 같은 문장으로 되묻는다. */
 function intakeFieldLabel(field: string, locale: "ko" | "en") {
   const agentId = serviceAgentId(field);
   if (agentId) return `[${PRODUCT_COPY[agentId]?.title[locale] ?? agentId}] ${REQUIRED_INPUT_BY_AGENT[agentId]?.[locale] ?? ""}`.trim();
-  return intakeLabels[locale][field as keyof typeof intakeLabels.ko] ?? field;
+  return INTAKE_FIELD_LABEL[field]?.[locale] ?? field;
 }
 
 /** 빠진 필드(공통 8개 또는 service:<agentId>)를 최대 4개까지 추가질문으로 바꾼다. */
@@ -254,7 +249,7 @@ export function clarificationQuestions(fields: string[], locale: "ko" | "en") {
     id: field,
     question: locale === "en"
       ? `Please provide ${intakeFieldLabel(field, locale)}, or answer “unknown” so the AI can use labelled analog assumptions.`
-      : `${intakeFieldLabel(field, locale)}을 알려주세요. 모르면 ‘모름’이라고 답하면 AI가 유사사례 가정으로 보완합니다.`
+      : `${intakeFieldLabel(field, locale)}을 알려주세요. 모르면 ‘모름’이라고 답하면 AI가 유사 사례 가정으로 보완합니다.`
   }));
 }
 

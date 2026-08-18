@@ -45,8 +45,8 @@ describe("AI 전문가 입력 화면의 상품별 특화 칸", () => {
     expect(markup).toContain("규제 요건 조사");
     expect(markup).toContain("소재·성분·용도");
     // 모름 체크박스는 보조기술이 필드명과 함께 읽는다.
-    expect(markup).toContain('aria-label="규제 요건 조사 — 모름 — 유사사례로 추론"');
-    expect(markup).toContain('aria-label="이번 업무로 내릴 결정 — 모름 — 유사사례로 추론"');
+    expect(markup).toContain('aria-label="규제 요건 조사 — 모름 — 유사 사례로 추론"');
+    expect(markup).toContain('aria-label="이번 업무로 내릴 결정 — 모름 — 유사 사례로 추론"');
   });
 
   it("첨부 안내에 상품별 유용한 자료와 PDF 변환 팁을 붙인다", () => {

@@ -91,7 +91,7 @@ export const PRODUCT_COPY: Record<string, ProductCopy> = {
     deliverables: { ko: ["확정된 품목 분류와 대안 검토", "필요 인허가 목록과 근거", "자격자 검토 의견"], en: ["Confirmed classification with alternatives", "Required approvals with basis", "Licensed expert opinion"] }
   },
   "hx-gtm-review": {
-    title: { ko: "GTM 실행계획 검토·코칭", en: "GTM Plan Review & Coaching" },
+    title: { ko: "GTM 실행 계획 검토·코칭", en: "GTM Plan Review & Coaching" },
     description: { ko: "현장에서 GTM을 실행해 본 전문가가 계획의 현실성을 점검하고 무엇을 먼저 할지 함께 정합니다.", en: "An operator who has run GTM in the field checks whether the plan is realistic and helps set the first moves." },
     deliverables: { ko: ["실행 가능성 검토 의견", "우선순위 조정안", "1시간 코칭 세션"], en: ["Feasibility review", "Reprioritized plan", "One-hour coaching session"] }
   },
@@ -120,6 +120,40 @@ export const PRODUCT_COPY: Record<string, ProductCopy> = {
     description: { ko: "자료를 함께 보며 깊이 논의해야 할 때 쓰는 2시간 상담입니다.", en: "A two-hour session for when you need to go through documents together." },
     deliverables: { ko: ["2시간 상담", "자료 검토 의견", "다음 액션 제안"], en: ["Two-hour session", "Review of your materials", "Suggested next actions"] }
   }
+};
+
+/**
+ * 결제 후 입력 화면의 공통 8칸 이름. 입력 화면·입력 확인·추가 질문 문장이 같은 표를 써야
+ * 사용자가 "아까 그 항목"으로 알아본다(전에는 화면과 서버가 각자 사본을 들고 있어 어긋났다).
+ */
+export const INTAKE_FIELD_LABEL: Record<string, Copy> = {
+  objective: { ko: "이번 업무로 내릴 결정", en: "Decision to make" },
+  offering: { ko: "제품·서비스", en: "Offering" },
+  targetCountry: { ko: "목표 국가·도시", en: "Target country and city" },
+  targetCustomer: { ko: "목표 고객", en: "Target customer" },
+  currentEvidence: { ko: "현재 보유한 증거·자료·URL", en: "Current evidence, materials, and URLs" },
+  constraints: { ko: "제약·금지사항", en: "Constraints and exclusions" },
+  resources: { ko: "가용 예산·인력·기간", en: "Available budget, people, and time" },
+  deadline: { ko: "계획 기한", en: "Planning deadline" }
+};
+
+/** 입력 확인 화면의 항목 상태 배지. 코드값(confirmed…)은 계약이라 그대로 두고 표시만 바꾼다. */
+export const INPUT_AUDIT_LABEL: Record<"confirmed" | "unclear" | "missing" | "conflicting", Copy> = {
+  confirmed: { ko: "확인됨", en: "confirmed" },
+  unclear: { ko: "불명확", en: "unclear" },
+  missing: { ko: "미입력", en: "missing" },
+  conflicting: { ko: "상충", en: "conflicting" }
+};
+
+/** 주문 상세 상단의 주문 상태 배지. 표에 없는 값은 코드값 그대로 보인다. */
+export const ORDER_STATUS_LABEL: Record<string, Copy> = {
+  pending: { ko: "결제 대기", en: "pending" },
+  paid: { ko: "결제 완료", en: "paid" },
+  service_started: { ko: "진행 중", en: "in progress" },
+  completed: { ko: "완료", en: "completed" },
+  cancelled: { ko: "취소", en: "cancelled" },
+  refunded: { ko: "환불", en: "refunded" },
+  disputed: { ko: "환불 검토 중", en: "under review" }
 };
 
 /** 어느 상품에나 필요한 기본 입력. 준비도 진단을 마쳤다면 대부분 자동으로 채워진다. */
@@ -155,7 +189,7 @@ export const ATTACHMENT_HINT_BY_AGENT: Record<string, Copy> = {
   "ai-customer-validation": { ko: "인터뷰·전환·파일럿 기록", en: "interview, conversion, or pilot records" },
   "ai-local-bmc": { ko: "가격표·결제·전달 흐름", en: "price list, payment and delivery flow" },
   "ai-tce-finance": { ko: "비용표·예산 근거", en: "cost table or budget basis" },
-  "ai-gtm-operations": { ko: "조직도·RACI·기존 실행계획", en: "org chart, RACI, existing plan" }
+  "ai-gtm-operations": { ko: "조직도·RACI·기존 실행 계획", en: "org chart, RACI, existing plan" }
 };
 export const ATTACHMENT_PDF_TIP: Copy = { ko: "엑셀·워드·PPT는 PDF로 내보내 첨부해 주세요.", en: "Export Excel, Word, or PowerPoint files to PDF before attaching." };
 

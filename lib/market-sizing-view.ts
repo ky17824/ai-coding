@@ -19,16 +19,16 @@ const TIERS: Tier[] = ["tam", "sam", "beachhead", "som"];
 
 const copy = {
   ko: {
-    heading: "시장규모 추정",
-    basis: (year: number, currency: string) => `${currency} · ${year}년 기준 · 모두 산식이 공개된 추정`,
+    heading: "시장 규모 추정",
+    basis: (year: number, currency: string) => `${currency} · ${year}년 기준 · 모든 값은 산식이 공개된 추정치입니다`,
     tier: { tam: "TAM", sam: "SAM", beachhead: "교두보 시장", som: "SOM" },
-    tierHint: { tam: "전체 시장", sam: "도달 가능 시장", beachhead: "최초 공략 세그먼트", som: "3~5년 획득 가능" },
+    tierHint: { tam: "전체 시장", sam: "도달 가능 시장", beachhead: "최초 공략 고객군", som: "3~5년 내 획득 가능" },
     method: { top_down: "하향식", bottom_up: "상향식", cross_check: "하향식×상향식 교차" },
     ratio: { sam: "TAM의", beachhead: "SAM의", som: "SAM의" } as Partial<Record<Tier, string>>,
-    range: (low: string, high: string) => `저 ${low} – 고 ${high}`,
-    chartTitle: "저–고 범위와 기준값",
-    chartScale: "로그 눈금 · 값이 수천 배 차이 나므로",
-    chartNote: "막대 = 저~고 범위, 세로 표식 = 기준값. 막대가 길수록 가정의 불확실성이 큽니다.",
+    range: (low: string, high: string) => `최소 ${low} – 최대 ${high}`,
+    chartTitle: "최소–최대 범위와 기준값",
+    chartScale: "로그 눈금(값이 수천 배 차이 나므로)",
+    chartNote: "막대 = 최소~최대 범위, 세로 표식 = 기준값. 막대가 길수록 가정의 불확실성이 큽니다.",
     consistency: "정합성"
   },
   en: {

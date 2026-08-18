@@ -112,7 +112,7 @@ describe("AI expert execution rules", () => {
     expect(service.id).toBe("service:ai-entry-requirements");
     expect(service.question).toContain("[규제 요건 조사]");
     expect(service.question).toContain("소재·성분·용도");
-    expect(common.question).toContain("가용자원");
+    expect(common.question).toContain("가용 예산·인력·기간");
     expect(clarificationQuestions(["service:ai-gtm-operations"], "en")[0].question).toContain("[GTM Execution & Local Operations]");
   });
 

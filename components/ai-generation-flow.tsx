@@ -39,19 +39,19 @@ const copy = {
     elapsed: (minutes: number) => `${minutes}분 경과`,
     stageElapsed: (seconds: number) => (seconds < 60 ? `이 단계 ${seconds}초 경과` : `이 단계 ${Math.floor(seconds / 60)}분 ${seconds % 60}초 경과`),
     working: (model: string) => `${model} · 작성 중`,
-    sources: (sources: number, findings: number) => `출처 ${sources}건 · 발견 ${findings}건`,
+    sources: (sources: number, findings: number) => `출처 ${sources}건 · 조사 결과 ${findings}건`,
     started: "시작",
     closeNote: "이 화면을 닫아도 작업은 계속되며, 다시 들어오면 이어서 볼 수 있습니다.",
     stageExpectation: {
       research: "보통 1분 안팎",
-      report: "보통 3~4분 — 가장 긴 단계입니다",
+      report: "보통 3~4분(가장 긴 단계)",
       finalize: "몇 초"
     } as Partial<Record<GenerationStage, string>>,
     stages: {
       context: { title: "입력 정리", body: "제출한 정보와 준비도 진단을 분류하고 조사 범위를 정합니다." },
       research: { title: "공개 자료 조사", body: "웹에서 근거를 찾고 출처 URL을 모읍니다. 최대 8회 검색합니다." },
       verify: { title: "출처 검증", body: "인용한 URL이 실제 검색 결과인지 대조합니다. 확인되지 않은 출처는 버립니다." },
-      report: { title: "보고서 작성", body: "모은 근거를 엮어 결론, 가정, 실행계획을 씁니다." },
+      report: { title: "보고서 작성", body: "모은 근거를 엮어 결론, 가정, 실행 계획을 씁니다." },
       finalize: { title: "최종 점검·저장", body: "준비도 문항 추적과 모순을 검사하고 저장합니다." }
     }
   },

@@ -3246,6 +3246,9 @@ main[lang="en"] .hero h1 {
   white-space: pre-wrap;
 }
 
+/* 생성 시작 버튼 아래 안내 한 줄. 버튼 라벨은 짧게, 설명은 여기로. */
+.ai-workspace__hint { margin: 0; color: var(--muted); font-size: 14px; }
+
 .ai-workspace__progress {
   min-height: 180px;
   display: grid;

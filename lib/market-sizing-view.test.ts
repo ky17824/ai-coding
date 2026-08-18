@@ -42,7 +42,7 @@ describe("시장규모 섹션 렌더", () => {
   it("카드에 기준값·저–고·상위 대비 비율을 넣는다", () => {
     const html = marketSizingHtml(sizing, "ko");
     expect(html).toContain("US$12억");
-    expect(html).toContain("저 8.8억 – 고 16억");
+    expect(html).toContain("최소 8.8억 – 최대 16억");
     expect(html).toContain("TAM의 7.1%"); // SAM 8,500만 / TAM 12억
     expect(html).toContain("SAM의 1.9%"); // SOM 162만 / SAM 8,500만
     expect(html).toContain("SAM의 20%"); // 교두보 1,700만 / SAM 8,500만
