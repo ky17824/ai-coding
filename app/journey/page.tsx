@@ -151,7 +151,7 @@ export default async function JourneyPage() {
           <>
             <div className="dashboard-section__heading">
               <span><span className="page-kicker">{en ? "APPROVED AI GTM PLAN" : "승인된 AI GTM 계획(Approved AI GTM Plan)"}</span><h2 className="plan-summary">{activePlan.summary}</h2></span>
-              <Link className="button button--soft" href={path(`/assistant/${activePlan.assessmentId}`)}>{en ? "Edit plan" : "계획 수정"}</Link>
+              <Link className="button button--ghost" href={path(`/assistant/${activePlan.assessmentId}`)}>{en ? "Edit plan" : "계획 수정"}</Link>
             </div>
             {activePlan.translationFallback && <p className="notice-banner">{en ? "Some saved content is shown in its original language." : "일부 저장 내용은 원문으로 표시합니다."}</p>}
             <div className="journey-board">
