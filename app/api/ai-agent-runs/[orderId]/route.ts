@@ -434,12 +434,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     // 스스로 판단했다. 실측(2026-08-17): Luna와 Sol이 각각 critical 문항 하나를 current_gate로
     // 낮춰 validateAiAgentReport에서 거절당했다. 값을 지시문에 직접 넣고 복사를 요구한다.
     const questionPriorityList = relevantQuestions.map((question) => `${question.questionId}=${question.priority}`).join(", ");
-    const reportInstructions = `${buildAiAgentInstructions(parsed.data.locale, service.title, service.deliverables)} ${(service.completionInstructions ?? []).join(" ")} ${en ? `Use every question ID exactly once in questionCoverage, ordered Critical, current_gate, low_score, other. Mark unused questions excluded with a reason. Cite source URLs only from publicEvidence. Resolve or explicitly record every contradiction. Required question IDs with the priority you MUST copy verbatim into questionCoverage.priority — do not re-judge them: ${questionPriorityList}.` : `모든 문항 ID를 questionCoverage에 정확히 한 번 넣고 Critical, current_gate, low_score, other 순서로 정렬하세요. 사용하지 않은 문항은 제외 이유를 적으세요. 출처 URL은 publicEvidence에 있는 것만 사용하세요. 모순은 모두 해결하거나 명시적으로 기록하세요. 각 문항의 priority는 아래 값을 **그대로** 복사하세요. 직접 판단하지 마세요: ${questionPriorityList}.`}`;
+    const reportInstructions = `${buildAiAgentInstructions(parsed.data.locale, service.title, service.deliverables)} ${(service.completionInstructions ?? []).join(" ")} ${en ? `questionCoverage must contain exactly the question IDs listed below — each once, no others (do not add not-applicable questions from readinessApplicability). Order Critical, current_gate, low_score, other. If you did not use one of the listed questions, keep it in the list with disposition excluded and a reason. Cite source URLs only from publicEvidence. Resolve or explicitly record every contradiction. Required question IDs with the priority you MUST copy verbatim into questionCoverage.priority — do not re-judge them: ${questionPriorityList}.` : `questionCoverage에는 아래 목록의 문항 ID만, 각각 정확히 한 번 넣으세요 — readinessApplicability의 해당 없음 문항 등 목록 밖 ID는 넣지 마세요. Critical, current_gate, low_score, other 순서로 정렬하세요. 목록의 문항 중 사용하지 않은 것은 빼지 말고 disposition을 excluded로 두고 이유를 적으세요. 출처 URL은 publicEvidence에 있는 것만 사용하세요. 모순은 모두 해결하거나 명시적으로 기록하세요. 각 문항의 priority는 아래 값을 **그대로** 복사하세요. 직접 판단하지 마세요: ${questionPriorityList}.`}`;
     const reportPayload = { product: { id: service.id, title: service.title, includedAgentIds: service.includedAgentIds, deliverables: service.deliverables }, privateContext, publicEvidence, privateFiles: referenceFiles.map((file) => file.fileName).filter(Boolean) };
     const reportResult = await runStage("final_report", (adapter, effort) =>
       adapter.writeReport({ locale: parsed.data.locale, effort, userHash, instructions: reportInstructions, payload: reportPayload, includedAgentIds: service.includedAgentIds, files: referenceFiles, deadlineAt }));
     await markStage("finalize");
     const report = normalizeReportTitles(reportResult.parsed);
+    // 계약 밖 문항(해당 없음으로 빠진 문항 등)을 모델이 excluded로 적어 넣는 일이 있다
+    // (실측 2026-08-18, Opus가 alloc-concentration을 추가). 그건 정보 손실이 없으니 버리고
+    // 진행한다. 누락·중복은 아래 validateAiAgentReport가 그대로 잡는다.
+    const contractSet = new Set(contractQuestionIds);
+    const strayCoverage = report.questionCoverage.filter((item) => !contractSet.has(item.questionId));
+    if (strayCoverage.length) {
+      console.warn("[ai-agent-run] stray questionCoverage dropped", { orderId, dropped: strayCoverage.map((item) => item.questionId) });
+      report.questionCoverage = report.questionCoverage.filter((item) => contractSet.has(item.questionId));
+    }
     validateAiAgentSources([...collectCitedUrls(report)], allowedUrls);
     validateAiAgentReport(report, {
       questionIds: contractQuestionIds,
