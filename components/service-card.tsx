@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ServiceOffering } from "@/lib/types";
-import { ArrowIcon } from "@/components/icons";
 import { localizedPath, type Locale } from "@/lib/i18n";
 
 const won = new Intl.NumberFormat("ko-KR");
@@ -41,10 +40,10 @@ export function ServiceCard({ service, locale = "ko" }: { service: ServiceOfferi
         </span>
         <Link
           href={localizedPath(`/services/${service.id}`, locale)}
-          className="icon-button"
-          aria-label={`${service.title} ${locale === "en" ? "details" : "상세 보기"}`}
+          className="button button--soft button--small"
+          aria-label={`${service.title} ${locale === "en" ? "details" : "자세히 보기"}`}
         >
-          <ArrowIcon />
+          {locale === "en" ? "Details" : "자세히 보기"}
         </Link>
       </div>
     </article>

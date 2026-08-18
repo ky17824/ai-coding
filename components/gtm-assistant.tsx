@@ -159,6 +159,16 @@ function coverageGapLabel(gap: string, en: boolean) {
   return labels[gap] ?? gap;
 }
 
+/** 모델이 본문에 남긴 마크다운 링크 `[라벨](https://…)`을 실제 링크로 그린다. 그 외 텍스트는 그대로. */
+function renderInlineLinks(text: string) {
+  const parts = text.split(/(\[[^\]]+\]\(https?:\/\/[^\s)]+\))/g);
+  return parts.map((part, index) => {
+    const match = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+    if (!match) return part;
+    return <a key={index} href={match[2]} target="_blank" rel="noreferrer">{match[1]}</a>;
+  });
+}
+
 export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion, locale, researchUploadsEnabled, initialResearchLimitReached, recommendedResearchService }: Props) {
   const en = locale === "en";
   const [planId, setPlanId] = useState(initialPlan?.id ?? "");
@@ -567,7 +577,7 @@ export function GtmAssistant({ assessment, actions, initialPlan, initialQuestion
             <section className="research-section"><h3>{en ? "Market boundary" : "시장 범위"}</h3><p className="market-definition">{marketResearch.marketDefinition.included}{marketResearch.marketDefinition.excluded ? ` · ${en ? "Excluded" : "제외"}: ${marketResearch.marketDefinition.excluded}` : ""}</p><div className="market-size-grid">{marketResearch.marketSizing.map((entry) => <MarketSizeCard key={entry.key} entry={entry} en={en} />)}</div></section>
             <section className="research-section"><h3>{en ? "Market trends" : "시장동향"}</h3><ResearchOverviewCard overview={buildTrendOverview(marketResearch.trends, en)} en={en} kind="trends"><details><summary>{en ? `View evidence for all ${marketResearch.trends.length} findings` : `전체 ${marketResearch.trends.length}개 조사 근거 보기`}</summary><TrendList entries={marketResearch.trends} en={en} /></details></ResearchOverviewCard></section>
             <section className="research-section"><h3>{en ? "Competitive landscape" : "경쟁구도"}</h3><ResearchOverviewCard overview={buildCompetitorOverview(marketResearch.competitors, en)} en={en} kind="competitors"><details><summary>{en ? `View evidence for all ${marketResearch.competitors.length} competitors` : `전체 ${marketResearch.competitors.length}개 경쟁 근거 보기`}</summary><CompetitorList entries={marketResearch.competitors} en={en} /></details></ResearchOverviewCard></section>
-            {marketResearch.contradictions.length > 0 && <section className="research-section research-contradictions"><h3>{en ? "Conflicting evidence" : "상충 근거"}</h3><ul>{marketResearch.contradictions.map((entry) => <li key={entry.topic}><strong>{entry.topic}</strong><span>{entry.summary}</span></li>)}</ul></section>}
+            {marketResearch.contradictions.length > 0 && <section className="research-section research-contradictions"><h3>{en ? "Conflicting evidence" : "상충 근거"}</h3><ul>{marketResearch.contradictions.map((entry) => <li key={entry.topic}><strong>{entry.topic}</strong><span>{renderInlineLinks(entry.summary)}</span></li>)}</ul></section>}
             <details className="research-coverage-details"><summary>{en ? "Research coverage and source mix" : "조사 범위와 출처 구성"}</summary><p>{en ? "Source mix" : "출처 구성"}: {Object.entries(marketResearch.researchCoverage.sourceTypes).map(([kind, count]) => `${en ? kind : ({ government: "정부·규제", industry: "산업자료", retail: "현지 유통", company: "기업 공식", consumer: "소비자", media: "미디어" }[kind] ?? kind)} ${count}`).join(" · ")}</p>{marketResearch.researchCoverage.coverageGaps.length > 0 && <p>{en ? "Coverage gaps" : "보완할 조사 범위"}: {marketResearch.researchCoverage.coverageGaps.map((gap) => coverageGapLabel(gap, en)).join(" · ")}</p>}</details>
             <div><h3>{en ? "Next validation tasks" : "다음 검증 과제"}</h3><ol>{marketResearch.nextExperiments.map((entry) => <li key={entry}>{entry}</li>)}</ol></div>
             <div className="research-report-cta">

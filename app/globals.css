@@ -744,6 +744,53 @@ main[lang="en"] .hero h1 {
   line-height: 0.9;
 }
 
+.preview-stages {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.preview-stage > span {
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.preview-stage small { color: var(--muted); }
+
+.preview-stage strong { font-size: 13px; }
+
+.preview-stages .meter--gate > span {
+  animation: bar-grow-x 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--delay, 0s) both;
+  transform-origin: left center;
+}
+
+@keyframes bar-grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.preview-gate {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.preview-verdict {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.preview-verdict span:last-child { font-weight: 500; color: var(--muted); }
+
 .chart {
   height: 180px;
   margin: 28px 0;
@@ -2548,6 +2595,16 @@ main[lang="en"] .hero h1 {
   line-height: 1.6;
 }
 
+.journey-empty {
+  margin: 8px 0 0;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-card);
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
 .journey-step-list {
   padding: 18px;
   display: grid;
@@ -2764,6 +2821,29 @@ main[lang="en"] .hero h1 {
 
 .detail-block {
   padding: 20px 0;
+}
+
+/* 서비스 상세: 제목·설명·제공자는 한 폭, 결과물/진행 방식/필요 정보/한계/환불은 2열로 접는다. */
+.service-main {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 32px;
+  align-content: start;
+}
+
+.service-main > :not(.detail-block) {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.service-main > h1,
+.service-main > .service-lead,
+.service-main > .provider-profile {
+  justify-self: stretch;
+}
+
+.service-main .detail-block {
+  min-width: 0;
 }
 
 .detail-block h2 {
@@ -3450,6 +3530,7 @@ main[lang="en"] .hero h1 {
 }
 
 .ai-report__summary {
+  max-width: 680px;
   max-width: 900px;
   font-size: 20px;
   line-height: 1.75;
@@ -3903,6 +3984,28 @@ fieldset.offering-picker {
   overflow: hidden;
   border-radius: var(--radius-pill);
   background: var(--track);
+}
+
+/* 통과 기준선이 있는 막대 — 대시보드 단계별 준비도·랜딩 미리보기. --gate(기본 80%) 위치에 얇은 세로선. */
+.meter--gate {
+  position: relative;
+  height: 10px;
+  overflow: visible;
+}
+
+.meter--gate > span {
+  border-radius: inherit;
+}
+
+.meter--gate::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: var(--gate, 80%);
+  width: 2px;
+  background: var(--ink);
+  opacity: 0.55;
 }
 
 .meter > span {

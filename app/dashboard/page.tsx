@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
@@ -167,7 +168,7 @@ export default async function DashboardPage({
               {stages.map((stage) => (
                 <div key={stage.id}>
                   <span><small>{stage.label}</small><strong>{displayDomainScores[stage.id] ?? 0}%</strong></span>
-                  <div className="meter"><span style={{ width: `${displayDomainScores[stage.id] ?? 0}%` }} /></div>
+                  <div className="meter meter--gate" style={{ "--gate": `${Math.round(GATE_THRESHOLD * 100)}%` } as CSSProperties}><span style={{ width: `${displayDomainScores[stage.id] ?? 0}%` }} /></div>
                 </div>
               ))}
             </div>

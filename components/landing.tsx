@@ -54,6 +54,9 @@ export function Landing({ locale }: { locale: Locale }) {
                   scoreEyebrow={m.preview.scoreEyebrow}
                   scoreLabel={m.preview.scoreLabel}
                   chartLabels={m.preview.chartLabels}
+                  gateLabel={m.preview.gateLabel}
+                  verdictBefore={m.preview.verdictBefore}
+                  verdictAfter={m.preview.verdictAfter}
                 />
                 <div className="preview-action">
                   <span className="action-number">01</span>

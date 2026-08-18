@@ -157,8 +157,11 @@ export default async function JourneyPage() {
             <div className="journey-board">
               {[30, 60, 90].map((horizon) => (
                 <section className="journey-column panel" key={horizon}>
-                  <header><span>{horizon}</span><div><h2>{en ? `${horizon}-Day Plan` : `단계별 실행계획(30·60·90 Day Plan) · ${horizon}일`}</h2><p>{en ? "Add completion evidence to move to the next horizon." : "완료 근거를 남기시면 다음 구간으로 넘어갑니다."}</p></div></header>
+                  <header><span>{horizon}</span><div><h2>{en ? `${horizon}-day plan` : `${horizon}일 계획`}</h2><p>{horizon === 30 ? (en ? "Add completion evidence to move to the next horizon." : "완료 근거를 남기시면 다음 구간으로 넘어갑니다.") : (en ? `Opens as ${horizon - 30}-day items are completed.` : `${horizon - 30}일 항목의 완료 근거가 쌓이면 열립니다.`)}</p></div></header>
                   <div className="journey-step-list">
+                    {activePlan.items.every((item) => item.horizon !== horizon) && (
+                      <p className="journey-empty">{en ? "No items in this horizon yet." : "이 구간에는 아직 항목이 없습니다."}</p>
+                    )}
                     {activePlan.items.filter((item) => item.horizon === horizon).map((item, index) => {
                       const expert = matchExpertSupport({
                         title: item.title,

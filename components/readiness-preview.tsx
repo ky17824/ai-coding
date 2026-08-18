@@ -3,12 +3,14 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { CountUp } from "@/components/count-up";
 
+/** 준비 1·2·3단계 점수. 마지막 장면에서 1단계가 통과 기준(80%)을 넘는다 — 제품이 실제로 보여 주는 것과 같은 그림. */
 export const READINESS_STAGES = [
-  { score: 62, bars: [64, 72, 56, 42, 78, 61] },
-  { score: 65, bars: [67, 75, 59, 45, 81, 64] },
-  { score: 78, bars: [80, 88, 72, 58, 94, 77] },
-  { score: 84, bars: [86, 94, 78, 64, 100, 83] }
+  { score: 32, bars: [32, 0, 0] },
+  { score: 58, bars: [58, 12, 0] },
+  { score: 74, bars: [74, 30, 0] },
+  { score: 84, bars: [84, 46, 8] }
 ] as const;
+export const GATE_PERCENT = 80;
 
 const STEP_MS = 2000;
 const FADE_MS = 300;
@@ -17,11 +19,17 @@ const RESET_MS = 1200;
 export function ReadinessPreview({
   scoreEyebrow,
   scoreLabel,
-  chartLabels
+  chartLabels,
+  gateLabel,
+  verdictBefore,
+  verdictAfter
 }: {
   scoreEyebrow: string;
   scoreLabel: string;
   chartLabels: readonly string[];
+  gateLabel: string;
+  verdictBefore: readonly string[];
+  verdictAfter: readonly string[];
 }) {
   const [stage, setStage] = useState(0);
   const [resetting, setResetting] = useState(false);
@@ -60,6 +68,7 @@ export function ReadinessPreview({
   }, []);
 
   const current = READINESS_STAGES[stage];
+  const verdict = current.score >= GATE_PERCENT ? verdictAfter : verdictBefore;
 
   return (
     <div className={`readiness-preview${resetting ? " is-resetting" : ""}`}>
@@ -72,21 +81,16 @@ export function ReadinessPreview({
           <CountUp to={current.score} />%
         </span>
       </div>
-      <div className="chart">
-        {current.bars.map((height, index) => (
-          <div className="chart__column" key={chartLabels[index]}>
-            <span
-              style={
-                {
-                  height: `${height}%`,
-                  "--delay": `${index * 0.12}s`
-                } as CSSProperties
-              }
-            />
-            <small>{chartLabels[index]}</small>
+      <div className="preview-stages" style={{ "--gate": `${GATE_PERCENT}%` } as CSSProperties}>
+        {current.bars.map((value, index) => (
+          <div className="preview-stage" key={chartLabels[index]}>
+            <span><small>{chartLabels[index]}</small><strong>{value}%</strong></span>
+            <div className="meter meter--gate" aria-hidden="true"><span style={{ width: `${value}%`, "--delay": `${index * 0.12}s` } as CSSProperties} /></div>
           </div>
         ))}
+        <small className="preview-gate">{gateLabel}</small>
       </div>
+      <p className="preview-verdict"><span>{verdict[0]}</span><span>{verdict[1]}</span></p>
     </div>
   );
 }
