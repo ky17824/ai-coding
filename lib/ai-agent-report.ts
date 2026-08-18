@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getIntakeQuestions, type SurveyVersion } from "@/lib/intake-questions";
 import { resolveAssessmentQuestions } from "@/lib/readiness";
-import { canonicalResearchUrl } from "@/lib/research-sources";
+import { canonicalResearchUrl, sanitizeResearchOutput } from "@/lib/research-sources";
 import { INTAKE_FIELD_LABEL, PRODUCT_COPY, REQUIRED_INPUT_BY_AGENT } from "@/lib/catalog/copy";
 import type { ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
 
@@ -144,11 +144,29 @@ export const aiPublicResearchSchema = z.object({
     title: z.string().trim().min(1).max(300),
     summary: reportText,
     counterEvidence: z.array(reportText).max(10),
-    sourceUrls: z.array(httpUrl).min(1).max(12)
+    // 실측(2026-08-19): 설명이 없으면 모델이 여기 제목·법령 번호를 적기도 한다 — 스키마 설명으로 못 박는다.
+    sourceUrls: z.array(httpUrl).min(1).max(12).describe("URLs from the web search results only, each starting with http:// or https:// — never a source title or a citation like a regulation number")
   })).min(1).max(30),
   sources: z.array(sourceSchema).min(1).max(60)
 });
 export type AiPublicResearch = z.infer<typeof aiPublicResearchSchema>;
+
+/**
+ * 조사 단계 구조화 출력을 스키마로 올린다 — 먼저 sanitizeResearchOutput으로 URL 자리를 정리한다.
+ * 실측(2026-08-19, 주문 2f8aaf21): 모델이 sourceUrls에 제목·법령 번호를 적어 zod가 65초짜리 조사를 통째로
+ * 거절했다. 살릴 수 있는 것은 살리고, 발견이 하나도 안 남으면 원인을 이름 붙여 던진다.
+ */
+export function parseResearchOutput(raw: unknown): AiPublicResearch {
+  const { cleaned, dropped } = sanitizeResearchOutput(raw);
+  if (dropped.values.length) console.warn("[ai-agent-run] research urls cleaned", { droppedFindings: dropped.findings, sample: dropped.values.slice(0, 5) });
+  const parsed = aiPublicResearchSchema.safeParse(cleaned);
+  if (parsed.success) return parsed.data;
+  const noFindings = parsed.error.issues.some((issue) => issue.path.length === 1 && issue.path[0] === "findings");
+  if (noFindings && dropped.findings) {
+    throw new Error(`조사 결과의 발견 ${dropped.findings}건이 모두 URL이 아닌 출처만 달고 있어 버려졌습니다 (예: ${dropped.values.slice(0, 3).map((value) => JSON.stringify(value)).join(", ")}).`);
+  }
+  throw parsed.error;
+}
 
 export const aiAgentReportSchema = z.object({
   title: z.string().trim().min(1).max(300),

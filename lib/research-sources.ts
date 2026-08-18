@@ -101,3 +101,47 @@ export function stripUnverifiedSources<T>(value: T, allowed: Set<string>, droppe
   }
   return value;
 }
+
+
+/**
+ * 조사 단계 구조화 출력의 URL 자리를 정리한다. 실측(2026-08-19, 주문 2f8aaf21 규제 조사): Luna가 findings의
+ * sourceUrls에 URL 대신 출처 제목·법령 번호("21 CFR 701.3")를 적어 zod가 단계 전체를 거절했다 — 65초짜리
+ * 조사가 통째로 버려졌다. 정보 손실 없이 살릴 수 있는 것만 살린다:
+ *   - sources[].title과 정확히(대소문자·공백 무시) 같은 문자열 → 그 출처의 URL로 치환
+ *   - 그 밖의 비URL 문자열 → 버림. URL이 하나도 안 남는 발견은 뺀다(근거 없는 발견은 남기지 않는다).
+ *   - sources[]에서 url이 URL이 아닌 항목 → 버림.
+ * 모양이 스키마와 아예 다르면 손대지 않는다 — zod가 원래 오류를 내게 둔다.
+ */
+export function sanitizeResearchOutput(raw: unknown): { cleaned: unknown; dropped: { findings: number; values: string[] } } {
+  const dropped = { findings: 0, values: [] as string[] };
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { cleaned: raw, dropped };
+  const input = raw as { findings?: unknown; sources?: unknown };
+  if (!Array.isArray(input.findings) || !Array.isArray(input.sources)) return { cleaned: raw, dropped };
+  const isHttp = (value: unknown): value is string => typeof value === "string" && /^https?:\/\/\S+$/i.test(value);
+  const norm = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+  const byTitle = new Map<string, string>();
+  const sources = input.sources.filter((source) => {
+    const url = (source as { url?: unknown } | null)?.url;
+    if (isHttp(url)) {
+      const title = (source as { title?: unknown }).title;
+      if (typeof title === "string" && title.trim()) byTitle.set(norm(title), url);
+      return true;
+    }
+    if (typeof url === "string") dropped.values.push(url);
+    return false;
+  });
+  const findings = input.findings.flatMap((finding) => {
+    const urls = (finding as { sourceUrls?: unknown } | null)?.sourceUrls;
+    if (!Array.isArray(urls)) return [finding];
+    const kept: string[] = [];
+    for (const value of urls) {
+      if (isHttp(value)) { kept.push(value); continue; }
+      const mapped = typeof value === "string" ? byTitle.get(norm(value)) : undefined;
+      if (mapped) kept.push(mapped);
+      else if (typeof value === "string") dropped.values.push(value);
+    }
+    if (!kept.length) { dropped.findings += 1; return []; }
+    return [{ ...(finding as object), sourceUrls: [...new Set(kept)] }];
+  });
+  return { cleaned: { ...(raw as object), findings, sources }, dropped };
+}

@@ -108,3 +108,42 @@ describe("collectAllowedResearchUrls — Anthropic 응답 모양", () => {
     expect(collectAllowedResearchUrls([content], []).size).toBe(0);
   });
 });
+
+// ---- 조사 출력 정리 (2026-08-19, 주문 2f8aaf21) ---------------------------------
+import { sanitizeResearchOutput } from "@/lib/research-sources";
+
+describe("sanitizeResearchOutput — 모델이 URL 자리에 제목·법령 번호를 적어도 살릴 수 있는 만큼 살린다", () => {
+  const sources = [
+    { title: "FDA Cosmetics Labeling Guide", url: "https://www.fda.gov/cosmetics/labeling", publisher: "FDA", kind: "official", publishedAt: "2026-01-01", checkedAt: "2026-08-19" },
+    { title: "eCFR 21 CFR 701", url: "https://www.ecfr.gov/current/title-21/part-701", publisher: "eCFR", kind: "official", publishedAt: "2026-01-01", checkedAt: "2026-08-19" }
+  ];
+
+  it("출처 제목과 정확히 같은 문자열은 그 출처 URL로 바꾸고, 그 밖의 비URL은 버리며, URL이 하나도 안 남는 발견은 뺀다", () => {
+    const raw = {
+      summary: "s",
+      findings: [
+        { title: "라벨링", summary: "s", counterEvidence: [], sourceUrls: ["FDA Cosmetics Labeling Guide"] },
+        { title: "성분", summary: "s", counterEvidence: [], sourceUrls: ["21 CFR 701.3", "https://www.ecfr.gov/current/title-21/part-701"] },
+        { title: "근거 없음", summary: "s", counterEvidence: [], sourceUrls: ["FDA 사이트 참고"] }
+      ],
+      sources
+    };
+    const { cleaned, dropped } = sanitizeResearchOutput(raw);
+    const c = cleaned as typeof raw;
+    expect(c.findings.map((f) => f.sourceUrls)).toEqual([["https://www.fda.gov/cosmetics/labeling"], ["https://www.ecfr.gov/current/title-21/part-701"]]);
+    expect(dropped.findings).toBe(1);
+    expect(dropped.values).toEqual(["21 CFR 701.3", "FDA 사이트 참고"]);
+  });
+
+  it("URL이 아닌 sources 항목도 버린다 — 나머지는 그대로 통과", () => {
+    const raw = { summary: "s", findings: [{ title: "t", summary: "s", counterEvidence: [], sourceUrls: ["https://a.com/x"] }], sources: [{ ...sources[0], url: "FDA" }, sources[1]] };
+    const { cleaned, dropped } = sanitizeResearchOutput(raw);
+    expect((cleaned as typeof raw).sources.map((s) => s.url)).toEqual(["https://www.ecfr.gov/current/title-21/part-701"]);
+    expect(dropped.values).toEqual(["FDA"]);
+  });
+
+  it("모양이 아예 다르면 손대지 않고 그대로 돌려준다 (zod가 원래 오류를 낸다)", () => {
+    expect(sanitizeResearchOutput(null).cleaned).toBeNull();
+    expect(sanitizeResearchOutput({ findings: "x" }).cleaned).toEqual({ findings: "x" });
+  });
+});

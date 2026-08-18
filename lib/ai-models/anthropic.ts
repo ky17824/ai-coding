@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { aiAgentReportSchema, aiPublicResearchSchema, publicClassificationSchema } from "@/lib/ai-agent-report";
+import { aiAgentReportSchema, aiPublicResearchSchema, publicClassificationSchema, parseResearchOutput } from "@/lib/ai-agent-report";
 import { toModelSchema } from "@/lib/ai-models/schema";
 import { EMPTY_USAGE, StageError, type Adapter } from "@/lib/ai-models/types";
 import type { ModelUsage } from "@/lib/ai-models/catalog";
@@ -93,7 +93,7 @@ function textOf(response: { content?: Array<{ type?: string; text?: string }> })
  * JSON input"만 남아 거절/손상 응답과 구별이 안 된다 — 이 저장소가 이미 그 원인 불명 실패로
  * 이틀을 날린 적이 두 번 있다.
  */
-function parseStructured<T extends z.ZodType>(schema: T, response: { stop_reason?: string | null; stop_details?: { category?: string | null; explanation?: string | null } | null; content?: Array<{ type?: string; text?: string }> }, stageSchemaName: string): z.infer<T> {
+function parseStructured<T extends z.ZodType>(schema: T, response: { stop_reason?: string | null; stop_details?: { category?: string | null; explanation?: string | null } | null; content?: Array<{ type?: string; text?: string }> }, stageSchemaName: string, parse?: (raw: unknown) => z.infer<T>): z.infer<T> {
   if (response.stop_reason === "max_tokens") throw new Error(`${stageSchemaName}: response was truncated (stop_reason=max_tokens) before it could be parsed`);
   // Fable 5·Opus 5의 안전 분류기는 HTTP 200에 stop_reason=refusal로 거절한다(내용은 비거나 일부).
   // 폴백 모델로 자동 재시도하지 않는다 — 라우팅은 폴백 없음이 원칙이라 관리자가 모델을 바꾸게 한다.
@@ -101,7 +101,9 @@ function parseStructured<T extends z.ZodType>(schema: T, response: { stop_reason
   const text = textOf(response);
   if (!text) throw new Error(`${stageSchemaName}: response had no text content to parse`);
   // 구조화 출력은 텍스트 블록에 JSON으로 온다. 길이 초과는 자르고, 나머지는 원래 Zod로 검증한다.
-  return parseTruncatingStrings(schema, JSON.parse(text));
+  // parse가 주어지면(조사 단계) 그 정리·검증 경로를 쓴다.
+  const json = JSON.parse(text);
+  return parse ? parse(json) : parseTruncatingStrings(schema, json);
 }
 
 function ensureBudget(deadlineAt: number) {
@@ -205,7 +207,7 @@ export function anthropicAdapter(model: string): Adapter {
           output_config: outputConfig(effort, aiPublicResearchSchema)
         });
         usage = addUsage(usage, usageOf(structured));
-        return { parsed: parseStructured(aiPublicResearchSchema, structured, "aiPublicResearchSchema"), usage, allowedUrls };
+        return { parsed: parseStructured(aiPublicResearchSchema, structured, "aiPublicResearchSchema", parseResearchOutput), usage, allowedUrls };
       } catch (err) {
         // F3의 잘림/빈 텍스트 메시지, pause_turn 상한, 예산 초과 메시지를 그대로 보존하고 usage만 얹는다.
         throw new StageError((err as Error).message, usage, { cause: err });

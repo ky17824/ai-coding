@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { lenientZodTextFormat as zodTextFormat } from "@/lib/lenient-text-format";
-import { aiAgentReportSchema, aiPublicResearchSchema, publicClassificationSchema } from "@/lib/ai-agent-report";
+import { aiAgentReportSchema, aiPublicResearchSchema, parseResearchOutput, publicClassificationSchema } from "@/lib/ai-agent-report";
 import { collectAllowedResearchUrls } from "@/lib/research-sources";
 import type { ModelUsage } from "@/lib/ai-models/catalog";
 import type { Adapter } from "@/lib/ai-models/types";
@@ -59,7 +59,7 @@ export function openaiAdapter(model: string): Adapter {
         text: { format: zodTextFormat(aiPublicResearchSchema, "ai_public_research") }
       });
       return {
-        parsed: aiPublicResearchSchema.parse(response.output_parsed),
+        parsed: parseResearchOutput(response.output_parsed),
         usage: usageOf(response),
         allowedUrls: collectAllowedResearchUrls([response.output], [])
       };
