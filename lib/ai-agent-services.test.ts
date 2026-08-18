@@ -66,10 +66,10 @@ describe("AI expert service catalog", () => {
     const ko = getAiAgentService("ai-market-intelligence", "ko");
     const en = getAiAgentService("ai-market-intelligence", "en");
 
-    expect(ko?.title).toBe("심층 시장조사");
+    expect(ko?.title).toBe("심층 시장 조사");
     expect(ko?.deliverables).toEqual([
       "후보 국가와 목표 고객 비교",
-      "시장규모 추정: 하향식·상향식 TAM·SAM·SOM과 교두보 시장 (최소·기준·최대)",
+      "시장 규모 추정: 하향식·상향식 TAM·SAM·SOM과 교두보 시장(최소·기준·최대)",
       "경쟁 구도와 근거 목록"
     ]);
     expect(en?.title).toBe("In-depth Market Research");
@@ -78,11 +78,11 @@ describe("AI expert service catalog", () => {
   });
 
   it("uses plain Korean service names", () => {
-    expect(getAiAgentService("ai-local-bmc", "ko")?.title).toBe("현지화 사업모델 설계");
+    expect(getAiAgentService("ai-local-bmc", "ko")?.title).toBe("현지화 사업 모델 설계");
     expect(getAiAgentService("ai-local-bmc", "en")?.title).toBe("Local Business Model Design");
     expect(getAiAgentService("ai-tce-finance", "ko")?.title).toBe("진입 비용·자금 계획");
     expect(getAiAgentService("ai-tce-finance", "en")?.title).toBe("Entry Cost & Funding Plan");
-    // 필요정보는 상품별로 달라졌다. 상세 계약은 lib/catalog/catalog.test.ts가 검증한다.
+    // 필요 정보는 상품별로 달라졌다. 상세 계약은 lib/catalog/catalog.test.ts가 검증한다.
     expect(getAiAgentService("pkg-entry-design", "ko")?.requiredInputs?.[0]).toContain("목표 국가와 고객");
   });
 });

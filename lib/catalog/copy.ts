@@ -9,32 +9,32 @@ export interface ProductCopy {
 /** 상품별 고객 화면 문구. 코드 로직과 분리되어 있어 비개발자도 이 파일만 검토하면 된다. */
 export const PRODUCT_COPY: Record<string, ProductCopy> = {
   "ai-market-intelligence": {
-    title: { ko: "심층 시장조사", en: "In-depth Market Research" },
-    description: { ko: "어느 나라의 어떤 고객을 먼저 공략할지, 그 시장이 얼마나 큰지(TAM·SAM·SOM), 누가 이미 경쟁하고 있는지를 출처와 함께 정리합니다.", en: "Research target markets, ICP, TAM, SAM, SOM, beachhead market, and competition with traceable evidence." },
+    title: { ko: "심층 시장 조사", en: "In-depth Market Research" },
+    description: { ko: "어느 국가의 어떤 고객군을 우선 공략할지, 시장 규모(TAM·SAM·SOM)는 얼마나 되는지, 어떤 경쟁사가 진출해 있는지를 출처와 함께 정리합니다.", en: "Research target markets, ICP, TAM, SAM, SOM, beachhead market, and competition with traceable evidence." },
     deliverables: {
-      ko: ["후보 국가와 목표 고객 비교", "시장규모 추정: 하향식·상향식 TAM·SAM·SOM과 교두보 시장 (최소·기준·최대)", "경쟁 구도와 근거 목록"],
+      ko: ["후보 국가와 목표 고객 비교", "시장 규모 추정: 하향식·상향식 TAM·SAM·SOM과 교두보 시장(최소·기준·최대)", "경쟁 구도와 근거 목록"],
       en: ["Market and ICP comparison", "In-depth Top-Down and Bottom-Up TAM, SAM, SOM, and Beachhead Market sizing (low/base/high)", "Competition and evidence ledger"]
     }
   },
   "ai-customer-validation": {
     title: { ko: "고객 검증·실증 시험", en: "Customer Validation" },
-    description: { ko: "지금 가진 고객 반응이 근거로 충분한지 점검하고, 인터뷰와 유료 시범판매를 어떤 기준으로 성공·중단할지 설계합니다.", en: "Audit customer evidence and design interviews and paid pilots with KPIs and stop criteria." },
+    description: { ko: "현재 확보한 고객 반응이 충분한 근거인지 점검하고, 인터뷰와 유료 시범 판매의 성공·중단 기준을 설계합니다.", en: "Audit customer evidence and design interviews and paid pilots with KPIs and stop criteria." },
     deliverables: {
-      ko: ["고객 근거 점검", "인터뷰·유료 시범판매 설계", "성과 지표와 중단 기준"],
+      ko: ["고객 근거 점검", "인터뷰·유료 시범 판매 설계", "성과 지표와 중단 기준"],
       en: ["Customer evidence audit", "Interview and paid-pilot design", "KPIs and stop criteria"]
     }
   },
   "ai-local-bmc": {
-    title: { ko: "현지화 사업모델 설계", en: "Local Business Model Design" },
-    description: { ko: "현지에 맞는 사업모델을 9개 항목으로 다시 짜고, 거래 방식과 가격·결제·고객 경험 가운데 무엇을 그대로 두고 무엇을 바꾸거나 시험할지 정리합니다.", en: "Design a local business model and the keep/change/test backlog across practices, price, payment, and customer journey." },
+    title: { ko: "현지화 사업 모델 설계", en: "Local Business Model Design" },
+    description: { ko: "현지에 맞는 사업 모델을 9개 항목으로 재구성하고, 거래 방식과 가격·결제·고객 경험 가운데 유지할 항목과 변경하거나 시험할 항목을 정리합니다.", en: "Design a local business model and the keep/change/test backlog across practices, price, payment, and customer journey." },
     deliverables: {
-      ko: ["현지 사업모델 9개 항목", "현지화 진단 6개 축(BMLC·LPA)", "유지·변경·시험 항목 목록"],
+      ko: ["현지 사업 모델 9개 항목", "현지화 진단 6개 축(BMLC·LPA)", "유지·변경·시험 항목 목록"],
       en: ["Nine-block local BMC", "BMLC and six LPA axes", "Keep/change/test backlog"]
     }
   },
   "ai-entry-requirements": {
     title: { ko: "규제 요건 조사", en: "Regulatory Requirements Research" },
-    description: { ko: "정부·기관의 공식 자료를 근거로 어떤 인허가·인증·표시가 필요한지, 아직 확인되지 않은 위험은 무엇인지 정리합니다. 품목 분류의 확정은 자격자 검토가 필요합니다.", en: "Use official sources to map required approvals, certification, labelling, and unresolved risks. Confirming the product classification itself requires a licensed expert." },
+    description: { ko: "정부와 관계 기관의 공식 자료를 근거로 어떤 인허가·인증·표시가 필요한지, 아직 확인되지 않은 위험은 무엇인지 정리합니다. 품목 분류의 확정은 자격자 검토가 필요합니다.", en: "Use official sources to map required approvals, certification, labelling, and unresolved risks. Confirming the product classification itself requires a licensed expert." },
     deliverables: {
       ko: ["공식 자료 기준 요건표", "미확인 위험과 재확인 시점", "분류 확정에 필요한 확인 항목"],
       en: ["Official-source requirements", "Open risks and review dates", "What a licensed expert still needs to confirm"]
@@ -42,7 +42,7 @@ export const PRODUCT_COPY: Record<string, ProductCopy> = {
   },
   "ai-partner-research": {
     title: { ko: "파트너·생태계 조사", en: "Partner & Ecosystem Research" },
-    description: { ko: "도시와 산업 거점별로 만나야 할 곳과 파트너 후보를 찾고, 무엇을 확인해야 하는지, 한 곳에 의존하면 어떤 위험이 있는지까지 정리합니다.", en: "Map city and cluster stakeholders, partner candidates, validation questions, and dependency risks." },
+    description: { ko: "도시와 산업 거점별로 접촉해야 할 기관과 파트너 후보를 찾고, 확인할 사항과 특정 파트너에 의존할 때의 위험까지 정리합니다.", en: "Map city and cluster stakeholders, partner candidates, validation questions, and dependency risks." },
     deliverables: {
       ko: ["생태계 지도", "파트너 후보와 검증 항목", "접촉 시 질문과 대체 경로"],
       en: ["Ecosystem map", "Partner shortlist and validation", "Outreach questions and alternatives"]
@@ -50,33 +50,33 @@ export const PRODUCT_COPY: Record<string, ProductCopy> = {
   },
   "ai-tce-finance": {
     title: { ko: "진입 비용·자금 계획", en: "Entry Cost & Funding Plan" },
-    description: { ko: "진출에 드는 총비용과 자금이 버티는 기간, 최소한으로 시작할 범위를 숫자로 계산하고, 어느 지점에서 예산을 다시 판단할지와 공급 여력이 충분한지도 함께 봅니다.", en: "Quantify total cost of entry, runway, minimum scope, budget gates, and capacity risks." },
+    description: { ko: "진출에 필요한 총비용과 가용 자금으로 운영할 수 있는 기간, 최소 실행 범위를 계산하고, 예산 재검토 시점과 공급 여력도 함께 분석합니다.", en: "Quantify total cost of entry, runway, minimum scope, budget gates, and capacity risks." },
     deliverables: {
-      ko: ["총 진입비용과 자금 유지 기간", "시나리오 손익", "예산 재검토 시점과 공급 병목"],
+      ko: ["총 진입 비용과 자금 유지 기간", "시나리오별 손익", "예산 재검토 시점과 공급 병목"],
       en: ["TCE and runway", "Scenario economics", "Budget gates and capacity bottlenecks"]
     }
   },
   "ai-gtm-operations": {
     title: { ko: "GTM 실행·현지 운영", en: "GTM Execution & Local Operations" },
-    description: { ko: "어떤 방식으로 팔지 정하고, 누가 무엇을 책임지는지와 30·60·90일 계획, 성과 지표, 되돌릴 기준까지 바로 쓸 수 있는 문서로 만듭니다.", en: "Turn evidence into a GTM motion, RACI, KPIs, 30/60/90-day plan, and rollback criteria." },
+    description: { ko: "판매 방식과 담당자의 책임을 정하고, 30·60·90일 실행 계획, 성과 지표, 재검토·철수 기준을 즉시 활용할 수 있는 문서로 작성합니다.", en: "Turn evidence into a GTM motion, RACI, KPIs, 30/60/90-day plan, and rollback criteria." },
     deliverables: {
-      ko: ["한 장짜리 GTM 요약과 성과 지표 체계", "역할·책임 분담표(RACI)와 권한표", "30·60·90일 계획"],
+      ko: ["1페이지 GTM 요약과 성과 지표 체계", "역할·책임 분담표(RACI)와 권한표", "30·60·90일 계획"],
       en: ["One-page GTM and KPI tree", "RACI and authority map", "30/60/90-day plan"]
     }
   },
   "pkg-feasibility": {
     title: { ko: "진출 가능성 진단", en: "Market Entry Feasibility" },
-    description: { ko: "시장 규모와 규제 요건, 파트너 후보를 한 번에 조사해 이 나라에 들어갈 만한지부터 판단합니다.", en: "Research market size, regulatory requirements, and partner candidates together to judge whether this market is worth entering." },
+    description: { ko: "시장 규모와 규제 요건, 파트너 후보를 함께 조사하여 해당 국가에 진출할 가치가 있는지 판단합니다.", en: "Research market size, regulatory requirements, and partner candidates together to judge whether this market is worth entering." },
     deliverables: {
-      ko: ["시장규모와 경쟁 구도", "공식 자료 기준 규제 요건", "파트너 후보와 접촉 질문"],
+      ko: ["시장 규모와 경쟁 구도", "공식 자료 기준 규제 요건", "파트너 후보와 접촉 질문"],
       en: ["Market sizing and competition", "Official-source regulatory requirements", "Partner candidates and outreach questions"]
     }
   },
   "pkg-entry-design": {
     title: { ko: "진출 설계", en: "Market Entry Design" },
-    description: { ko: "AI가 할 수 있는 조사와 설계를 모두 묶어, 어디에 무엇을 가지고 들어가 어떻게 팔지까지 한 번에 정리합니다.", en: "Bundle every AI-completable research and design step into one plan: where to enter, with what, and how to sell." },
+    description: { ko: "AI가 수행할 수 있는 조사와 설계를 종합하여 어느 시장에 어떤 제품으로 진출하고 어떻게 판매할지 정리합니다.", en: "Bundle every AI-completable research and design step into one plan: where to enter, with what, and how to sell." },
     deliverables: {
-      ko: ["시장·규제·파트너 조사 일체", "현지 사업모델과 고객 검증 설계", "진입 비용과 30·60·90일 실행계획"],
+      ko: ["시장·규제·파트너 조사 결과 종합", "현지 사업 모델과 고객 검증 설계", "진입 비용과 30·60·90일 실행 계획"],
       en: ["Market, regulatory, and partner research", "Local business model and validation design", "Entry cost and a 30/60/90-day plan"]
     }
   },
@@ -124,28 +124,45 @@ export const PRODUCT_COPY: Record<string, ProductCopy> = {
 
 /** 어느 상품에나 필요한 기본 입력. 준비도 진단을 마쳤다면 대부분 자동으로 채워진다. */
 export const SHARED_REQUIRED_INPUT: Copy = {
-  ko: "목표 국가와 고객, 판매할 제품 또는 서비스 (준비도 진단 답변에서 자동으로 불러옵니다)",
-  en: "Target country, customer, and offering (carried over from your readiness answers)"
+  ko: "목표 국가와 고객은 준비도 진단에서 불러옵니다. 판매할 제품 또는 서비스는 여기에서 확인해 주세요.",
+  en: "Target country and customer come from your readiness answers. Confirm the offering here."
 };
 
 /**
  * 상품별 추가 입력. 전 상품에 같은 세 줄을 붙이면 무엇을 준비해야 하는지 알 수 없다.
  * B 계층은 여기 적힌 회사 내부 정보가 없으면 결과가 유사사례 가정으로 채워진다.
+ *
+ * 상세 페이지의 "필요 정보"이자, 결제 후 입력 화면의 상품별 칸(intake.serviceInputs)의
+ * 보조문구이자, 비워 두면 나가는 추가질문 문구다. 세 곳이 같은 문장을 써야 사용자가
+ * "아까 본 그 항목"으로 알아본다.
  */
 export const REQUIRED_INPUT_BY_AGENT: Record<string, Copy> = {
-  "ai-market-intelligence": { ko: "비교하고 싶은 후보 국가가 있다면 함께 알려 주세요.", en: "Any candidate countries you want compared." },
+  "ai-market-intelligence": { ko: "비교할 후보 국가·도시(쉼표로 구분)와 단가·ARPU 등 상향식 산정에 쓸 근거", en: "Candidate countries or cities to compare (comma-separated) and unit price or ARPU for bottom-up sizing." },
   "ai-entry-requirements": { ko: "제품의 소재·성분·용도 등 품목 분류에 영향을 주는 정보", en: "Materials, ingredients, and intended use — anything that affects classification." },
-  "ai-partner-research": { ko: "찾는 파트너의 역할(유통·총판·시공 등)과 우선 도시", en: "The partner role you need (distributor, reseller, installer) and priority cities." },
-  "ai-customer-validation": { ko: "지금까지 받은 고객 반응과 그 근거 (인터뷰 기록, 유료 전환 기록 등)", en: "Customer responses so far and the evidence behind them (interviews, paid conversions)." },
-  "ai-local-bmc": { ko: "현재 사업모델 — 가격·결제 방식·전달 방식", en: "Your current business model: price, payment, and delivery." },
-  "ai-tce-finance": { ko: "쓸 수 있는 자금과 인건비, 목표 기한", en: "Available funds, personnel cost, and target date." },
-  "ai-gtm-operations": { ko: "조직 구성과 담당자, 각자의 권한 범위", en: "Your team, who owns what, and their authority." }
+  "ai-partner-research": { ko: "필요한 파트너의 역할(유통·총판·시공 등)과 우선 도시", en: "The partner role you need (distributor, reseller, installer) and priority cities." },
+  "ai-customer-validation": { ko: "지금까지 확보한 고객 반응과 그 근거(인터뷰 기록, 유료 전환 기록 등)", en: "Customer responses so far and the evidence behind them (interviews, paid conversions)." },
+  "ai-local-bmc": { ko: "현재 사업 모델: 가격·결제·전달 방식", en: "Your current business model: price, payment, and delivery." },
+  // 가용 자금·기간은 공통 칸(가용 예산·인력·기간, 계획기한)이 받는다. 여기서는 그 칸이 못 받는 것만 묻는다.
+  "ai-tce-finance": { ko: "월 인건비·고정비 등 비용 항목, 통화, 세금 포함 여부 (가용 자금과 기한은 위 공통 칸에)", en: "Cost lines such as monthly payroll and fixed costs, currency, and whether figures include tax (funds and deadline go in the shared fields above)." },
+  "ai-gtm-operations": { ko: "조직 구성과 담당자별 권한 범위", en: "Your team, who owns what, and their authority." }
 };
+
+/** 첨부 안내. 형식 제한(PDF·PNG·JPG)을 코드로 풀기 전에 문구로 흡수한다. */
+export const ATTACHMENT_HINT_BY_AGENT: Record<string, Copy> = {
+  "ai-market-intelligence": { ko: "자체 판매·가격 데이터", en: "your own sales or pricing data" },
+  "ai-entry-requirements": { ko: "사양서·성분표·인증서", en: "spec sheet, composition, certificates" },
+  "ai-partner-research": { ko: "기존 접촉·파트너 목록", en: "existing contacts or partner list" },
+  "ai-customer-validation": { ko: "인터뷰·전환·파일럿 기록", en: "interview, conversion, or pilot records" },
+  "ai-local-bmc": { ko: "가격표·결제·전달 흐름", en: "price list, payment and delivery flow" },
+  "ai-tce-finance": { ko: "비용표·예산 근거", en: "cost table or budget basis" },
+  "ai-gtm-operations": { ko: "조직도·RACI·기존 실행계획", en: "org chart, RACI, existing plan" }
+};
+export const ATTACHMENT_PDF_TIP: Copy = { ko: "엑셀·워드·PPT는 PDF로 내보내 첨부해 주세요.", en: "Export Excel, Word, or PowerPoint files to PDF before attaching." };
 
 /** 계층별 진행 방식 1단계. A는 공개 자료만으로, B는 회사 내부 정보가 있어야 끝난다. */
 export const TIER_FIRST_STEP: Record<Tier, Copy> = {
-  A: { ko: "공개 자료만으로 진행되므로 목표 국가·고객·제품만 확인하면 시작합니다.", en: "This runs on public sources, so it starts once the country, customer, and offering are confirmed." },
-  B: { ko: "회사 내부 정보가 필요합니다. 아래 필요정보를 채우지 않으면 그 부분은 유사사례 가정으로 표시됩니다.", en: "This needs information only you have. Anything you leave blank is filled with a labelled analog assumption." },
+  A: { ko: "공개 자료를 바탕으로 진행하므로 목표 국가와 고객, 제품 또는 서비스만 확인하면 시작할 수 있습니다.", en: "This runs on public sources, so it starts once the country, customer, and offering are confirmed." },
+  B: { ko: "회사 내부 정보가 필요합니다. 아래의 필요 정보를 입력하지 않으면 해당 내용은 유사 사례를 바탕으로 한 가정으로 표시됩니다.", en: "This needs information only you have. Anything you leave blank is filled with a labelled analog assumption." },
   C: { ko: "AI 조사 결과를 먼저 만들고, 배정된 자격자가 검토를 시작합니다.", en: "The AI research runs first, then the assigned licensed expert begins review." },
   D: { ko: "담당 전문가를 배정한 뒤 일정을 조율합니다.", en: "An expert is assigned and the schedule is arranged with you." },
   M: { ko: "멘토를 배정한 뒤 상담 일정을 잡습니다.", en: "A mentor is assigned and the session is scheduled." }
@@ -158,12 +175,12 @@ export const TIER_FIRST_STEP: Record<Tier, Copy> = {
  */
 export const HUMAN_BOUNDARY: Record<string, Copy> = {
   "ai-market-intelligence": { ko: "추정에 쓰인 가정을 받아들일지 여부는 직접 판단하셔야 합니다.", en: "Whether to accept the assumptions behind the estimates is your call." },
-  "ai-entry-requirements": { ko: "품목 분류와 인허가 가능 여부의 확정 — 관할 기관이나 관세사·변리사 확인이 필요합니다.", en: "Confirming the classification and whether approval is obtainable requires the authority or a licensed expert." },
-  "ai-partner-research": { ko: "파트너의 실재 여부와 거래 의향 — 직접 접촉해 확인하셔야 합니다.", en: "Whether a partner is real and willing to deal requires contacting them yourself." },
-  "ai-customer-validation": { ko: "인터뷰와 시범판매의 실제 수행 — 설계까지 제공하며 실행은 직접 하셔야 합니다.", en: "Running the interviews and pilots themselves; we design them, you execute." },
-  "ai-local-bmc": { ko: "현지 관행에 대한 최종 판단 — 현지에서의 확인이 필요합니다.", en: "The final read on local practice needs confirmation on the ground." },
-  "ai-tce-finance": { ko: "세무 처리와 계약의 효력 — 세무·법률 자문이 필요합니다.", en: "Tax treatment and contract effectiveness need a tax or legal advisor." },
-  "ai-gtm-operations": { ko: "조직 내 역할 배정과 실제 실행 — 계획까지 제공합니다.", en: "Assigning owners inside your organization and executing the plan; we provide the plan." }
+  "ai-entry-requirements": { ko: "품목 분류와 인허가 가능 여부를 확정하려면 관할 기관이나 관세사·변리사의 확인이 필요합니다.", en: "Confirming the classification and whether approval is obtainable requires the authority or a licensed expert." },
+  "ai-partner-research": { ko: "파트너의 실재 여부와 거래 의향은 직접 접촉해 확인하셔야 합니다.", en: "Whether a partner is real and willing to deal requires contacting them yourself." },
+  "ai-customer-validation": { ko: "인터뷰와 시범 판매의 설계까지만 제공하며, 실제 실행은 직접 하셔야 합니다.", en: "Running the interviews and pilots themselves; we design them, you execute." },
+  "ai-local-bmc": { ko: "현지 관행에 대한 최종 판단은 현지에서 직접 확인하셔야 합니다.", en: "The final read on local practice needs confirmation on the ground." },
+  "ai-tce-finance": { ko: "세무 처리와 계약의 효력은 세무·법률 전문가의 자문이 필요합니다.", en: "Tax treatment and contract effectiveness need a tax or legal advisor." },
+  "ai-gtm-operations": { ko: "조직 내 역할 배정과 실제 실행은 포함되지 않으며, 계획까지만 제공합니다.", en: "Assigning owners inside your organization and executing the plan; we provide the plan." }
 };
 
 /**
@@ -257,7 +274,7 @@ export const TIER_DISCLOSURE: Partial<Record<Tier, Copy>> = {
 export const REFUND_POLICY: CopyList = {
   ko: [
     "보고서 생성 시작 전에는 전액 환불됩니다.",
-    "생성 시작 후 요청은 주문·생성 기록을 기준으로 검토합니다."
+    "보고서 생성이 시작된 뒤의 환불 요청은 주문 및 생성 기록을 기준으로 검토합니다."
   ],
   en: [
     "A full refund is available before report generation begins.",
@@ -273,7 +290,7 @@ export const PROVIDER: { name: Copy; title: Copy; duration: Copy } = {
 /** 계층 배지. 카드 상단 pill 자리를 대체한다. */
 export const TIER_BADGE: Record<Tier, Copy> = {
   A: { ko: "AI 전용", en: "AI only" },
-  B: { ko: "AI + 내 정보", en: "AI + your input" },
+  B: { ko: "AI + 사용자 제공 정보", en: "AI + your input" },
   C: { ko: "전문가 검토", en: "Expert review" },
   D: { ko: "전문가 진행", en: "Expert-led" },
   M: { ko: "멘토", en: "Mentor" }

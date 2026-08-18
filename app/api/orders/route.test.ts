@@ -83,7 +83,7 @@ describe("service detail beta affordance", () => {
   it("shows a zero charge and says no checkout window opens", () => {
     // 플래그가 켜졌는데 화면이 55,000원 결제 버튼이면 관리자가 실수로 결제를 시도한다.
     expect(detail).toContain("관리자 테스트 청구액");
-    expect(detail).toContain("결제창은 열리지 않습니다");
+    expect(detail).toContain("결제 창은 열리지 않습니다");
     expect(detail).toContain("관리자 베타 테스트");
   });
 

@@ -3,7 +3,7 @@
 ## Source of truth
 
 - Status: Active
-- Last refreshed: 2026-08-16
+- Last refreshed: 2026-08-17
 - Primary product surfaces: 랜딩, 인증·온보딩, 단계별 준비도 진단, Gate 판정, 론칭 대상 정의, AI 시장·경쟁 사전조사, 준비 3단계 후 실제 판매 가능성 예비검증, AI GTM 공동계획, 대시보드·여정, 계획 보고서, 유료 AI 전문가 서비스
 - Evidence reviewed: live `https://global-gtm.vercel.app/en/dashboard`, `app/page.tsx`, `app/globals.css`, `public/fonts/PretendardVariable.woff2`, `components/site-header.tsx`, `components/assessment-form.tsx`, `components/gtm-assistant.tsx`, `components/google-button.tsx`, `components/signin-form.tsx`, `components/signup-form.tsx`, `app/auth/callback/route.ts`, `app/account/actions.ts`, `app/api/gtm-assistant/turn/route.ts`, `app/api/gtm-plans/[id]/export/route.ts`, `lib/gtm-assistant.ts`, `app/dashboard/page.tsx`, `app/journey/page.tsx`, `supabase/migrations/005_ai_gtm_assistant.sql`, `scripts/build-questionnaire-docx.js`, `docs/survey/*.docx`, `docs/specs/2026-08-04-auth-account-design.md`, `.omx/plans/2026-08-05-ai-gtm-assistant-plan.md`, `.omx/plans/2026-08-10-progressive-gate-ai-assistant.md`, `.omx/plans/2026-08-11-kakao-login-integration.md`, `.omx/plans/2026-08-11-full-english-localization.md`, external reference `DESIGN-starbucks.md`
 - Observed fact: 기존 UI는 `--ink`, `--green`, `--green-dark`, `--mint`, `--paper` 토큰과 흰색 panel, 12px 내외 radius, 짧은 상태 문구를 공통으로 사용한다.
@@ -193,6 +193,11 @@ Google로 계속하기
 ## Content voice
 
 - Tone: 존댓말, 짧고 실행 중심, 불확실성을 숨기지 않는 코치형 문장
+- Korean standard: 사용자에게 보이는 한글은 표준어와 한글 맞춤법을 따르고, 완전한 문장은 `합니다`, `해 주세요`, `하셔야 합니다` 계열의 합쇼체로 통일한다. 버튼·상태칩처럼 문장이 아닌 짧은 제어 문구는 명사형 또는 행동형으로 쓸 수 있다.
+- Spacing: 전문 용어라도 국어 문장에서는 `필요 정보`, `유사 사례`, `시장 규모`, `사업 모델`, `실행 계획`, `추가 질문`, `첨부 파일`, `카드 정보`, `결제 창`처럼 의미 단위로 띄어 쓴다. 제품명·법정 용어·고유 명칭은 공식 표기를 우선한다.
+- Natural Korean: 번역투와 불필요한 AI 전문 용어를 피한다. `자금이 버티는 기간`, `이 나라에 들어갈 만한지`, `프론티어 모델`처럼 구어적이거나 사용자의 결정에 필요하지 않은 표현은 각각 `가용 자금으로 운영할 수 있는 기간`, `해당 국가에 진출할 가치가 있는지`, `AI 모델`처럼 직접적이고 전문적인 한국어로 바꾼다.
+- Punctuation: 보충 설명을 넣는 괄호 앞에는 공백을 두지 않고, 정의·열거는 콜론을 사용한다. 문장 중간의 장식적 긴 줄표보다 완전한 서술문을 우선한다.
+- Review rule: 같은 의미의 공통 문구는 catalog 등 기존 단일 출처에서 관리하고, 새 한국어 문구는 맞춤법·띄어쓰기·경어법·화면 내 문체 일관성을 검토한 뒤 반영한다.
 - Terminology: `AI GTM 어시스턴트`, `론칭 대상`, `예비진단`, `시장·경쟁 사전조사`, `실제 판매 가능성 예비검증`, `검증 보류`, `AI 추정`, `창업자 입력`, `고객 행동 증거`, `지불 증거`, `외부 자료`, `계획 초안`, `확인 필요`, `전문가 확인`, `완료 증거`
 - Microcopy rules: AI가 했다고 말하기보다 사용자가 결정할 행동을 말한다. `추천`보다 `초안`, `정답`보다 `확인`, `완료`보다 증거 기준을 사용한다.
 - Market research microcopy: 약어만 단독으로 쓰지 않고 한글(영문 정식명칭)으로 표시한다. 시장 수치는 `확정`이 아니라 `추정 범위`, 경쟁사는 `전체 목록`이 아니라 `확인된 주요 후보`라고 쓴다.

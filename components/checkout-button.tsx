@@ -156,8 +156,8 @@ export function CheckoutButton({
         <span>
           {type === "ai_agent"
             ? betaMode
-              ? en ? "I agree to the AI service scope and private OpenAI processing of files I attach. Admin beta tests are not charged and are not eligible for a refund." : "AI 서비스 범위와 첨부파일의 OpenAI 비공개 처리에 동의합니다. 관리자 베타 테스트는 결제·환불 대상이 아닙니다."
-              : en ? "I agree to the AI service scope, private OpenAI processing of files I attach, and the full-refund policy before report generation starts." : "AI 서비스 범위, 첨부파일의 OpenAI 비공개 처리, 보고서 생성 시작 전 전액 환불 정책에 동의합니다."
+              ? en ? "I agree to the AI service scope and private OpenAI processing of files I attach. Admin beta tests are not charged and are not eligible for a refund." : "AI 서비스의 범위와 OpenAI의 첨부 파일 비공개 처리 방침을 확인하고 동의합니다. 관리자 베타 테스트는 결제·환불 대상이 아닙니다."
+              : en ? "I agree to the AI service scope, private OpenAI processing of files I attach, and the full-refund policy before report generation starts." : "AI 서비스의 범위, OpenAI의 첨부 파일 비공개 처리 방침, 보고서 생성 시작 전 전액 환불 정책을 확인하고 동의합니다."
             : en ? "I agree to the service scope, seller information, and full refund policy before service starts." : "서비스 범위, 판매자 정보, 서비스 시작 전 전액 환불 정책에 동의합니다."}
         </span>
       </label>
@@ -179,8 +179,8 @@ export function CheckoutButton({
       )}
       <small>
         {type === "ai_agent"
-          ? en ? "Borderless provides this AI expert service. Card details are handled in the PortOne payment window." : "Borderless가 AI 전문가 서비스를 제공합니다. 카드정보는 PortOne 결제창에서 처리됩니다."
-          : en ? "Borderless is a marketplace intermediary; the expert provides the service. Card details are handled in the PortOne payment window." : "Borderless는 통신판매중개자이며, 서비스 제공 당사자는 해당 전문가입니다. 카드정보는 PortOne·결제대행 서비스(Payment Gateway) 결제창에서 처리됩니다."}
+          ? en ? "Borderless provides this AI expert service. Card details are handled in the PortOne payment window." : "Borderless가 AI 전문가 서비스를 제공합니다. 카드 정보는 PortOne 결제 창에서 처리됩니다."
+          : en ? "Borderless is a marketplace intermediary; the expert provides the service. Card details are handled in the PortOne payment window." : "Borderless는 통신판매중개자이며, 서비스 제공 당사자는 해당 전문가입니다. 카드 정보는 PortOne·결제대행 서비스(Payment Gateway) 결제 창에서 처리됩니다."}
       </small>
     </div>
   );
