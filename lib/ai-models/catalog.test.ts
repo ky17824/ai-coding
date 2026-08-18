@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MODEL_CATALOG, costOf, isModelOptionVisible, modelSpec, parseModelKey, type ModelKey } from "@/lib/ai-models/catalog";
+import { MODEL_CATALOG, costOf, isModelOptionVisible, modelLabel, modelSpec, parseModelKey, type ModelKey } from "@/lib/ai-models/catalog";
 
 const KEYS = Object.keys(MODEL_CATALOG) as ModelKey[];
 
 describe("모델 허용 목록", () => {
   it("네 모델이 정확히 있고 키가 provider:model 형식이다", () => {
-    expect(KEYS.sort()).toEqual(["anthropic:claude-opus-5", "anthropic:claude-sonnet-5", "openai:gpt-5.6-luna", "openai:gpt-5.6-sol"]);
+    expect(KEYS.sort()).toEqual(["anthropic:claude-fable-5", "anthropic:claude-opus-5", "anthropic:claude-sonnet-5", "openai:gpt-5.6-luna", "openai:gpt-5.6-sol"]);
     for (const key of KEYS) {
       const spec = modelSpec(key);
       expect(`${spec.provider}:${spec.model}`).toBe(key);
@@ -47,6 +47,15 @@ describe("모델 허용 목록", () => {
     // (100000-20000)*0.2 + 20000*0.02 + 10000*1.2 = 16000+400+12000 = 28400 → 0.0284
     expect(costOf("openai:gpt-5.6-luna", usage)).toBeCloseTo(0.0284, 6);
     expect(modelSpec("openai:gpt-5.6-luna").webSearchUsdPerCall).toBe(0.01);
+  });
+
+  it("Fable 5 단가는 정확히 in 10 / cache-read 1 / cache-write 12.5 / out 50다 (Opus 5의 두 배)", () => {
+    const usage = { input: 100_000, cachedInput: 20_000, cacheWriteInput: 10_000, output: 10_000, webSearchCalls: 0 };
+    // (100000-20000-10000)*10 + 20000*1 + 10000*12.5 + 10000*50 = 700000+20000+125000+500000 = 1345000 → 1.345
+    expect(costOf("anthropic:claude-fable-5", usage)).toBeCloseTo(1.345, 6);
+    expect(costOf("anthropic:claude-fable-5", usage)).toBeCloseTo(costOf("anthropic:claude-opus-5", usage) * 2, 6);
+    expect(modelSpec("anthropic:claude-fable-5").model).toBe("claude-fable-5");
+    expect(modelLabel("anthropic:claude-fable-5")).toBe("Claude Fable 5");
   });
 
   it("기존 sol 계산과 결과가 같다 (회귀)", () => {

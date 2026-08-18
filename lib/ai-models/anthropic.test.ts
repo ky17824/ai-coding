@@ -106,6 +106,17 @@ describe("anthropicAdapter", () => {
     expect(createMock).not.toHaveBeenCalled();
   });
 
+  it("classify: 안전 분류기 거절(stop_reason=refusal)은 빈 JSON 오류가 아니라 거절 사유를 담은 StageError다 (Fable 5·Opus 5)", async () => {
+    // Fable 5는 HTTP 200에 stop_reason=refusal, content=[]로 거절한다. 폴백 모델로 자동 재시도하지 않는다.
+    createMock.mockResolvedValueOnce({ stop_reason: "refusal", stop_details: { type: "refusal", category: "cyber", explanation: null }, content: [], usage });
+    const promise = anthropicAdapter("claude-fable-5").classify({ locale: "ko", effort: "medium", userHash: "h", intake: {} });
+    await expect(promise).rejects.toThrow(/refusal/);
+    await expect(promise).rejects.toThrow("category=cyber");
+    expect(createMock.mock.calls[0][0].model).toBe("claude-fable-5");
+    // Fable 5는 thinking 파라미터를 보내면 안 된다(항상 켜져 있고 disabled는 400) — 어댑터는 원래 안 보낸다.
+    expect(createMock.mock.calls[0][0]).not.toHaveProperty("thinking");
+  });
+
   it("research: 정리 호출이 max_tokens로 잘리면 검색+정리 usage를 담은 StageError를 F3 메시지 그대로 던진다", async () => {
     const searchTurn = { stop_reason: "end_turn", role: "assistant", content: [{ type: "text", text: "found" }], usage: { ...usage, server_tool_use: { web_search_requests: 2 } } };
     const structureTurnTruncated = { stop_reason: "max_tokens", content: [textJson({ summary: "s" })], usage };

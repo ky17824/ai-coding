@@ -92,8 +92,11 @@ function textOf(response: { content?: Array<{ type?: string; text?: string }> })
  * JSON input"만 남아 거절/손상 응답과 구별이 안 된다 — 이 저장소가 이미 그 원인 불명 실패로
  * 이틀을 날린 적이 두 번 있다.
  */
-function parseStructured<T extends z.ZodType>(schema: T, response: { stop_reason?: string | null; content?: Array<{ type?: string; text?: string }> }, stageSchemaName: string): z.infer<T> {
+function parseStructured<T extends z.ZodType>(schema: T, response: { stop_reason?: string | null; stop_details?: { category?: string | null; explanation?: string | null } | null; content?: Array<{ type?: string; text?: string }> }, stageSchemaName: string): z.infer<T> {
   if (response.stop_reason === "max_tokens") throw new Error(`${stageSchemaName}: response was truncated (stop_reason=max_tokens) before it could be parsed`);
+  // Fable 5·Opus 5의 안전 분류기는 HTTP 200에 stop_reason=refusal로 거절한다(내용은 비거나 일부).
+  // 폴백 모델로 자동 재시도하지 않는다 — 라우팅은 폴백 없음이 원칙이라 관리자가 모델을 바꾸게 한다.
+  if (response.stop_reason === "refusal") throw new Error(`${stageSchemaName}: model refused (stop_reason=refusal${response.stop_details?.category ? `, category=${response.stop_details.category}` : ""})`);
   const text = textOf(response);
   if (!text) throw new Error(`${stageSchemaName}: response had no text content to parse`);
   // 구조화 출력은 텍스트 블록에 JSON으로 온다. 길이 초과는 자르고, 나머지는 원래 Zod로 검증한다.

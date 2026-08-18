@@ -1,10 +1,10 @@
 /**
  * AI 전문가 서비스가 쓸 수 있는 모델의 전부. 관리자는 이 목록 안에서만 고른다.
- * 단가는 2026-08-17 공식 문서 기준이며 코드 검토를 거쳐서만 바꾼다.
+ * 단가는 2026-08-17 공식 문서 기준(Fable 5는 2026-08-18)이며 코드 검토를 거쳐서만 바꾼다.
  */
 export type Provider = "openai" | "anthropic";
 export type Effort = "low" | "medium" | "high";
-export type ModelKey = "anthropic:claude-opus-5" | "anthropic:claude-sonnet-5" | "openai:gpt-5.6-sol" | "openai:gpt-5.6-luna";
+export type ModelKey = "anthropic:claude-fable-5" | "anthropic:claude-opus-5" | "anthropic:claude-sonnet-5" | "openai:gpt-5.6-sol" | "openai:gpt-5.6-luna";
 
 export type ModelSpec = {
   key: ModelKey;
@@ -29,6 +29,15 @@ export type ModelUsage = {
 };
 
 export const MODEL_CATALOG: Record<ModelKey, ModelSpec> = {
+  // Anthropic 최상위 모델(2026-08-18 추가). Opus 5의 두 배 단가($10/$50). 사고(thinking)는 항상 켜져
+  // 있어 thinking 파라미터를 보내지 않는다 — 어댑터가 원래 안 보낸다. 안전 분류기가 HTTP 200에
+  // stop_reason=refusal로 거절할 수 있어 어댑터가 그 경우를 명시적 오류로 바꾼다.
+  // 조직이 30일 데이터 보존이 아니면(ZDR) 모든 요청이 400이다.
+  "anthropic:claude-fable-5": {
+    key: "anthropic:claude-fable-5", provider: "anthropic", model: "claude-fable-5", label: "Claude Fable 5",
+    structuredOutput: true, webSearch: true, fileInput: true, efforts: ["low", "medium", "high"],
+    priceUsdPerMTok: { input: 10, cacheRead: 1, cacheWrite: 12.5, output: 50 }, webSearchUsdPerCall: 0.01
+  },
   "anthropic:claude-opus-5": {
     key: "anthropic:claude-opus-5", provider: "anthropic", model: "claude-opus-5", label: "Claude Opus 5",
     structuredOutput: true, webSearch: true, fileInput: true, efforts: ["low", "medium", "high"],
