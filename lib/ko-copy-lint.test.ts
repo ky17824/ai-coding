@@ -12,7 +12,9 @@ const USER_FACING = [
   "lib/catalog/copy.ts",
   "app/orders/[id]/page.tsx",
   "app/api/ai-agent-runs/[orderId]/route.ts",
-  "app/api/ai-agent-runs/[orderId]/upload-url/route.ts"
+  "app/api/ai-agent-runs/[orderId]/upload-url/route.ts",
+  "lib/ai-agent-report.ts",
+  "lib/catalog/rules.ts"
 ];
 
 // 상세 화면이 이미 쓰는 표기 → 나머지 화면도 같은 표기여야 한다(2026-08-18 감수 #1~7).
@@ -28,9 +30,9 @@ const BANNED: Array<[RegExp, string]> = [
   [/새로고침/, "새로 고침"]
 ];
 
-/** 주석 줄과 모델 지시문(프롬프트) 줄은 검사하지 않는다 — 사용자에게 보이는 문장만 본다. */
+/** 주석 줄과 `ko-copy-lint: allow` 표시가 있는 줄(옛→새 표기 사전)만 뺀다. 모델 지시문(프롬프트)도 검사한다 — 모델이 지시문 어휘를 보고서 본문에 그대로 쓰기 때문이다. */
 function codeLines(source: string) {
-  return source.split("\n").filter((line) => !/^\s*(\/\/|\/?\*)/.test(line) && !/Instructions/.test(line));
+  return source.split("\n").filter((line) => !/^\s*(\/\/|\/?\*)/.test(line) && !line.includes("ko-copy-lint: allow"));
 }
 
 describe("AI 전문가 서비스 한글 표기 통일", () => {
@@ -48,6 +50,5 @@ describe("AI 전문가 서비스 한글 표기 통일", () => {
     const report = readFileSync(join(process.cwd(), "lib/ai-agent-report.ts"), "utf8");
     expect(report).toContain("INTAKE_FIELD_LABEL[field]");
     expect(report).not.toContain("const intakeLabels");
-    expect(report).not.toContain("유사사례 가정으로 보완");
   });
 });

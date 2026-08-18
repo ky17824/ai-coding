@@ -62,6 +62,19 @@ function stripLeadingNumber(title: string) {
   return title.replace(/^\s*(?:\d+\s*[.)、]|[①-⑳])\s*/, "");
 }
 
+/** 저장된 보고서 본문에 남은 옛 표기를 표시에서 보정한다. 지시문은 이미 새 표기를 쓰지만, 예전 보고서와
+ *  모델이 어긴 경우를 덮는다. 한 단어 쌍만 목록으로 관리하고 범용 교정기로 키우지 않는다. */
+const DISPLAY_TERMS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/사람 검증/g, "전문가 검증"], // ko-copy-lint: allow (옛 표기 → 새 표기 사전)
+  [/유사사례/g, "유사 사례"] // ko-copy-lint: allow
+];
+function normalizeReportText<T>(value: T): T {
+  if (typeof value === "string") return DISPLAY_TERMS.reduce<string>((text, [pattern, next]) => text.replace(pattern, next), value) as T;
+  if (Array.isArray(value)) return value.map(normalizeReportText) as T;
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, normalizeReportText(item)])) as T;
+  return value;
+}
+
 const reportLabels = {
   ko: {
     status: { fact: "확인된 사실", estimate: "추정", analog_assumption: "유사 사례 가정", human_verification: "전문가 검증 필요" },
@@ -228,7 +241,7 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
 
   function downloadReport() {
     if (!run.report) return;
-    const report = run.report;
+    const report = normalizeReportText(run.report);
     const html = `<!doctype html><html lang="${locale}"><meta charset="utf-8"><title>${escapeHtml(report.title)}</title><style>body{font-family:"Pretendard Variable",Pretendard,"Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 24px;color:#10221b;line-height:1.65}h1,h2{color:#0e3b2b}section{margin:32px 0;padding:24px;border:1px solid #d9dfdb;border-radius:12px}small{color:#5f6d66}a{color:#1d7b4c}dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:8px 0 0;font-size:14px}dt{color:#60726a}dd{margin:0}ol>li{margin:0 0 18px}details{margin:6px 0}</style><h1>${escapeHtml(report.title)}</h1><p>${escapeHtml(report.executiveSummary)}</p><section><h2>${escapeHtml(c.report)}</h2>${report.findings.map((item) => `<h3>${escapeHtml(stripLeadingNumber(item.title))}</h3><small>${escapeHtml(L.status[item.status])} · ${escapeHtml(L.confidence[item.confidence])}</small><p>${escapeHtml(item.summary)}</p>${item.actions.length ? `<ul>${item.actions.map((action) => `<li>${escapeHtml(action)}</li>`).join("")}</ul>` : ""}${item.questionIds.length ? `<details><summary>${escapeHtml(L.relatedQuestions)} · ${item.questionIds.length}</summary><ul>${item.questionIds.map((id) => `<li>${escapeHtml(questionLabel(id))}</li>`).join("")}</ul></details>` : ""}`).join("")}</section>${report.marketSizing ? `<section>${marketSizingHtml(report.marketSizing, locale)}</section>` : ""}<section><h2>${escapeHtml(c.actions)}</h2><ol>${report.actionPlan.map((item) => `<li><strong>${escapeHtml(stripLeadingNumber(item.title))}</strong><p>${escapeHtml(item.why)}</p><dl><dt>${escapeHtml(L.owner)}</dt><dd>${escapeHtml(item.owner)}</dd><dt>${escapeHtml(L.timing)}</dt><dd>${escapeHtml(item.timing)}</dd><dt>${escapeHtml(L.successMetric)}</dt><dd>${escapeHtml(item.successMetric)}</dd><dt>${escapeHtml(L.stopCondition)}</dt><dd>${escapeHtml(item.stopCondition)}</dd></dl></li>`).join("")}</ol></section><section><h2>${escapeHtml(c.source)}</h2><ul>${report.sources.map((source) => `<li><a href="${escapeHtml(/^https?:\/\//i.test(source.url) ? source.url : "#")}" rel="noopener noreferrer">${escapeHtml(source.title)}</a> — ${escapeHtml(source.publisher)} · ${escapeHtml(source.publishedAt)}</li>`).join("")}</ul></section><section><h2>${escapeHtml(c.human)}</h2><ul>${report.humanVerification.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section><section><h2>${escapeHtml(c.limitations)}</h2><ul>${report.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section></html>`;
     const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
     const anchor = document.createElement("a");
@@ -273,8 +286,8 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
         {finding.counterEvidence.length > 0 && <details><summary>{locale === "en" ? "Counter-evidence" : "반대 근거"}</summary><ul>{finding.counterEvidence.map((item) => <li key={item}>{item}</li>)}</ul></details>}
         {finding.questionIds.length > 0 && <details className="ai-report__questions"><summary>{L.relatedQuestions} · {finding.questionIds.length}</summary><ul>{finding.questionIds.map((id) => <li key={id}>{questionLabel(id)}</li>)}</ul></details>}
       </article>)}</div>
-      {run.report.marketSizing && <div className="detail-block" dangerouslySetInnerHTML={{ __html: marketSizingHtml(run.report.marketSizing, locale) }} />}
-      <div className="detail-block ai-report__plan"><h3>{c.actions}</h3><ol>{run.report.actionPlan.map((item) => <li key={item.title}>
+      {report.marketSizing && <div className="detail-block" dangerouslySetInnerHTML={{ __html: marketSizingHtml(report.marketSizing, locale) }} />}
+      <div className="detail-block ai-report__plan"><h3>{c.actions}</h3><ol>{report.actionPlan.map((item) => <li key={item.title}>
         <strong>{stripLeadingNumber(item.title)}</strong>
         <p>{item.why}</p>
         <dl>
@@ -284,12 +297,12 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
           <div><dt>{L.stopCondition}</dt><dd>{item.stopCondition}</dd></div>
         </dl>
       </li>)}</ol></div>
-      <div className="ai-report__columns"><div><h3>{c.assumptions}</h3><ul>{run.report.assumptions.map((item) => <li key={item.statement}><strong>{item.statement}</strong><small>{L.basis}: {item.basis} · {L.confidence[item.confidence]} · {L.impact}: {item.impact}</small></li>)}</ul></div><div><h3>{c.human}</h3><ul>{run.report.humanVerification.map((item) => <li key={item}>{item}</li>)}</ul></div></div>
-      {run.report.sources.length > 0 && <details><summary>{c.source} · {run.report.sources.length}</summary><ul>{run.report.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a><small>{source.publisher} · {source.checkedAt}</small></li>)}</ul></details>}
-      {run.report.evidenceGaps.length > 0 && <details><summary>{c.gaps} · {run.report.evidenceGaps.length}</summary><ul>{run.report.evidenceGaps.map((item) => <li key={item}>{item}</li>)}</ul></details>}
-      {run.report.contradictions.length > 0 && <details><summary>{c.contradictions} · {run.report.contradictions.length}</summary><ul>{run.report.contradictions.map((item) => <li key={`${item.statementA}-${item.statementB}`}><strong>{item.statementA} ↔ {item.statementB}</strong><small>{item.resolution}</small></li>)}</ul></details>}
-      {run.report.questionCoverage.length > 0 && <details><summary>{c.coverage} · {run.report.questionCoverage.length}</summary><ul>{run.report.questionCoverage.map((item) => <li key={item.questionId}><strong>{questionLabel(item.questionId)}</strong><small>{L.priority[item.priority]} · {L.disposition[item.disposition]} · {item.reason}</small></li>)}</ul></details>}
-      <details><summary>{c.limitations}</summary><ul>{run.report.limitations.map((item) => <li key={item}>{item}</li>)}</ul></details>
+      <div className="ai-report__columns"><div><h3>{c.assumptions}</h3><ul>{report.assumptions.map((item) => <li key={item.statement}><strong>{item.statement}</strong><small>{L.basis}: {item.basis} · {L.confidence[item.confidence]} · {L.impact}: {item.impact}</small></li>)}</ul></div><div><h3>{c.human}</h3><ul>{report.humanVerification.map((item) => <li key={item}>{item}</li>)}</ul></div></div>
+      {report.sources.length > 0 && <details><summary>{c.source} · {report.sources.length}</summary><ul>{report.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a><small>{source.publisher} · {source.checkedAt}</small></li>)}</ul></details>}
+      {report.evidenceGaps.length > 0 && <details><summary>{c.gaps} · {report.evidenceGaps.length}</summary><ul>{report.evidenceGaps.map((item) => <li key={item}>{item}</li>)}</ul></details>}
+      {report.contradictions.length > 0 && <details><summary>{c.contradictions} · {report.contradictions.length}</summary><ul>{report.contradictions.map((item) => <li key={`${item.statementA}-${item.statementB}`}><strong>{item.statementA} ↔ {item.statementB}</strong><small>{item.resolution}</small></li>)}</ul></details>}
+      {report.questionCoverage.length > 0 && <details><summary>{c.coverage} · {report.questionCoverage.length}</summary><ul>{report.questionCoverage.map((item) => <li key={item.questionId}><strong>{questionLabel(item.questionId)}</strong><small>{L.priority[item.priority]} · {L.disposition[item.disposition]} · {item.reason}</small></li>)}</ul></details>}
+      <details><summary>{c.limitations}</summary><ul>{report.limitations.map((item) => <li key={item}>{item}</li>)}</ul></details>
     </section>;
   }
 

@@ -90,4 +90,15 @@ describe("AI 전문가 입력 화면의 상품별 특화 칸", () => {
     expect(source).toContain("intake: { ...intake, serviceInputs: serviceAnswers, unknownFields }");
     expect(source).toContain("const serviceField = (id: string) => `service:${id}`;");
   });
+  it("저장된 보고서 본문의 옛 표기(사람 검증·유사사례)는 표시에서 새 표기로 보정한다", () => {
+    const report = {
+      title: "t", executiveSummary: "규제는 사람 검증 전까지 잠정적임", findings: [{ title: "사람 검증 필요: 규제", status: "human_verification", confidence: "medium", summary: "유사사례 가정", actions: ["FDA 확인(사람 검증)"], counterEvidence: [], questionIds: [] }],
+      actionPlan: [], sources: [], humanVerification: ["인터뷰는 사람 검증"], limitations: [], assumptions: [], evidenceGaps: [], contradictions: [], questionCoverage: [], marketSizing: null
+    };
+    const html = renderToStaticMarkup(<AiAgentWorkspace initialRun={{ ...baseRun, status: "completed", report } as never} />);
+    expect(html).not.toContain("사람 검증");
+    expect(html).not.toContain("유사사례");
+    expect(html).toContain("전문가 검증 필요: 규제");
+    expect(html).toContain("FDA 확인(전문가 검증)");
+  });
 });
