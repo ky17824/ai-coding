@@ -56,7 +56,7 @@ const ROUTES_B: Routes = {
   final_report: { model: "anthropic:claude-opus-5", effort: "medium" }
 };
 
-function changeFormData(routes: Routes) {
+function changeFormData(routes: Routes, overrides?: unknown) {
   const form = new FormData();
   form.set("locale", "ko");
   form.set("reason", "테스트를 위한 변경 사유입니다");
@@ -64,6 +64,7 @@ function changeFormData(routes: Routes) {
     form.set(`${stage}.model`, routes[stage].model);
     form.set(`${stage}.effort`, routes[stage].effort);
   }
+  if (overrides !== undefined) form.set("product_overrides", typeof overrides === "string" ? overrides : JSON.stringify(overrides));
   return form;
 }
 
@@ -118,8 +119,9 @@ describe("admin AI model routing actions", () => {
 
   it("rollback은 폼에 실린 모델 필드를 무시하고 저장된 버전의 routes만 적용한다", async () => {
     mocks.actorProfile = { role: "admin", deleted_at: null };
+    const storedOverrides = { "pkg-feasibility": { final_report: { model: "anthropic:claude-fable-5", effort: "high" } } };
     mocks.adminFromResults = [
-      { data: { routes: ROUTES_B }, error: null }, // rollbackModelRouting의 버전 조회
+      { data: { routes: ROUTES_B, product_overrides: storedOverrides }, error: null }, // rollbackModelRouting의 버전 조회
       { data: null, error: null } // applyRouting의 활성 설정 조회: 없음 -> unchanged 아님
     ];
 
@@ -127,10 +129,54 @@ describe("admin AI model routing actions", () => {
     const result = await rollbackModelRouting(initial, rollbackFormData(1, ROUTES_A));
 
     expect(result.ok).toBe(true);
+    // 저장된 버전의 routes와 product_overrides 둘 다 그대로 적용한다.
     expect(mocks.rpc).toHaveBeenCalledWith(
       "apply_ai_model_routing",
-      expect.objectContaining({ p_routes: ROUTES_B })
+      expect.objectContaining({ p_routes: ROUTES_B, p_product_overrides: storedOverrides })
     );
+  });
+
+  it("change는 폼의 product_overrides(JSON)를 검증해 RPC 4번째 인자로 넘긴다", async () => {
+    mocks.actorProfile = { role: "admin", deleted_at: null };
+    mocks.adminFromResults = [{ data: null, error: null }];
+    const overrides = { "ai-market-intelligence": { final_report: { model: "anthropic:claude-fable-5", effort: "high" } } };
+    const result = await changeModelRouting(initial, changeFormData(ROUTES_A, overrides));
+    expect(result.ok).toBe(true);
+    expect(mocks.rpc).toHaveBeenCalledWith("apply_ai_model_routing", expect.objectContaining({ p_routes: ROUTES_A, p_product_overrides: overrides }));
+  });
+
+  it("오버라이드가 없으면 {}를 넘기고, 모르는 상품·깨진 JSON은 거부하며 RPC를 부르지 않는다", async () => {
+    mocks.actorProfile = { role: "admin", deleted_at: null };
+    mocks.adminFromResults = [{ data: null, error: null }];
+    const plain = await changeModelRouting(initial, changeFormData(ROUTES_A));
+    expect(plain.ok).toBe(true);
+    expect(mocks.rpc).toHaveBeenCalledWith("apply_ai_model_routing", expect.objectContaining({ p_product_overrides: {} }));
+
+    mocks.rpc.mockClear();
+    mocks.adminFromResults = [{ data: null, error: null }];
+    const unknown = await changeModelRouting(initial, changeFormData(ROUTES_A, { "no-such-product": { final_report: { model: "anthropic:claude-fable-5", effort: "high" } } }));
+    expect(unknown.ok).toBe(false);
+    expect(unknown.message).toContain("상품");
+    expect(mocks.rpc).not.toHaveBeenCalled();
+
+    mocks.adminFromResults = [{ data: null, error: null }];
+    const broken = await changeModelRouting(initial, changeFormData(ROUTES_A, "{not json"));
+    expect(broken.ok).toBe(false);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("공통 기본값이 같아도 오버라이드가 다르면 '변경 없음'이 아니다 — 그리고 둘 다 같으면 변경 없음이다", async () => {
+    mocks.actorProfile = { role: "admin", deleted_at: null };
+    const overrides = { "ai-market-intelligence": { final_report: { model: "anthropic:claude-fable-5", effort: "high" } } };
+    mocks.adminFromResults = [{ data: { routes: ROUTES_A, product_overrides: {} }, error: null }];
+    const changed = await changeModelRouting(initial, changeFormData(ROUTES_A, overrides));
+    expect(changed.ok).toBe(true);
+
+    mocks.rpc.mockClear();
+    mocks.adminFromResults = [{ data: { routes: ROUTES_A, product_overrides: overrides }, error: null }];
+    const same = await changeModelRouting(initial, changeFormData(ROUTES_A, overrides));
+    expect(same.ok).toBe(false);
+    expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
   it("RPC가 유니크 위반(23505)을 돌려주면 '다른 관리자가 방금 적용' 메시지를 준다", async () => {

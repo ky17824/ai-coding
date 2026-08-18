@@ -12,7 +12,8 @@ import {
   createSupabaseServerClient,
   requireUser
 } from "@/lib/supabase/server";
-import { validateRoutes, routesSchema, type RoutesValidationError } from "@/lib/ai-models/routing";
+import { validateRoutes, validateProductOverrides, routesSchema, type OverridesValidationError, type RoutesValidationError } from "@/lib/ai-models/routing";
+import { listCatalogProducts } from "@/lib/catalog";
 
 export interface AdminRoleActionState {
   ok: boolean;
@@ -89,11 +90,12 @@ const ROUTING_ERROR_MESSAGES: Record<string, { ko: string; en: string }> = {
   unsupported_effort: { ko: "선택한 추론 강도를 그 모델이 지원하지 않습니다.", en: "That model does not support the chosen reasoning level." },
   no_web_search: { ko: "공개 자료 조사에는 웹검색이 있는 모델이 필요합니다.", en: "Public research needs a model with web search." },
   provider_key_missing: { ko: "그 공급자의 API 키가 설정되지 않았습니다.", en: "That provider's API key is not configured." },
+  unknown_product: { ko: "상품별 조정에 알 수 없는 상품이 있습니다.", en: "A product override names an unknown product." },
   unchanged: { ko: "바뀐 값이 없습니다.", en: "Nothing changed." },
   admin_required: { ko: "관리자 권한이 필요합니다.", en: "Administrator access is required." }
 };
 
-function routingErrorMessage(error: RoutesValidationError | string, en: boolean): string {
+function routingErrorMessage(error: OverridesValidationError | RoutesValidationError | string, en: boolean): string {
   const entry = ROUTING_ERROR_MESSAGES[error];
   if (entry) return en ? entry.en : entry.ko;
   return en ? "The change could not be saved." : "설정을 저장하지 못했습니다.";
@@ -115,7 +117,12 @@ async function requireRoutingAdmin(en: boolean): Promise<RoutingAdminGate> {
   return { ok: true, userId: user.id };
 }
 
-async function applyRouting(routesInput: unknown, reason: string, locale: Locale): Promise<ModelRoutingActionState> {
+/** 상품별 조정을 받을 수 있는 상품 — 지금 노출된 AI 전문가 상품(전문가 7 + 패키지 2). */
+function routableProductIds(): string[] {
+  return listCatalogProducts().filter((product) => product.includedAgentIds.length > 0).map((product) => product.id);
+}
+
+async function applyRouting(routesInput: unknown, overridesInput: unknown, reason: string, locale: Locale): Promise<ModelRoutingActionState> {
   const en = locale === "en";
   // 호출자(rollbackModelRouting)가 이미 이 게이트를 통과했더라도 다시 확인한다 — 방어적 이중 확인.
   const gate = await requireRoutingAdmin(en);
@@ -130,15 +137,24 @@ async function applyRouting(routesInput: unknown, reason: string, locale: Locale
     hasAnthropicKey: Boolean(process.env.ANTHROPIC_API_KEY)
   });
   if (!validated.ok) return { ok: false, message: routingErrorMessage(validated.error, en) };
+  const validatedOverrides = validateProductOverrides(overridesInput ?? {}, {
+    hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),
+    hasAnthropicKey: Boolean(process.env.ANTHROPIC_API_KEY)
+  }, routableProductIds());
+  if (!validatedOverrides.ok) return { ok: false, message: routingErrorMessage(validatedOverrides.error, en) };
 
-  const { data: active } = await admin.from("ai_model_routing_configs").select("routes").eq("status", "active").maybeSingle();
+  const { data: active } = await admin.from("ai_model_routing_configs").select("routes,product_overrides").eq("status", "active").maybeSingle();
   const current = routesSchema.safeParse(active?.routes);
-  if (current.success && JSON.stringify(current.data) === JSON.stringify(validated.routes)) {
+  const currentOverrides = active?.product_overrides && typeof active.product_overrides === "object" ? active.product_overrides : {};
+  if (current.success
+    && JSON.stringify(current.data) === JSON.stringify(validated.routes)
+    && JSON.stringify(currentOverrides) === JSON.stringify(validatedOverrides.overrides)) {
     return { ok: false, message: routingErrorMessage("unchanged", en) };
   }
 
   const { data: version, error } = await admin.rpc("apply_ai_model_routing", {
     p_routes: validated.routes,
+    p_product_overrides: validatedOverrides.overrides,
     p_reason: reason.trim(),
     p_actor: gate.userId
   });
@@ -163,7 +179,13 @@ export async function changeModelRouting(_state: ModelRoutingActionState, formDa
     public_research: { model: formData.get("public_research.model"), effort: formData.get("public_research.effort") },
     final_report: { model: formData.get("final_report.model"), effort: formData.get("final_report.effort") }
   };
-  return applyRouting(routes, String(formData.get("reason") ?? ""), locale);
+  // 상품별 조정은 폼의 hidden input에 JSON으로 실린다. 없으면 조정 없음, 깨졌으면 모양 오류.
+  const raw = formData.get("product_overrides");
+  let overrides: unknown = {};
+  if (typeof raw === "string" && raw.trim()) {
+    try { overrides = JSON.parse(raw); } catch { return { ok: false, message: routingErrorMessage("invalid_shape", locale === "en") }; }
+  }
+  return applyRouting(routes, overrides, String(formData.get("reason") ?? ""), locale);
 }
 
 export async function rollbackModelRouting(_state: ModelRoutingActionState, formData: FormData): Promise<ModelRoutingActionState> {
@@ -176,8 +198,8 @@ export async function rollbackModelRouting(_state: ModelRoutingActionState, form
   const admin = createSupabaseAdminClient();
   const version = Number(formData.get("version"));
   if (!admin || !Number.isInteger(version)) return { ok: false, message: en ? "Invalid version." : "버전이 올바르지 않습니다." };
-  const { data: row } = await admin.from("ai_model_routing_configs").select("routes").eq("version", version).maybeSingle();
+  const { data: row } = await admin.from("ai_model_routing_configs").select("routes,product_overrides").eq("version", version).maybeSingle();
   if (!row) return { ok: false, message: en ? "That version does not exist." : "그 버전이 없습니다." };
-  // 폼에 다른 필드가 실려 있어도 무시한다 — routes는 오직 저장된 버전 스냅샷에서만 온다.
-  return applyRouting(row.routes, String(formData.get("reason") ?? ""), locale);
+  // 폼에 다른 필드가 실려 있어도 무시한다 — routes·overrides는 오직 저장된 버전 스냅샷에서만 온다.
+  return applyRouting(row.routes, row.product_overrides ?? {}, String(formData.get("reason") ?? ""), locale);
 }
