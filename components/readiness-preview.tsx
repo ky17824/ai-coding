@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { CountUp } from "@/components/count-up";
+import { StageGateBar } from "@/components/stage-gate-bar";
 
 /** 준비 1·2·3단계 점수. 마지막 장면에서 1단계가 통과 기준(80%)을 넘는다 — 제품이 실제로 보여 주는 것과 같은 그림. */
 export const READINESS_STAGES = [
@@ -81,13 +82,12 @@ export function ReadinessPreview({
           <CountUp to={current.score} />%
         </span>
       </div>
-      <div className="preview-stages" style={{ "--gate": `${GATE_PERCENT}%` } as CSSProperties}>
-        {current.bars.map((value, index) => (
-          <div className="preview-stage" key={chartLabels[index]}>
-            <span><small>{chartLabels[index]}</small><strong>{value}%</strong></span>
-            <div className="meter meter--gate" aria-hidden="true"><span style={{ width: `${value}%`, "--delay": `${index * 0.12}s` } as CSSProperties} /></div>
-          </div>
-        ))}
+      <div className="preview-stages">
+        <StageGateBar
+          stages={current.bars.map((value, index) => ({ id: `s${index + 1}`, label: chartLabels[index], value }))}
+          current="s1"
+          gate={GATE_PERCENT / 100}
+        />
         <small className="preview-gate">{gateLabel}</small>
       </div>
       <p className="preview-verdict"><span>{verdict[0]}</span><span>{verdict[1]}</span></p>

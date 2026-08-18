@@ -3,6 +3,8 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { ServiceCard } from "@/components/service-card";
 import { JOURNEY_PHASES } from "@/lib/readiness-data";
+import { StageGateBar } from "@/components/stage-gate-bar";
+import { getIntakeStages } from "@/lib/intake-questions";
 import { createSupabaseAdminClient, getCurrentProfile } from "@/lib/supabase/server";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
@@ -62,6 +64,8 @@ export default async function JourneyPage() {
   const admin = createSupabaseAdminClient();
   let activePlan: StoredGtmPlan | null = null;
   let recommended: ServiceOffering[] = [];
+  let readinessStages: Array<{ id: string; label: string; value: number }> = [];
+  let currentStageId: string | undefined;
   let planItems: {
     id: string;
     horizon: number;
@@ -82,12 +86,15 @@ export default async function JourneyPage() {
           .eq("status", "active")
           .order("updated_at", { ascending: false }).limit(1).maybeSingle(),
         admin.from("assessments")
-          .select("id")
+          .select("id,domain_scores,status_label")
           .eq("organization_id", profile.organization_id)
           .order("completed_at", { ascending: false }).limit(1).maybeSingle(),
         getPublishedServices(locale)
       ]);
       if (assessment) {
+        const scores = (assessment.domain_scores ?? {}) as Record<string, number>;
+        readinessStages = getIntakeStages(locale).map((stage) => ({ id: stage.id, label: stage.label, value: scores[stage.id] ?? 0 }));
+        currentStageId = getIntakeStages(locale).find((stage) => stage.label === assessment.status_label)?.id;
         const { data: actions } = await admin.from("action_items")
           .select("service_tag")
           .eq("assessment_id", assessment.id);
@@ -147,6 +154,7 @@ export default async function JourneyPage() {
         <p className="page-description">
           {en ? "We group the 11 Global Class steps into three horizons. Progress depends on evidence of completion, not a fixed schedule." : "Global Class 11단계를 세 구간으로 묶었습니다. 정해진 일정이 아니라 완료를 증명할 근거가 있어야 다음 단계로 넘어갑니다."}
         </p>
+        {readinessStages.length > 0 && <div className="journey-readiness"><StageGateBar stages={readinessStages} current={currentStageId} size="sm" ariaLabel={en ? "Readiness by stage" : "단계별 준비도"} /><small>{en ? "Readiness by stage · pass at 80%" : "단계별 준비도 · 통과 기준 80%"}</small></div>}
         {activePlan && activePlan.items.length > 0 ? (
           <>
             <div className="dashboard-section__heading">

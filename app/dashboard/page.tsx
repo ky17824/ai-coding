@@ -1,10 +1,10 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { AnswerQuestionChart } from "@/components/answer-question-chart";
 import { StageSummaryPanel } from "@/components/stage-summary-panel";
+import { StageGateBar } from "@/components/stage-gate-bar";
 import {
   buildStageAnswerInsights,
   GATE_THRESHOLD,
@@ -164,14 +164,12 @@ export default async function DashboardPage({
               <span><small>{en ? "GLOBAL READINESS" : "시장진입 준비도(Global Readiness)"}</small><h2>{en ? "Readiness by stage" : "단계별 준비도"}</h2></span>
               <span className="summary-score"><strong>{currentStageScore}<span>%</span></strong><small>{assessmentStatus}</small><em>{en ? `Pass at ${Math.round(GATE_THRESHOLD * 100)}%` : `통과 기준 ${Math.round(GATE_THRESHOLD * 100)}%`}</em></span>
             </div>
-            <div className="domain-bars">
-              {stages.map((stage) => (
-                <div key={stage.id}>
-                  <span><small>{stage.label}</small><strong>{displayDomainScores[stage.id] ?? 0}%</strong></span>
-                  <div className="meter meter--gate" style={{ "--gate": `${Math.round(GATE_THRESHOLD * 100)}%` } as CSSProperties}><span style={{ width: `${displayDomainScores[stage.id] ?? 0}%` }} /></div>
-                </div>
-              ))}
-            </div>
+            <StageGateBar
+              stages={stages.map((stage) => ({ id: stage.id, label: stage.label, value: displayDomainScores[stage.id] ?? 0 }))}
+              current={currentStageId}
+              animate
+              ariaLabel={en ? "Readiness by stage" : "단계별 준비도"}
+            />
           </article>
           <article className="next-session panel">
             <span className="page-kicker">{en ? "LATEST ASSESSMENT" : "최근 진단(Latest Assessment)"}</span>
