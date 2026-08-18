@@ -13,7 +13,7 @@ import {
   localizeCatalogProduct,
   OFFICIAL_SOURCE_AGENT_ID
 } from "@/lib/catalog";
-import { PRODUCT_COPY } from "@/lib/catalog/copy";
+import { ATTACHMENT_HINT_BY_AGENT, PRODUCT_COPY, REQUIRED_INPUT_BY_AGENT, SHARED_REQUIRED_INPUT } from "@/lib/catalog/copy";
 
 describe("product catalog", () => {
   it("ships nine phase-1 products and hides phase 2 until expert supply exists", () => {
@@ -108,6 +108,21 @@ describe("scope boundary", () => {
     for (const service of getCatalogServices("ko")) {
       expect(service.requiredInputs?.[0]).toContain("목표 국가와 고객");
     }
+  });
+
+  it("gives every AI specialist a service-specific intake label and attachment hint in both locales", () => {
+    // 결제 후 입력 화면(intake.serviceInputs)이 includedAgentIds마다 칸을 그린다. 문구가 빠지면 빈 라벨이 나간다.
+    const agentIds = new Set(listCatalogProducts().flatMap((p) => p.includedAgentIds));
+    for (const id of agentIds) {
+      for (const locale of ["ko", "en"] as const) {
+        expect(REQUIRED_INPUT_BY_AGENT[id]?.[locale], `${id} required ${locale}`).toBeTruthy();
+        expect(ATTACHMENT_HINT_BY_AGENT[id]?.[locale], `${id} hint ${locale}`).toBeTruthy();
+      }
+    }
+    // 공통 문구는 제품을 자동으로 불러온다고 말하면 안 된다(실제로는 국가·고객만 불러온다).
+    expect(SHARED_REQUIRED_INPUT.en).not.toMatch(/offering \(carried/);
+    // 자금 상품의 특화 칸은 공통 칸(가용 예산·기한)과 같은 것을 다시 묻지 않는다.
+    expect(REQUIRED_INPUT_BY_AGENT["ai-tce-finance"].ko).toContain("공통 칸");
   });
 
   it("lists only the boundaries that apply to what the product includes", () => {

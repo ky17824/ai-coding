@@ -21,6 +21,20 @@ describe("paid AI readiness snapshot", () => {
   });
 });
 
+describe("service-specific intake", () => {
+  it("audits and re-asks the included specialists' service inputs, not just the eight shared fields", () => {
+    // 상세 페이지가 약속한 상품별 "필요 정보"가 결제 후 입력·누락검증·추가질문에 연결되는 배선.
+    expect(source).toContain("serviceInputs: z.record(");
+    expect((source.match(/service\.includedAgentIds\)/g) ?? []).length).toBeGreaterThanOrEqual(4);
+    expect(source).toContain("setIntakeField(merged, field, answer)");
+    expect(source).not.toContain("z.array(z.enum(aiIntakeFields))");
+    // 클라이언트가 보낸 특화 키·모름 목록은 상품 허용 목록으로 좁혀 저장한다(모델에 그대로 가는 값).
+    expect(source).toContain("clearUnknownIntakeValues(restrictIntake(parsed.data.intake, service.includedAgentIds))");
+    // 추가질문은 4개×2회뿐이라 특화 칸이 공통 뒷자리(증거·제약·자원·기한)보다 먼저 나가야 한다.
+    expect(source).toContain(".sort((a, b) => askOrder(a) - askOrder(b))");
+  });
+});
+
 describe("model routing", () => {
   it("모델 상수를 코드에 고정하지 않는다", () => {
     expect(source).not.toMatch(/const MODEL = "gpt-5\.6-sol"/);

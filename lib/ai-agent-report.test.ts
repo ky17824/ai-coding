@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   auditAiAgentIntake,
   aiAgentReportSchema,
+  clarificationQuestions,
   aiReadinessSnapshotSchema,
   buildAiReadinessSnapshot,
   buildSafePublicResearchBrief,
@@ -85,6 +86,34 @@ describe("AI expert execution rules", () => {
     });
     expect(auditAiAgentIntake({ targetCountry: "일본" }, { targetCountry: "싱가포르" }).find((item) => item.field === "targetCountry")?.status).toBe("conflicting");
     expect(auditAiAgentIntake({ targetCountry: "일본" }, { targetCountry: "싱가포르" }, ["targetCountry"]).find((item) => item.field === "targetCountry")?.status).toBe("confirmed");
+  });
+
+  it("audits the service-specific inputs of the included specialists under service:<agentId>", () => {
+    // 상품별 특화 칸(intake.serviceInputs)은 공통 8필드와 같은 규칙으로 판정된다.
+    const audit = auditAiAgentIntake({
+      objective: "미국 진출",
+      serviceInputs: { "ai-entry-requirements": "", "ai-partner-research": "유통 파트너, LA", "ai-market-intelligence": "일본, 대만" },
+      unknownFields: ["service:ai-entry-requirements", "service:ai-market-intelligence"]
+    }, {}, [], ["ai-market-intelligence", "ai-entry-requirements", "ai-partner-research"]);
+    expect(Object.fromEntries(audit.map((item) => [item.field, item.status]))).toMatchObject({
+      "service:ai-market-intelligence": "conflicting",
+      "service:ai-entry-requirements": "unclear",
+      "service:ai-partner-research": "confirmed"
+    });
+    // 빈값+모름 아님 → missing. agentIds를 안 넘기면 특화 행은 나오지 않는다(하위 호환).
+    expect(auditAiAgentIntake({ serviceInputs: {} }, {}, [], ["ai-local-bmc"]).find((item) => item.field === "service:ai-local-bmc")?.status).toBe("missing");
+    expect(auditAiAgentIntake({ serviceInputs: { "ai-local-bmc": "x" } }).some((item) => item.field.startsWith("service:"))).toBe(false);
+  });
+
+  it("blanks service inputs marked unknown and asks service questions with the product wording", () => {
+    const cleared = clearUnknownIntakeValues({ objective: "a", serviceInputs: { "ai-tce-finance": "월 2천만원" }, unknownFields: ["service:ai-tce-finance"] });
+    expect(cleared.serviceInputs).toEqual({ "ai-tce-finance": "" });
+    const [service, common] = clarificationQuestions(["service:ai-entry-requirements", "resources"], "ko");
+    expect(service.id).toBe("service:ai-entry-requirements");
+    expect(service.question).toContain("[규제 요건 조사]");
+    expect(service.question).toContain("소재·성분·용도");
+    expect(common.question).toContain("가용자원");
+    expect(clarificationQuestions(["service:ai-gtm-operations"], "en")[0].question).toContain("[GTM Execution & Local Operations]");
   });
 
   it("normalizes the immutable paid scope", () => {

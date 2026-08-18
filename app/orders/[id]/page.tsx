@@ -4,6 +4,7 @@ import { OrderActions } from "@/components/order-actions";
 import { AiAgentWorkspace } from "@/components/ai-agent-workspace";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { getIntakeQuestions } from "@/lib/intake-questions";
+import { ATTACHMENT_HINT_BY_AGENT, PRODUCT_COPY, REQUIRED_INPUT_BY_AGENT } from "@/lib/catalog/copy";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -73,6 +74,7 @@ export default async function OrderPage({
     title: string;
     type: string;
     deliverables: string[];
+    includedAgentIds?: string[];
   };
   const terms = shownOrder.terms_snapshot as { refundPolicy: string };
   const aiRun = Array.isArray(shownOrder.ai_agent_runs) ? shownOrder.ai_agent_runs[0] : shownOrder.ai_agent_runs;
@@ -92,6 +94,10 @@ export default async function OrderPage({
       targetCustomer: storedIntake.targetCustomer || readinessBaseline?.target_customer_segment || ""
     }
   } : null;
+  // 상품에 포함된 전문가마다 특화 입력칸 하나. 문구는 결제 시점 스냅샷이 아니라 현재 카탈로그를
+  // 읽는다 — 안내 문구이지 계약(deliverables)이 아니고, 문구 개선이 기존 주문에도 닿아야 한다.
+  // 서버는 includedAgentIds 전부를 감사하므로 화면도 전부 그린다(문구가 빠져도 칸은 있어야 답할 수 있다).
+  const serviceInputs = (snapshot.includedAgentIds ?? []).map((id) => ({ id, title: PRODUCT_COPY[id]?.title[locale] ?? id, label: REQUIRED_INPUT_BY_AGENT[id]?.[locale] ?? "", fileHint: ATTACHMENT_HINT_BY_AGENT[id]?.[locale] }));
 
   return (
     <main className="app-page">
@@ -145,6 +151,7 @@ export default async function OrderPage({
           <AiAgentWorkspace
             locale={locale}
             initialRun={hydratedAiRun as never}
+            serviceInputs={serviceInputs}
             // 보고서는 준비도 문항 ID로 근거를 추적한다. 화면에는 ID 대신 문항 문장을 보여 준다.
             questionLabels={Object.fromEntries(getIntakeQuestions(locale, "5.0").map((question) => [question.id, question.question]))}
           />

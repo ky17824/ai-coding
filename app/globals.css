@@ -3159,6 +3159,31 @@ main[lang="en"] .hero h1 {
   font-weight: 550;
 }
 
+/* 상품별 특화 입력. 공통 8필드와 시각적으로 갈라 "이건 왜 묻지"를 없앤다. */
+.ai-service-inputs {
+  margin: 8px 0 0;
+  padding: 24px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.ai-service-inputs header h3 {
+  margin: 4px 0 6px;
+}
+
+.ai-service-inputs header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.ai-service-inputs .ai-intake-grid {
+  margin-top: 16px;
+}
+
+/* 답이 한두 줄인 항목이 대부분. 진출 설계(7칸)의 스크롤 길이를 억제한다. */
+.ai-service-inputs textarea {
+  min-height: 80px;
+}
+
 .ai-file-upload {
   display: grid;
   gap: 8px;

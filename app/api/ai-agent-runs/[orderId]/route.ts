@@ -8,8 +8,11 @@ import {
   buildAiReadinessSnapshot,
   buildSafePublicResearchBrief,
   buildAiAgentInstructions,
+  clarificationQuestions,
   clearUnknownIntakeValues,
   estimateAiVariableCosts,
+  serviceAgentId,
+  serviceField,
   nextAiAgentStep,
   normalizeAiAgentScope,
   publicTargetCountryCode,
@@ -37,7 +40,10 @@ const intakeSchema = z.object({
   constraints: z.string().trim().max(3000).default(""),
   resources: z.string().trim().max(3000).default(""),
   deadline: z.string().trim().max(200).default(""),
-  unknownFields: z.array(z.enum(aiIntakeFields)).max(8).default([])
+  // 상품별 특화 칸. 키는 포함 전문가 id(ai-entry-requirements 등). 모르는 키는 감사에서 무시된다.
+  serviceInputs: z.record(z.string().trim().max(60), z.string().trim().max(3000)).default({}),
+  // 공통 8필드명 또는 "service:<agentId>". 허용 목록 밖 값은 submit 시점에 걸러 저장한다.
+  unknownFields: z.array(z.string().trim().max(80)).max(64).default([])
 });
 const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("submit_intake"), locale: z.enum(["ko", "en"]).default("ko"), intake: intakeSchema }),
@@ -72,23 +78,30 @@ const paidServiceSchema = z.object({
 });
 
 type Intake = z.infer<typeof intakeSchema>;
-const requiredFields: (keyof Intake)[] = [...aiIntakeFields];
-const labels = {
-  ko: { objective: "이번 업무의 의사결정 목표", offering: "제품·서비스", targetCountry: "목표국가", targetCustomer: "목표고객", currentEvidence: "현재 증거", constraints: "제약", resources: "가용자원", deadline: "계획기한", unknownFields: "모름 항목" },
-  en: { objective: "decision objective", offering: "offering", targetCountry: "target country", targetCustomer: "target customer", currentEvidence: "current evidence", constraints: "constraints", resources: "available resources", deadline: "deadline", unknownFields: "unknown fields" }
-} as const;
-
-function missingFields(intake: Intake, baseline: Record<string, unknown> = {}, confirmedFields: string[] = []) {
-  return auditAiAgentIntake(intake, baseline, confirmedFields).filter((item) => item.status === "missing" || item.status === "conflicting").map((item) => item.field);
+/** 이 상품이 받는 필드 전체: 공통 8개 + 포함 전문가별 service:<agentId>. */
+const allowedIntakeFields = (agentIds: string[]) => new Set<string>([...aiIntakeFields, ...agentIds.map(serviceField)]);
+/** 공통 필드는 intake 최상위에, 특화 칸(service:<agentId>)은 intake.serviceInputs에 쓴다. */
+function setIntakeField(intake: Intake, field: string, value: string) {
+  const agentId = serviceAgentId(field);
+  if (agentId) intake.serviceInputs = { ...intake.serviceInputs, [agentId]: value };
+  else (intake as unknown as Record<string, unknown>)[field] = value;
 }
-
-function questionsFor(fields: (keyof Intake)[], locale: "ko" | "en") {
-  return fields.slice(0, 4).map((field) => ({
-    id: String(field),
-    question: locale === "en"
-      ? `Please provide ${labels.en[field]}, or answer “unknown” so the AI can use labelled analog assumptions.`
-      : `${labels.ko[field]}을 알려주세요. 모르면 ‘모름’이라고 답하면 AI가 유사사례 가정으로 보완합니다.`
-  }));
+/** 추가질문은 최대 4개씩 2회라 순서가 곧 "무엇을 묻고 무엇을 포기하는가"다. 범위 → 특화 칸 → 나머지 공통. */
+const askOrder = (field: string) => ["objective", "offering", "targetCountry", "targetCustomer"].includes(field) ? 0 : serviceAgentId(field) ? 1 : 2;
+function missingFields(intake: Intake, baseline: Record<string, unknown> = {}, confirmedFields: string[] = [], agentIds: string[] = []) {
+  return auditAiAgentIntake(intake, baseline, confirmedFields, agentIds)
+    .filter((item) => item.status === "missing" || item.status === "conflicting")
+    .map((item) => item.field)
+    .sort((a, b) => askOrder(a) - askOrder(b));
+}
+/** 클라이언트가 보낸 특화 칸·모름 목록을 이 상품의 허용 키로 좁힌다. 모델에 그대로 가는 값이라 여기서 자른다. */
+function restrictIntake(intake: Intake, agentIds: string[]): Intake {
+  const allowed = allowedIntakeFields(agentIds);
+  return {
+    ...intake,
+    serviceInputs: Object.fromEntries(agentIds.map((id) => [id, intake.serviceInputs[id] ?? ""])),
+    unknownFields: intake.unknownFields.filter((field) => allowed.has(field))
+  };
 }
 
 async function loadOrder(orderId: string, userId: string) {
@@ -164,7 +177,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   const intakeBaseline = { targetCountry: boundAssessment?.target_country ?? "", targetCustomer: boundAssessment?.target_customer_segment ?? "" };
 
   if (parsed.data.action === "submit_intake") {
-    const normalizedIntake = clearUnknownIntakeValues(parsed.data.intake);
+    const normalizedIntake = clearUnknownIntakeValues(restrictIntake(parsed.data.intake, service.includedAgentIds));
     const nextScope = normalizeAiAgentScope(normalizedIntake);
     const savedScope = normalizeAiAgentScope(activeRun.scope_snapshot ?? {});
     const scopeUnknown = normalizedIntake.unknownFields.some((field) => ["offering", "targetCountry", "targetCustomer"].includes(field));
@@ -174,10 +187,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     if (Number(activeRun.generation_count ?? 0) > 0 && (scopeUnknown || JSON.stringify(nextScope) !== JSON.stringify(savedScope))) {
       return NextResponse.json({ message: en ? "Changing the offering, target country, or core customer requires a new order." : "제품·목표국가·핵심고객 변경은 새로운 유료 업무로 신청해야 합니다." }, { status: 409 });
     }
-    const missing = missingFields(normalizedIntake, intakeBaseline);
-    const inputAudit = auditAiAgentIntake(normalizedIntake, intakeBaseline);
+    const missing = missingFields(normalizedIntake, intakeBaseline, [], service.includedAgentIds);
+    const inputAudit = auditAiAgentIntake(normalizedIntake, intakeBaseline, [], service.includedAgentIds);
     const nextStatus = nextAiAgentStep({ missingCriticalInputs: missing.length > 0, clarificationRound: 0 });
-    const pendingQuestions = nextStatus === "clarifying" ? questionsFor(missing, parsed.data.locale) : [];
+    const pendingQuestions = nextStatus === "clarifying" ? clarificationQuestions(missing, parsed.data.locale) : [];
     const { data, error } = await admin.from("ai_agent_runs").update({
       locale: parsed.data.locale,
       intake: normalizedIntake,
@@ -200,17 +213,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     const unknown = new Set(merged.unknownFields);
     const pendingIds = new Set(Array.isArray(activeRun.pending_questions) ? activeRun.pending_questions.map((question: { id?: string }) => question.id) : []);
     const acceptedAnswers: Record<string, string> = {};
+    const allowed = allowedIntakeFields(service.includedAgentIds);
     for (const [field, answer] of Object.entries(parsed.data.answers)) {
-      if (!pendingIds.has(field)) continue;
-      if (!requiredFields.includes(field as keyof Intake)) continue;
+      if (!pendingIds.has(field) || !allowed.has(field)) continue;
       acceptedAnswers[field] = answer;
       if (/^(모름|unknown|don't know|do not know)$/i.test(answer.trim())) {
-        unknown.add(field as never);
-        (merged as unknown as Record<string, unknown>)[field] = "";
+        unknown.add(field);
+        setIntakeField(merged, field, "");
       }
       else {
-        unknown.delete(field as never);
-        (merged as unknown as Record<string, unknown>)[field] = answer;
+        unknown.delete(field);
+        setIntakeField(merged, field, answer);
       }
     }
     merged.unknownFields = [...unknown];
@@ -223,17 +236,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     const round = Math.min(2, Number(activeRun.clarification_round ?? 0) + 1);
     const previousAnswers = Array.isArray(activeRun.clarification_answers) ? activeRun.clarification_answers : [];
     const confirmedFields = [...new Set([...previousAnswers, acceptedAnswers].flatMap((entry) => Object.keys(entry ?? {})))];
-    let missing = missingFields(merged, intakeBaseline, confirmedFields);
+    let missing = missingFields(merged, intakeBaseline, confirmedFields, service.includedAgentIds);
     const nextStatus = nextAiAgentStep({ missingCriticalInputs: missing.length > 0, clarificationRound: round });
     if (nextStatus === "ready" && missing.length > 0) {
       merged.unknownFields = [...new Set([...merged.unknownFields, ...missing])];
-      for (const field of missing) (merged as unknown as Record<string, unknown>)[field] = "";
+      for (const field of missing) setIntakeField(merged, field, "");
       missing = [];
     }
-    const pendingQuestions = nextStatus === "clarifying" ? questionsFor(missing, parsed.data.locale) : [];
+    const pendingQuestions = nextStatus === "clarifying" ? clarificationQuestions(missing, parsed.data.locale) : [];
     const { data, error } = await admin.from("ai_agent_runs").update({
       intake: merged,
-      input_audit: auditAiAgentIntake(merged, intakeBaseline, confirmedFields),
+      input_audit: auditAiAgentIntake(merged, intakeBaseline, confirmedFields, service.includedAgentIds),
       clarification_round: round,
       pending_questions: pendingQuestions,
       clarification_answers: [...previousAnswers, acceptedAnswers],

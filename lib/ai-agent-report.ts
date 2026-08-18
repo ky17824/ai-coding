@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getIntakeQuestions, type SurveyVersion } from "@/lib/intake-questions";
 import { resolveAssessmentQuestions } from "@/lib/readiness";
 import { canonicalResearchUrl } from "@/lib/research-sources";
+import { PRODUCT_COPY, REQUIRED_INPUT_BY_AGENT } from "@/lib/catalog/copy";
 import type { ReadinessAnswer, ReadinessLevel, SalesMotion } from "@/lib/types";
 
 /**
@@ -28,7 +29,11 @@ function capList<T>(items: T[], limit = DETAIL_LIST_CAP) {
 
 export const aiIntakeFields = ["objective", "offering", "targetCountry", "targetCustomer", "currentEvidence", "constraints", "resources", "deadline"] as const;
 export type AiIntakeField = typeof aiIntakeFields[number];
-export type AiInputAudit = { field: AiIntakeField; status: "confirmed" | "unclear" | "missing" | "conflicting"; reason: string }[];
+/** 상품별 특화 칸의 감사 필드명. 값은 intake.serviceInputs[agentId]에 산다. */
+const SERVICE_FIELD_PREFIX = "service:";
+export const serviceField = (agentId: string) => `${SERVICE_FIELD_PREFIX}${agentId}`;
+export const serviceAgentId = (field: string) => field.startsWith(SERVICE_FIELD_PREFIX) ? field.slice(SERVICE_FIELD_PREFIX.length) : null;
+export type AiInputAudit = { field: string; status: "confirmed" | "unclear" | "missing" | "conflicting"; reason: string }[];
 export const publicOfferingCategories = ["consumer_goods", "beauty_personal_care", "food_beverage", "b2b_software", "consumer_software", "industrial", "healthcare", "professional_services", "education", "other"] as const;
 export const publicCustomerSegments = ["consumer", "small_business", "mid_market", "enterprise", "public_sector", "channel_partner", "mixed", "other"] as const;
 
@@ -204,17 +209,53 @@ export const aiAgentReportSchema = z.object({
 export type AiAgentReport = z.infer<typeof aiAgentReportSchema>;
 export type MarketSizing = NonNullable<AiAgentReport["marketSizing"]>;
 
-export function auditAiAgentIntake(intake: Record<string, unknown>, baseline: Record<string, unknown> = {}, confirmedFields: string[] = []): AiInputAudit {
+/** 공통 8필드와 특화 칸(service:<agentId>)을 같은 규칙으로 읽는다. */
+function intakeValue(intake: Record<string, unknown>, field: string) {
+  const agentId = serviceAgentId(field);
+  if (!agentId) return intake[field];
+  const inputs = intake.serviceInputs;
+  return inputs && typeof inputs === "object" ? (inputs as Record<string, unknown>)[agentId] : undefined;
+}
+
+/**
+ * agentIds를 넘기면 상품에 포함된 전문가마다 `service:<id>` 행이 추가된다.
+ * 넘기지 않으면 예전과 같이 공통 8필드만 감사한다.
+ */
+export function auditAiAgentIntake(intake: Record<string, unknown>, baseline: Record<string, unknown> = {}, confirmedFields: string[] = [], agentIds: string[] = []): AiInputAudit {
   const unknown = new Set(Array.isArray(intake.unknownFields) ? intake.unknownFields : []);
   const confirmed = new Set(confirmedFields);
   const normalize = (value: unknown) => String(value ?? "").normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase();
-  return aiIntakeFields.map((field) => {
-    const hasValue = Boolean(String(intake[field] ?? "").trim());
+  const fields: string[] = [...aiIntakeFields, ...agentIds.map(serviceField)];
+  return fields.map((field) => {
+    const value = intakeValue(intake, field);
+    const hasValue = Boolean(String(value ?? "").trim());
     const isUnknown = unknown.has(field);
-    const differsFromBaseline = Boolean(baseline[field]) && normalize(intake[field]) !== normalize(baseline[field]) && !confirmed.has(field);
+    const differsFromBaseline = Boolean(baseline[field]) && normalize(value) !== normalize(baseline[field]) && !confirmed.has(field);
     const status = differsFromBaseline || hasValue && isUnknown ? "conflicting" : isUnknown ? "unclear" : hasValue ? "confirmed" : "missing";
     return { field, status, reason: differsFromBaseline ? "differs_from_saved_readiness" : status === "confirmed" ? "user_provided" : status === "unclear" ? "analog_case_required" : status === "conflicting" ? "value_and_unknown_both_selected" : "not_provided" };
   });
+}
+
+const intakeLabels = {
+  ko: { objective: "이번 업무의 의사결정 목표", offering: "제품·서비스", targetCountry: "목표국가", targetCustomer: "목표고객", currentEvidence: "현재 증거", constraints: "제약", resources: "가용자원", deadline: "계획기한" },
+  en: { objective: "decision objective", offering: "offering", targetCountry: "target country", targetCustomer: "target customer", currentEvidence: "current evidence", constraints: "constraints", resources: "available resources", deadline: "deadline" }
+} as const;
+
+/** 공통 필드는 짧은 라벨로, 특화 칸은 상세 페이지 "필요 정보"와 같은 문장으로 되묻는다. */
+function intakeFieldLabel(field: string, locale: "ko" | "en") {
+  const agentId = serviceAgentId(field);
+  if (agentId) return `[${PRODUCT_COPY[agentId]?.title[locale] ?? agentId}] ${REQUIRED_INPUT_BY_AGENT[agentId]?.[locale] ?? ""}`.trim();
+  return intakeLabels[locale][field as keyof typeof intakeLabels.ko] ?? field;
+}
+
+/** 빠진 필드(공통 8개 또는 service:<agentId>)를 최대 4개까지 추가질문으로 바꾼다. */
+export function clarificationQuestions(fields: string[], locale: "ko" | "en") {
+  return fields.slice(0, 4).map((field) => ({
+    id: field,
+    question: locale === "en"
+      ? `Please provide ${intakeFieldLabel(field, locale)}, or answer “unknown” so the AI can use labelled analog assumptions.`
+      : `${intakeFieldLabel(field, locale)}을 알려주세요. 모르면 ‘모름’이라고 답하면 AI가 유사사례 가정으로 보완합니다.`
+  }));
 }
 
 export function normalizeAiAgentScope(intake: Record<string, unknown>) {
@@ -223,11 +264,16 @@ export function normalizeAiAgentScope(intake: Record<string, unknown>) {
 }
 
 export function clearUnknownIntakeValues<T extends Record<string, unknown>>(intake: T): T {
-  const next = { ...intake };
+  const next = { ...intake } as Record<string, unknown>;
+  const serviceInputs = { ...(intake.serviceInputs && typeof intake.serviceInputs === "object" ? intake.serviceInputs as Record<string, unknown> : {}) };
   for (const field of Array.isArray(intake.unknownFields) ? intake.unknownFields : []) {
-    if (typeof field === "string" && aiIntakeFields.includes(field as AiIntakeField)) (next as Record<string, unknown>)[field] = "";
+    if (typeof field !== "string") continue;
+    const agentId = serviceAgentId(field);
+    if (agentId) serviceInputs[agentId] = "";
+    else if (aiIntakeFields.includes(field as AiIntakeField)) next[field] = "";
   }
-  return next;
+  if (Object.keys(serviceInputs).length) next.serviceInputs = serviceInputs;
+  return next as T;
 }
 
 export function publicTargetCountryCode(targetCountry: unknown, classifiedCode: string) {
