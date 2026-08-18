@@ -1,8 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createMock = vi.fn();
+// writeReport는 스트리밍(client.messages.stream(...).finalMessage())으로 부른다. 같은 fixture를 쓰도록
+// stream은 createMock에 위임하고, 어떤 호출이 스트리밍이었는지는 streamCalls로 따로 센다.
+const streamCalls: unknown[] = [];
 const constructorMock = vi.fn();
-vi.mock("@anthropic-ai/sdk", () => ({ default: class { messages = { create: createMock }; constructor(public opts: unknown) { constructorMock(opts); } } }));
+vi.mock("@anthropic-ai/sdk", () => ({ default: class {
+  messages = {
+    create: createMock,
+    stream: (params: unknown, opts: unknown) => { streamCalls.push({ params, opts }); return { finalMessage: () => Promise.resolve(createMock(params)) }; }
+  };
+  constructor(public opts: unknown) { constructorMock(opts); }
+} }));
 
 import { PAUSE_TURN_LIMIT, WRITE_REPORT_MAX_TOKENS, anthropicAdapter } from "@/lib/ai-models/anthropic";
 import { StageError } from "@/lib/ai-models/types";
@@ -20,6 +29,7 @@ const ANTHROPIC_NONSTREAMING_MAX_TOKENS_CEILING = 21_333;
 
 beforeEach(() => {
   createMock.mockReset();
+  streamCalls.length = 0;
   constructorMock.mockReset();
   delete process.env.AI_PROBE;
 });
@@ -197,7 +207,7 @@ describe("anthropicAdapter", () => {
     await expect(promise).rejects.toThrow(/no text content/i);
   });
 
-  it("모든 호출의 max_tokens가 SDK의 non-streaming 상한(21,333) 이하다 — 넘기면 API를 부르기도 전에 로컬에서 던진다", async () => {
+  it("non-streaming 호출(classify·research)의 max_tokens는 SDK 상한(21,333) 이하이고, writeReport는 스트리밍이라 그 위(64,000)를 쓴다", async () => {
     createMock
       .mockResolvedValueOnce({ stop_reason: "end_turn", content: [textJson({ offeringCategory: "beauty_personal_care", customerSegment: "consumer", targetCountryCode: "US" })], usage })
       .mockResolvedValueOnce({ stop_reason: "end_turn", role: "assistant", content: [{ type: "text", text: "found" }], usage })
@@ -210,11 +220,20 @@ describe("anthropicAdapter", () => {
     await adapter.writeReport({ locale: "ko", effort: "high", userHash: "h", instructions: "i", payload: { a: 1 }, includedAgentIds: [], files: [], deadlineAt: Date.now() + 120_000 });
 
     expect(createMock).toHaveBeenCalledTimes(4);
-    for (const [args] of createMock.mock.calls) {
+    // 앞의 3건(classify, research 검색, research 정리)은 non-streaming — 로컬 상한 아래여야 한다.
+    for (const [args] of createMock.mock.calls.slice(0, 3)) {
       expect(typeof args.max_tokens).toBe("number");
       expect(args.max_tokens).toBeGreaterThan(0);
       expect(args.max_tokens).toBeLessThanOrEqual(ANTHROPIC_NONSTREAMING_MAX_TOKENS_CEILING);
     }
+    // writeReport 본문은 스트리밍으로 갔고, 그래서 상한을 넘는 max_tokens가 허용된다.
+    expect(streamCalls).toHaveLength(1);
+    const streamed = streamCalls[0] as { params: { max_tokens: number }; opts: { timeout: number } };
+    expect(streamed.params.max_tokens).toBe(WRITE_REPORT_MAX_TOKENS);
+    expect(WRITE_REPORT_MAX_TOKENS).toBeGreaterThan(ANTHROPIC_NONSTREAMING_MAX_TOKENS_CEILING);
+    // 타임아웃은 남은 예산(약 120초)에 맞춘다 — SDK 기본 10분을 그대로 두면 라우트 예산을 넘긴다.
+    expect(streamed.opts.timeout).toBeLessThanOrEqual(120_000);
+    expect(streamed.opts.timeout).toBeGreaterThan(60_000);
   });
 });
 

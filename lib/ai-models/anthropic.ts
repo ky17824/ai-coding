@@ -30,14 +30,15 @@ const MAX_WEB_SEARCHES = 8;
  * ROUTE_DEADLINE_MS, Vercel Pro 기준). 예상 소요가 수십 분 단위로 잡히는 한도는 그래도 이 라우트
  * 안에서는 도달할 수 없다.
  *
- * 더 올리려면 이 숫자를 키우는 게 아니라 writeReport를 스트리밍 API(client.messages.stream)로
- * 바꿔야 한다.
+ * 그래서 writeReport(본문·시장규모)는 스트리밍 API(client.messages.stream(...).finalMessage())로
+ * 부른다 — 스트리밍에는 그 로컬 상한이 없다. classify·research는 출력이 작아 non-streaming 그대로다.
  *
- * 20,000은 실측된 가장 큰 완료 리포트(8,397 output tokens — 유일하게 완료된 프로덕션 실행 기준)
- * 의 약 2.4배로 잡았다. 모자라면 parseStructured에 이미 있는 max_tokens 잘림 에러가 이름 있는
- * 실패로 드러난다.
+ * 값의 근거: Fable 5·Opus 5는 max_tokens가 사고(thinking) + 본문을 합친 상한이다. 2026-08-19 실측
+ * (주문 308de0b2, Fable 5 high): 20,000에서 본문이 잘렸다(stop_reason=max_tokens, 출력 정확히 20,000).
+ * medium은 18,606으로 완료. high의 사고량을 감안해 64,000으로 둔다 — 시간 예산(785초)이 실질 상한이며,
+ * 모자라면 parseStructured의 max_tokens 잘림 에러가 이름 있는 실패로 드러난다.
  */
-export const WRITE_REPORT_MAX_TOKENS = 20_000;
+export const WRITE_REPORT_MAX_TOKENS = 64_000;
 
 /**
  * writeReport를 두 번의 구조화 호출로 나눈 이유 — 전체 스키마 하나로는 Anthropic이 400을 던진다:
@@ -105,6 +106,15 @@ function parseStructured<T extends z.ZodType>(schema: T, response: { stop_reason
 
 function ensureBudget(deadlineAt: number) {
   if (deadlineAt - Date.now() < MIN_CALL_BUDGET_MS) throw new Error("budget_exhausted");
+}
+
+/**
+ * 긴 출력 호출은 스트리밍으로 받아 finalMessage()로 모은다. SDK의 non-streaming 상한(21,333 max_tokens)을
+ * 피하는 유일한 길이다. 타임아웃은 남은 예산에 맞춘다(기본 10분이 예산보다 길 수 있다).
+ */
+async function streamToMessage(client: Anthropic, params: Anthropic.MessageCreateParamsNonStreaming, deadlineAt: number) {
+  const timeout = Math.max(MIN_CALL_BUDGET_MS, deadlineAt - Date.now());
+  return client.messages.stream(params, { timeout }).finalMessage();
 }
 
 /**
@@ -207,7 +217,7 @@ export function anthropicAdapter(model: string): Adapter {
       let usage = EMPTY_USAGE;
       try {
         ensureBudget(deadlineAt);
-        const response = await client.messages.create({
+        const response = await streamToMessage(client, {
           ...base(userHash),
           max_tokens: WRITE_REPORT_MAX_TOKENS,
           system: instructions,
@@ -221,20 +231,20 @@ export function anthropicAdapter(model: string): Adapter {
             ]
           }],
           output_config: outputConfig(effort, reportBodySchema)
-        });
+        }, deadlineAt);
         usage = addUsage(usage, usageOf(response));
         const body = parseStructured(reportBodySchema, response, "aiAgentReportSchema");
 
         let marketSizing: z.infer<typeof marketSizingSchema> | null = null;
         if (includedAgentIds.includes("ai-market-intelligence")) {
           ensureBudget(deadlineAt);
-          const sizing = await client.messages.create({
+          const sizing = await streamToMessage(client, {
             ...base(userHash),
             max_tokens: WRITE_REPORT_MAX_TOKENS,
             system: `${instructions} ${locale === "en" ? "Size the market from the findings and sources below. Return only the market sizing object." : "아래 발견과 출처만으로 시장 규모를 산정하세요. 시장 규모 객체만 반환하세요."}`,
             messages: [{ role: "user", content: JSON.stringify({ findings: body.findings, sources: body.sources }) }],
             output_config: outputConfig(effort, marketSizingSchema)
-          });
+          }, deadlineAt);
           usage = addUsage(usage, usageOf(sizing));
           marketSizing = parseStructured(marketSizingSchema, sizing, "marketSizingSchema");
         }
