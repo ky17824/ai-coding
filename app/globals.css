@@ -5501,9 +5501,14 @@ h2.plan-summary {
   gap: 8px;
 }
 .admin-model-routing__recent { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
-.admin-model-routing__stage h2 { display: flex; align-items: center; gap: 10px; font-size: 17px; margin: 0 0 12px; }
-.admin-model-routing__index { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--mint); color: var(--chart-level-4); font-size: 13px; font-weight: 700; }
-.admin-model-routing__fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.admin-model-routing__fields select { min-height: 42px; }
+/* 편집 폼은 읽기 폭(820px)으로 묶고, .provider-form의 32px 패딩을 빼서 상태 칩과 왼쪽을 맞춘다. 이력 표는 전폭 그대로. */
+.admin-model-routing .provider-form { padding: 0; margin-top: 24px; max-width: 820px; }
+.admin-model-routing__stage { padding: 20px 24px; display: grid; gap: 12px; }
+.admin-model-routing__heading { display: grid; gap: 4px; }
+.admin-model-routing__heading .page-kicker { font-size: 12px; }
+.admin-model-routing__stage h2 { font-size: 17px; margin: 0; }
+/* 모델 옵션 문구는 길고("… (웹검색 없음)") 추론 강도는 3개뿐이라 열 폭을 다르게 준다. */
+.admin-model-routing__fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 220px); gap: 12px; }
+.admin-model-routing__fields select { min-height: 40px; padding: 8px 36px 8px 12px; }
 .admin-model-routing__actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
 @media (max-width: 480px) { .admin-model-routing__fields { grid-template-columns: 1fr; } }

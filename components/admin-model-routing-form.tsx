@@ -78,8 +78,11 @@ export function AdminModelRoutingForm(props: {
       <form action={action} className="provider-form admin-role-form">
         <input type="hidden" name="locale" value={locale} />
         {STAGES.map((stage, index) => (
-          <section key={stage} className="admin-section panel admin-model-routing__stage">
-            <h2><span className="admin-model-routing__index" aria-hidden="true">{index + 1}</span>{STAGE_LABEL[locale][stage]}</h2>
+          <section key={stage} className="panel admin-model-routing__stage">
+            <div className="admin-model-routing__heading">
+              <span className="page-kicker">{en ? `Stage ${index + 1}` : `${index + 1}단계`}</span>
+              <h2>{STAGE_LABEL[locale][stage]}</h2>
+            </div>
             <div className="admin-model-routing__fields">
               <label>
                 <span>{en ? "Model" : "모델"}</span>

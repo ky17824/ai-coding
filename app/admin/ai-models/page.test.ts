@@ -78,4 +78,27 @@ describe("/admin/ai-models", () => {
   it("저장/취소 버튼 줄은 320px에서 줄바꿈되어 가로 스크롤을 만들지 않는다", () => {
     expect(css).toMatch(/\.admin-model-routing__actions\s*\{[^}]*flex-wrap:\s*wrap;/s);
   });
+
+  it("단계 번호는 원형 배지가 아니라 'N단계' kicker 텍스트다", () => {
+    expect(form).not.toContain("admin-model-routing__index");
+    expect(css).not.toContain("admin-model-routing__index");
+    expect(form).toContain("`${index + 1}단계`");
+    expect(form).toContain("`Stage ${index + 1}`");
+  });
+
+  it("단계 카드는 자기 패딩이 있고 admin-section의 48px 마진을 물려받지 않는다", () => {
+    expect(css).toMatch(/\.admin-model-routing__stage\s*\{[^}]*padding:/s);
+    expect(form).toContain('className="panel admin-model-routing__stage"');
+    expect(form).not.toContain("admin-section panel admin-model-routing__stage");
+  });
+
+  it("추론 강도 열은 고정폭이라 모델 select와 반씩 나누지 않는다", () => {
+    const fields = css.match(/\.admin-model-routing__fields\s*\{[^}]*\}/s)?.[0] ?? "";
+    expect(fields).not.toContain("1fr 1fr");
+    expect(fields).toMatch(/minmax\(0,\s*220px\)/);
+  });
+
+  it("편집 폼은 읽기 폭으로 묶고 .provider-form 패딩을 걷어 상태 칩과 정렬한다", () => {
+    expect(css).toMatch(/\.admin-model-routing \.provider-form\s*\{[^}]*padding:\s*0;[^}]*max-width:\s*820px;/s);
+  });
 });
