@@ -238,6 +238,115 @@ svg {
   color: var(--green);
 }
 
+/* 헤더 "진행 중 서비스" 알약 — 서비스명 · 상태. 톤은 lib/active-service.ts의 describeActiveService가 정한다. */
+.active-service {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 320px;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.active-service__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-service__state {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.active-service__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.active-service--warn { border-color: var(--warning-border); background: var(--warning-bg); color: var(--warning-ink); }
+.active-service--warn .active-service__state { color: var(--warning-ink); }
+.active-service--warn .active-service__dot { background: #d9822b; }
+.active-service--live { border-color: var(--success-border); background: var(--success-bg); color: var(--green-dark); }
+.active-service--live .active-service__state { color: var(--green); }
+.active-service--live .active-service__dot { background: var(--green); box-shadow: 0 0 0 3px rgba(29, 123, 76, 0.18); animation: active-service-pulse 1.6s ease-in-out infinite; }
+.active-service--done { border-color: var(--success-border); background: var(--success-bg); color: var(--green-dark); }
+.active-service--done .active-service__state { color: var(--green); }
+.active-service--done .active-service__dot { width: auto; height: auto; background: transparent; color: var(--green); font-size: 12px; font-weight: 800; }
+.active-service--danger { border-color: var(--danger-border); background: var(--danger-bg); color: var(--danger-ink); }
+.active-service--danger .active-service__state { color: var(--danger-ink); }
+.active-service--danger .active-service__dot { background: var(--danger-ink); }
+
+@keyframes active-service-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(29, 123, 76, 0.18); }
+  50% { box-shadow: 0 0 0 6px rgba(29, 123, 76, 0.06); }
+}
+
+.active-service-link { display: inline-flex; text-decoration: none; }
+.main-nav .active-service-link:hover .active-service,
+.main-nav .active-service-link:focus-visible .active-service,
+.active-service-menu summary:hover .active-service,
+.active-service-menu summary:focus-visible .active-service { border-color: var(--green); }
+
+/* 둘 이상이면 details 드롭다운. mobile-nav와 같은 방식이라 자바스크립트가 없다. */
+.active-service-menu { position: relative; }
+.active-service-menu summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+}
+.active-service-menu summary::-webkit-details-marker { display: none; }
+.active-service__count {
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--green-dark);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 800;
+}
+.active-service-menu__list {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 5;
+  min-width: 300px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  display: grid;
+  gap: 2px;
+  background: var(--white);
+  box-shadow: var(--shadow-raised);
+}
+.active-service-menu__item {
+  display: flex;
+  padding: 6px;
+  border-radius: var(--radius-field);
+  text-decoration: none;
+}
+.active-service-menu__item:hover,
+.active-service-menu__item:focus-visible { background: var(--surface-soft); }
+.active-service-menu__item .active-service { max-width: none; width: 100%; background: transparent; border-color: transparent; }
+/* 901~1180px에서는 상태 문구를 숨겨 내비가 눌리지 않게 한다 — 서비스명과 점(톤)은 남는다. */
+@media (max-width: 1180px) {
+  .main-nav .active-service__state { display: none; }
+}
+
 .button,
 .icon-button,
 .filter-row button,
@@ -649,7 +758,8 @@ main[lang="en"] .hero h1 {
 
 @media (prefers-reduced-motion: reduce) {
   .chart__column span,
-  .hero h1 span {
+  .hero h1 span,
+  .active-service--live .active-service__dot {
     animation: none;
   }
 }
@@ -5161,6 +5271,8 @@ h2.plan-summary {
     top: calc(100% + 10px);
     right: 0;
     width: min(280px, calc(100vw - 32px));
+    max-height: 70vh;
+    overflow-y: auto;
     padding: 10px;
     border: 1px solid var(--line);
     border-radius: var(--radius-card);
@@ -5185,6 +5297,10 @@ h2.plan-summary {
     font-weight: 700;
     text-align: left;
   }
+
+  /* 알약 링크는 자체 여백을 가지므로 행 패딩을 걷어내고, 행 hover 배경과 겹치지 않게 흰 바탕을 준다. */
+  .mobile-nav__menu > a.active-service-link { padding: 0 2px; }
+  .mobile-nav__menu .active-service { background: var(--white); }
 
   .mobile-nav__menu > a:hover,
   .mobile-nav__menu button:hover,

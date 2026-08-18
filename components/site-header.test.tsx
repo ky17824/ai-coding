@@ -34,6 +34,13 @@ describe("site header shell", () => {
     expect(SiteHeader({ locale: "ko" })).not.toBeInstanceOf(Promise);
   });
 
+  it("mounts the active-service slot in the app navigation but not on the landing header", () => {
+    // 랜딩은 로그인 전 화면이라 알약 슬롯 자체를 두지 않는다. directLinks는 href 없는 자식을 무시하므로 자식 수로 잠근다.
+    const count = (header: React.ReactElement, className: string) => React.Children.toArray(findByClass(header, className)?.props.children).filter(Boolean).length;
+    expect(count(SiteHeader({ locale: "ko" }) as React.ReactElement, "main-nav")).toBe(5); // 4 links + slot
+    expect(count(SiteHeader({ locale: "ko", landing: true }) as React.ReactElement, "main-nav")).toBe(2); // 2 links, no slot
+  });
+
   it("shows the assessment assistant only in the dashboard desktop navigation", () => {
     const header = SiteHeader({ locale: "ko", assistantHref: "/assistant/assessment-1" });
 

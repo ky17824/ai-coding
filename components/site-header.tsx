@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { signOut } from "@/app/signin/actions";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { HeaderActiveService } from "@/components/header-active-service";
 import { localizedPath, t, type Locale } from "@/lib/i18n";
 import { getCurrentProfile } from "@/lib/supabase/server";
 
@@ -52,11 +53,13 @@ export function SiteHeader({
       </Link>
       <nav className="main-nav" aria-label={m.header.mainNav}>
         {desktopNavItems.map(([href, label]) => <Link href={localizedPath(href, locale)} key={href}>{label}</Link>)}
+        {!landing && <Suspense fallback={null}><HeaderActiveService locale={locale} /></Suspense>}
       </nav>
       <details className="mobile-nav">
         <summary>{locale === "en" ? "Menu" : "메뉴"}</summary>
         <div className="mobile-nav__menu" role="navigation" aria-label={m.header.mainNav}>
           <span className="mobile-nav__language"><LanguageSwitcher locale={locale} /></span>
+          {!landing && <Suspense fallback={null}><HeaderActiveService locale={locale} mobile /></Suspense>}
           {navItems.map(([href, label]) => <Link href={localizedPath(href, locale)} key={href}>{label}</Link>)}
           <Suspense fallback={null}><HeaderAccount locale={locale} mobile /></Suspense>
         </div>
