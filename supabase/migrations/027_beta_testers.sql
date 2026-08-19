@@ -1,4 +1,4 @@
--- 026: 베타 테스터 초대
+-- 027: 베타 테스터 초대 (026은 codex/ai-expert-health-check의 health_events가 이미 원격에 적용되어 있어 건너뛴다)
 --
 -- 관리자가 이메일을 등록한 창업자가 결제 없이 심층 시장 조사(ai-market-intelligence)를
 -- max_runs(기본 3)회 실행한다. 관리자 베타(019, admin_beta)와 별개 계층이며 billing_mode는

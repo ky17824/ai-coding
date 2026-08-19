@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * 심층 시장 조사를 max_runs(기본 3)회 실행한다.
  *
  * - 판정은 서버에서만 한다. 클라이언트 값은 어떤 것도 무료 여부를 정하지 못한다(fail closed).
- * - DB RPC create_free_ai_order(026)가 같은 규칙을 잠금 아래에서 다시 검사한다.
+ * - DB RPC create_free_ai_order(027)가 같은 규칙을 잠금 아래에서 다시 검사한다.
  * - 관리자 베타(lib/admin-ai-beta.ts, admin_beta)와 별개 계층이다.
  */
 export const BETA_TESTER_PRODUCT_ID = "ai-market-intelligence";

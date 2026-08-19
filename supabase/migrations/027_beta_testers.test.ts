@@ -2,11 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const sql = readFileSync(join(process.cwd(), "supabase/migrations/026_beta_testers.sql"), "utf8");
+const sql = readFileSync(join(process.cwd(), "supabase/migrations/027_beta_testers.sql"), "utf8");
 const code = sql.split("\n").filter((line) => !line.trimStart().startsWith("--")).join("\n");
 const rpc = code.slice(code.indexOf("function public.create_free_ai_order"), code.indexOf("$$;", code.indexOf("function public.create_free_ai_order")));
 
-describe("026 beta testers", () => {
+describe("027 beta testers", () => {
   it("초대 목록 테이블은 소문자 이메일이 키이고 관리자만 다룬다", () => {
     expect(code).toContain("create table if not exists public.beta_testers");
     expect(code).toContain("email = lower(btrim(email))");

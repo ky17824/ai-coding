@@ -207,7 +207,7 @@ export async function rollbackModelRouting(_state: ModelRoutingActionState, form
 
 // ---------------------------------------------------------------------------
 // 베타 테스터 초대. 이메일을 등록하면 그 계정은 심층 시장 조사를 max_runs(3)회 결제 없이 실행한다.
-// 판정·과금 우회는 lib/beta-testers.ts와 026 RPC가 하고, 여기는 목록 편집만 한다.
+// 판정·과금 우회는 lib/beta-testers.ts와 027 RPC가 하고, 여기는 목록 편집만 한다.
 // ---------------------------------------------------------------------------
 export interface BetaTesterActionState {
   ok: boolean;

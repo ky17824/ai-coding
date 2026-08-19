@@ -18,8 +18,8 @@
 
 ---
 
-### Task 1: 마이그레이션 026 — beta_testers 테이블, billing_mode 확장, create_free_ai_order RPC
-**Files:** Create `supabase/migrations/026_beta_testers.sql`, Test `supabase/migrations/026_beta_testers.test.ts`
+### Task 1: 마이그레이션 027 — beta_testers 테이블, billing_mode 확장, create_free_ai_order RPC
+**Files:** Create `supabase/migrations/027_beta_testers.sql`, Test `supabase/migrations/027_beta_testers.test.ts`
 **Produces:** table `public.beta_testers`, RPC `create_free_ai_order(p_order_id uuid, p_buyer_id uuid, p_organization_id uuid, p_product_key text, p_locale text, p_service_snapshot jsonb, p_terms_snapshot jsonb, p_billing_mode text)`; billing_mode 값 `beta_tester`.
 - [ ] 테스트: SQL 문자열에 `create table if not exists public.beta_testers`, `billing_mode in ('paid', 'admin_beta', 'beta_tester')`, `create_free_ai_order`, `beta_tester_quota_exhausted`, `drop function if exists public.create_admin_beta_ai_order`, `for update`(경쟁 조건 잠금)가 있고, RPC 안에서 `beta_testers` 조회가 `insert into public.orders`보다 앞에 온다.
 - [ ] SQL: 테이블(email pk lower, max_runs default 3 check 0..100, note, invited_by, created_at, revoked_at) + admin만 select/insert/update RLS(`public.is_admin()` 001:261 사용); `orders_billing_mode_check`·`orders_amount_by_billing_mode_check`·`orders_admin_beta_open_run` 인덱스를 두 값 모두 포함하도록 재생성; RPC: `p_billing_mode='admin_beta'`면 019와 같은 admin 검증, `'beta_tester'`면 `select email from auth.users where id=p_buyer_id` → `beta_testers` 행 `for update`(revoked_at null) 없으면 `beta_tester_not_allowed`, `p_product_key<>'ai-market-intelligence'`면 `beta_tester_not_allowed`, `count(orders where buyer_id and billing_mode='beta_tester' and status<>'cancelled') >= max_runs`면 `beta_tester_quota_exhausted`; insert orders(billing_mode=p_billing_mode, payment_id 'beta-'||uuid) + ai_agent_runs. revoke public/anon/authenticated, grant service_role. 옛 함수 drop.

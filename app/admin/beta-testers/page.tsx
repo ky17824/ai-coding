@@ -17,7 +17,7 @@ type TesterRow = { email: string; max_runs: number; note: string | null; created
 
 /**
  * 창업자 초대 목록. 등록된 이메일로 로그인한 계정은 심층 시장 조사를 max_runs회 결제 없이 실행한다
- * (lib/beta-testers.ts, 026 RPC). 초대 메일 발송은 자동화하지 않는다 — 관리자가 직접 안내한다.
+ * (lib/beta-testers.ts, 027 RPC). 초대 메일 발송은 자동화하지 않는다 — 관리자가 직접 안내한다.
  */
 export default async function AdminBetaTestersPage() {
   const [{ user: actor, profile }, locale] = await Promise.all([getCurrentProfile(), getRequestLocale()]);
