@@ -39,6 +39,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         <p className="page-description">
           {aiEnabled ? (en ? "Your saved readiness answers carry over. After a few material follow-ups, a frontier model produces a sourced report and action plan." : "이미 입력한 준비도 진단 답변을 그대로 이어받습니다. 결론이 달라질 내용만 몇 가지 더 확인한 뒤, 출처를 밝힌 보고서와 실행계획을 만들어 드립니다.") : (en ? "Only standardized services from admin-approved mentors and consultants are listed." : "관리자 승인을 거친 멘토·컨설턴트의 표준화된 서비스만 공개됩니다.")}
         </p>
+        {aiEnabled && <p className="notice-banner" role="status">{en ? "In-depth Market Research is available now; the remaining services launch in late August." : "현재 심층 시장 조사를 먼저 제공하며, 나머지 서비스는 8월 말 순차 출시합니다."}</p>}
         {requestedTag && <p className="notice-banner" role="status">{matched.length
           ? en ? `${matched.length} matching service${matched.length === 1 ? "" : "s"} found.` : `관련 ${aiEnabled ? "AI 전문가 " : ""}서비스 ${matched.length}개를 찾았습니다.`
           : en ? "No exact match is available, so the full catalog is shown." : "딱 맞는 서비스가 없어 전체 목록을 보여 드립니다."}</p>}

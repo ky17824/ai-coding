@@ -1,14 +1,14 @@
 import type { Locale } from "@/lib/i18n";
 import type { SurveyVersion } from "@/lib/intake-questions";
 import type { ServiceOffering } from "@/lib/types";
-import { CATALOG_PRODUCTS } from "./products";
+import { CATALOG_PRODUCTS, LAUNCHED_PRODUCT_IDS } from "./products";
 import { REFUND_POLICY, TIER_DISCLOSURE, HUMAN_BOUNDARY, PRODUCT_BOUNDARY, PRODUCT_COPY, PRODUCT_REQUIRED_INPUT, PROVIDER, REQUIRED_INPUT_BY_AGENT, SHARED_REQUIRED_INPUT, TIER_BADGE, TIER_FIRST_STEP } from "./copy";
 import { buildSpecialistRules, OFFICIAL_SOURCE_AGENT_ID } from "./rules";
 import { LABOR_RATES, PLATFORM_FEE_RATE, type CatalogProduct, type Phase } from "./types";
 
 export type { CatalogProduct, Phase, Tier } from "./types";
-export { CATALOG_PRODUCTS } from "./products";
-export { TIER_BADGE, TIER_FIRST_STEP, REFUND_POLICY } from "./copy";
+export { CATALOG_PRODUCTS, LAUNCHED_PRODUCT_IDS } from "./products";
+export { TIER_BADGE, TIER_FIRST_STEP, REFUND_POLICY, COMING_SOON } from "./copy";
 export { buildSpecialistRules, OFFICIAL_SOURCE_AGENT_ID } from "./rules";
 export { LABOR_RATES, PLATFORM_FEE_RATE } from "./types";
 
@@ -106,7 +106,8 @@ export function localizeCatalogProduct(
     refundPolicy: REFUND_POLICY[locale],
     tier: product.tier,
     tierLabel: TIER_BADGE[product.tier][locale],
-    area: product.area
+    area: product.area,
+    comingSoon: !LAUNCHED_PRODUCT_IDS.has(product.id)
   };
 }
 

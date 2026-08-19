@@ -13,7 +13,7 @@ import {
   localizeCatalogProduct,
   OFFICIAL_SOURCE_AGENT_ID
 } from "@/lib/catalog";
-import { ATTACHMENT_HINT_BY_AGENT, PRODUCT_COPY, REQUIRED_INPUT_BY_AGENT, SHARED_REQUIRED_INPUT } from "@/lib/catalog/copy";
+import { ATTACHMENT_HINT_BY_AGENT, COMING_SOON, PRODUCT_COPY, REQUIRED_INPUT_BY_AGENT, SHARED_REQUIRED_INPUT } from "@/lib/catalog/copy";
 
 describe("product catalog", () => {
   it("ships nine phase-1 products and hides phase 2 until expert supply exists", () => {
@@ -108,6 +108,14 @@ describe("scope boundary", () => {
     for (const service of getCatalogServices("ko")) {
       expect(service.requiredInputs?.[0]).toContain("목표 국가와 고객");
     }
+  });
+
+  it("marks every phase-1 product except the launched ones as coming soon", () => {
+    // 2026-08-18: 심층 시장 조사만 프론티어 모델 실행이 검증돼 먼저 연다. 나머지 8개는 회색 + 8월 말 출시 예정.
+    const services = getCatalogServices("ko");
+    expect(services.filter((s) => !s.comingSoon).map((s) => s.id)).toEqual(["ai-market-intelligence"]);
+    expect(services.filter((s) => s.comingSoon).length).toBe(8);
+    expect(COMING_SOON.badge.ko).toBe("8월 말 출시 예정");
   });
 
   it("gives every AI specialist a service-specific intake label and attachment hint in both locales", () => {

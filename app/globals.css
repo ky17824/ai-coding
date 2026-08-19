@@ -1584,6 +1584,31 @@ main[lang="en"] .hero h1 {
   box-shadow: var(--shadow);
 }
 
+/* 출시 전 상품. 읽을 수는 있되 살 수 없다는 것이 한눈에 보이게 회색조로 낮춘다. */
+.service-card--coming-soon {
+  filter: grayscale(1);
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.service-card--coming-soon:hover {
+  transform: none;
+}
+
+.pill--coming-soon {
+  background: var(--sand);
+  color: var(--ink);
+}
+
+.coming-soon-notice {
+  display: grid;
+  gap: 8px;
+}
+
+.coming-soon-notice .button {
+  justify-self: start;
+}
+
 .service-card__topline,
 .service-card__footer {
   display: flex;

@@ -321,6 +321,13 @@ export const PROVIDER: { name: Copy; title: Copy; duration: Copy } = {
   duration: { ko: "결제 후 즉시 시작", en: "Starts immediately after payment" }
 };
 
+/** 아직 열지 않은 상품의 배지·안내. LAUNCHED_PRODUCT_IDS(products.ts)에 없는 상품에 붙는다. */
+export const COMING_SOON: { badge: Copy; notice: Copy; cta: Copy } = {
+  badge: { ko: "8월 말 출시 예정", en: "Launching late August" },
+  notice: { ko: "이 서비스는 8월 말에 출시됩니다. 지금은 심층 시장 조사를 먼저 이용하실 수 있습니다.", en: "This service launches in late August. In-depth Market Research is available now." },
+  cta: { ko: "심층 시장 조사 보기", en: "See In-depth Market Research" }
+};
+
 /** 계층 배지. 카드 상단 pill 자리를 대체한다. */
 export const TIER_BADGE: Record<Tier, Copy> = {
   A: { ko: "AI 전용", en: "AI only" },

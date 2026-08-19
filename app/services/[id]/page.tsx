@@ -5,7 +5,9 @@ import { CheckoutButton } from "@/components/checkout-button";
 import { getPublishedService } from "@/lib/services";
 import { getAiPriceWithVat } from "@/lib/ai-agent-report";
 import { getRequestLocale } from "@/lib/i18n-server";
-import { TIER_FIRST_STEP } from "@/lib/catalog";
+import Link from "next/link";
+import { COMING_SOON, TIER_FIRST_STEP } from "@/lib/catalog";
+import { localizedPath } from "@/lib/i18n";
 import { checkAdminBetaAccess } from "@/lib/admin-ai-beta";
 import { createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
 
@@ -77,7 +79,13 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             <span><small>{en ? "Type" : "유형"}</small><strong>{isAi ? (service.productKind === "package" ? (en ? "AI package" : "AI 패키지") : (en ? "AI specialist" : "AI 전문가")) : service.type === "mentoring" ? (en ? "Mentoring" : "멘토링") : (en ? "Consulting" : "컨설팅")}</strong></span>
             <span><small>{en ? (isAi ? "Included" : "Duration") : (isAi ? "포함" : "제공기간")}</small><strong>{isAi ? (en ? "2 clarifications · 1 correction" : "추가 질문 2회 · 사실 정정 1회") : service.durationLabel}</strong></span>
           </div>
-          <CheckoutButton serviceId={service.id} title={service.title} amount={isBeta ? 0 : amounts?.grossAmountKrw ?? service.price} type={service.type} availableSlots={service.availableSlots} locale={locale} betaMode={isBeta} />
+          {service.comingSoon && !isBeta
+            ? <div className="notice-banner coming-soon-notice" role="status">
+                <strong>{COMING_SOON.badge[locale]}</strong>
+                <span>{COMING_SOON.notice[locale]}</span>
+                <Link href={localizedPath("/services/ai-market-intelligence", locale)} className="button button--primary">{COMING_SOON.cta[locale]}</Link>
+              </div>
+            : <CheckoutButton serviceId={service.id} title={service.title} amount={isBeta ? 0 : amounts?.grossAmountKrw ?? service.price} type={service.type} availableSlots={service.availableSlots} locale={locale} betaMode={isBeta} />}
         </aside>
       </div>
     </main>

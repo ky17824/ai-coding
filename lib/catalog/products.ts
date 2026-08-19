@@ -120,5 +120,12 @@ const expertProducts: CatalogProduct[] = [
 
 export const CATALOG_PRODUCTS: CatalogProduct[] = [...specialists, ...packages, ...expertProducts];
 
+/**
+ * 지금 판매 중인 상품. 여기 없는 1차 상품은 목록·상세에 "8월 말 출시 예정"으로 회색 표시되고
+ * 유료 주문이 막힌다(관리자 베타 테스트는 계속 가능). 출시할 때 id를 한 줄 추가한다.
+ * 2026-08-18: 심층 시장 조사만 프론티어 모델(Fable 5) 실행이 검증돼 먼저 연다.
+ */
+export const LAUNCHED_PRODUCT_IDS = new Set(["ai-market-intelligence"]);
+
 /** 화면 필터에 쓰는 준비도 영역. 순서가 곧 노출 순서다. */
 export const CATALOG_AREAS = ["시장·경쟁", "고객 검증", "현지화", "규제", "파트너", "자금", "실행"];

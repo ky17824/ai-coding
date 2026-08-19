@@ -112,6 +112,10 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
     const amounts = getAiOrderAmounts(aiService.price);
     const isBeta = betaAccess.eligible;
+    // 출시 전 상품은 UI에서 결제 버튼을 숨기지만, 직접 호출을 막는 것은 여기다. 베타 테스트는 계속 허용.
+    if (aiService.comingSoon && !isBeta) {
+      return NextResponse.json({ message: en ? "This service has not launched yet." : "아직 출시 전인 서비스입니다." }, { status: 403 });
+    }
     const serviceSnapshot = {
         contractVersion: 1,
         questionCatalogVersion: surveyVersion,

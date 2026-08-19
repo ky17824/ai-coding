@@ -21,6 +21,16 @@ describe("ServiceCard", () => {
     expect(html).toContain("VAT excluded");
   });
 
+  it("greys out coming-soon products with the launch badge but keeps the details link", () => {
+    const soon = getAiAgentService("ai-entry-requirements", "ko")!;
+    const html = renderToStaticMarkup(<ServiceCard service={soon} locale="ko" />);
+    expect(html).toContain("service-card--coming-soon");
+    expect(html).toContain("8월 말 출시 예정");
+    expect(html).toContain("/services/ai-entry-requirements");
+    const live = renderToStaticMarkup(<ServiceCard service={getAiAgentService("ai-market-intelligence", "ko")!} locale="ko" />);
+    expect(live).not.toContain("service-card--coming-soon");
+  });
+
   it("uses generic frontier-model copy across the public AI service journey", () => {
     const publicSources = [
       "app/services/page.tsx",

@@ -1,13 +1,15 @@
 import Link from "next/link";
 import type { ServiceOffering } from "@/lib/types";
 import { localizedPath, type Locale } from "@/lib/i18n";
+import { COMING_SOON } from "@/lib/catalog/copy";
 
 const won = new Intl.NumberFormat("ko-KR");
 
 export function ServiceCard({ service, locale = "ko" }: { service: ServiceOffering; locale?: Locale }) {
   return (
-    <article className="service-card">
+    <article className={`service-card${service.comingSoon ? " service-card--coming-soon" : ""}`}>
       <div className="service-card__topline">
+        {service.comingSoon && <span className="pill pill--coming-soon">{COMING_SOON.badge[locale]}</span>}
         <span className={`pill pill--${service.type}${service.tier ? ` pill--tier-${service.tier.toLowerCase()}` : ""}`}>
           {service.type === "mentoring"
             ? locale === "en" ? "1:1 Mentoring" : "1:1 멘토링"
@@ -36,7 +38,7 @@ export function ServiceCard({ service, locale = "ko" }: { service: ServiceOfferi
         <span>
           <strong>{locale === "en" ? `₩${won.format(service.price)}` : `${won.format(service.price)}원`}</strong>
           {service.type === "ai_agent" ? <small>{locale === "en" ? "VAT excluded" : "부가세 별도"}</small> : null}
-          <small>{service.durationLabel}</small>
+          <small>{service.comingSoon ? COMING_SOON.badge[locale] : service.durationLabel}</small>
         </span>
         <Link
           href={localizedPath(`/services/${service.id}`, locale)}

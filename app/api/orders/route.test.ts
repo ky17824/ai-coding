@@ -70,6 +70,22 @@ describe("beta order boundaries", () => {
   });
 });
 
+describe("coming-soon products", () => {
+  it("refuses paid orders for unlaunched products but lets admin beta tests through", () => {
+    // 카드·상세는 회색 표시일 뿐이고 직접 호출을 막는 것은 서버다. 베타는 출시 전 검증을 위해 계속 열어 둔다.
+    const guard = source.indexOf("aiService.comingSoon && !isBeta");
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(source.indexOf("create_admin_beta_ai_order"));
+    expect(source).toContain("아직 출시 전인 서비스입니다");
+  });
+
+  it("swaps the checkout button for the launch notice unless the viewer is a beta admin", () => {
+    const detail = readFileSync(new URL("../../services/[id]/page.tsx", import.meta.url), "utf8");
+    expect(detail).toContain("service.comingSoon && !isBeta");
+    expect(detail).toContain("COMING_SOON.notice[locale]");
+  });
+});
+
 describe("service detail beta affordance", () => {
   const detail = readFileSync(new URL("../../services/[id]/page.tsx", import.meta.url), "utf8");
 
