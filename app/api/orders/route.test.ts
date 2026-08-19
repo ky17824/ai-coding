@@ -97,7 +97,7 @@ describe("coming-soon products", () => {
 
   it("swaps the checkout button for the launch notice unless the viewer is a beta admin", () => {
     const detail = readFileSync(new URL("../../services/[id]/page.tsx", import.meta.url), "utf8");
-    expect(detail).toContain("service.comingSoon && !isBeta");
+    expect(detail).toContain("service.comingSoon && !isFree");
     expect(detail).toContain("COMING_SOON.notice[locale]");
   });
 });
@@ -107,7 +107,10 @@ describe("service detail beta affordance", () => {
 
   it("decides eligibility on the server and passes only a boolean to the client", () => {
     expect(detail).toContain("checkAdminBetaAccess");
-    expect(detail).toContain("betaMode={isBeta}");
+    expect(detail).toContain("betaMode={isFree}");
+    // 베타 테스터도 같은 0원 패널을 쓰되, 자격은 서버에서 읽는다.
+    expect(detail).toContain("checkBetaTesterAccess(adminClient");
+    expect(detail).toContain("무료 이용 ${tester.remaining}/${tester.maxRuns}회 남음");
     // 허용 목록이나 UUID가 클라이언트로 나가면 안 된다.
     expect(detail).not.toContain("ADMIN_AI_BETA_USER_IDS");
   });
@@ -120,8 +123,8 @@ describe("service detail beta affordance", () => {
   });
 
   it("labels the CTA as a test rather than a payment", () => {
-    expect(checkout).toContain("관리자 베타 테스트 시작");
-    expect(checkout).toContain("Start admin beta test");
+    expect(checkout).toContain("베타 테스트 시작");
+    expect(checkout).toContain("Start beta test");
     expect(checkout).toContain("결제·환불 대상이 아닙니다");
   });
 });

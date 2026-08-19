@@ -9,7 +9,8 @@ import Link from "next/link";
 import { COMING_SOON, TIER_FIRST_STEP } from "@/lib/catalog";
 import { localizedPath } from "@/lib/i18n";
 import { checkAdminBetaAccess } from "@/lib/admin-ai-beta";
-import { createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
+import { checkBetaTesterAccess } from "@/lib/beta-testers";
+import { createSupabaseAdminClient, createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
 
 const won = new Intl.NumberFormat("ko-KR");
 
@@ -39,6 +40,13 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
     profile: viewer ? { role: viewer.role, deletedAt: viewer.deleted_at } : null,
     isAiProduct: isAi
   }).eligible;
+  // 베타 테스터(관리자가 이메일 등록): 심층 시장 조사만 횟수 안에서 무료. 판정은 서버에서만.
+  const adminClient = createSupabaseAdminClient();
+  const tester = !isBeta && user && isAi && adminClient && viewer?.role === "startup" && !viewer.deleted_at
+    ? await checkBetaTesterAccess(adminClient, { userId: user.id, email: user.email, productId: service.id })
+    : null;
+  const isTester = tester?.eligible === true;
+  const isFree = isBeta || isTester;
 
   return (
     <main className="app-page">
@@ -69,9 +77,13 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             <strong>{en ? "Admin beta test" : "관리자 베타 테스트"}</strong>
             <span>{en ? " This runs the real AI service without payment. The model, research, files, clarifications, report, and cost recording are identical to a paid order." : " — 결제 없이 실제 AI 실행 환경을 테스트합니다. 모델·검색·파일·추가 질문·보고서·비용 기록은 운영과 동일합니다."}</span>
           </p>}
-          <span>{isBeta ? (en ? "Charged to you" : "관리자 테스트 청구액") : (en ? "Service price" : "서비스 금액")}</span>
-          <strong>{isBeta ? (en ? "₩0" : "0원") : en ? `₩${won.format(service.price)}` : `${won.format(service.price)}원`}</strong>
-          <small>{isBeta
+          {isTester && tester?.eligible && <p className="notice-banner notice-banner--warning" role="status">
+            <strong>{en ? "Beta tester" : "베타 테스터"}</strong>
+            <span>{en ? ` You are invited to use this service without payment. Free runs left: ${tester.remaining}/${tester.maxRuns}.` : ` — 초대받은 계정이라 결제 없이 이용합니다. 무료 이용 ${tester.remaining}/${tester.maxRuns}회 남음.`}</span>
+          </p>}
+          <span>{isFree ? (isBeta ? (en ? "Charged to you" : "관리자 테스트 청구액") : (en ? "Charged to you" : "결제 금액")) : (en ? "Service price" : "서비스 금액")}</span>
+          <strong>{isFree ? (en ? "₩0" : "0원") : en ? `₩${won.format(service.price)}` : `${won.format(service.price)}원`}</strong>
+          <small>{isFree
             ? (en ? `List price ₩${won.format(service.price)} · no checkout window opens` : `서비스 기준가 ${won.format(service.price)}원 · 결제 창은 열리지 않습니다`)
             : isAi && amounts ? (en ? `VAT ₩${won.format(amounts.vatAmountKrw)} · Total ₩${won.format(amounts.grossAmountKrw)}` : `부가세 ${won.format(amounts.vatAmountKrw)}원 · 결제금액 ${won.format(amounts.grossAmountKrw)}원`) : service.durationLabel}</small>
           <div className="purchase-summary">
@@ -79,13 +91,13 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             <span><small>{en ? "Type" : "유형"}</small><strong>{isAi ? (service.productKind === "package" ? (en ? "AI package" : "AI 패키지") : (en ? "AI specialist" : "AI 전문가")) : service.type === "mentoring" ? (en ? "Mentoring" : "멘토링") : (en ? "Consulting" : "컨설팅")}</strong></span>
             <span><small>{en ? (isAi ? "Included" : "Duration") : (isAi ? "포함" : "제공기간")}</small><strong>{isAi ? (en ? "2 clarifications · 1 correction" : "추가 질문 2회 · 사실 정정 1회") : service.durationLabel}</strong></span>
           </div>
-          {service.comingSoon && !isBeta
+          {service.comingSoon && !isFree
             ? <div className="notice-banner coming-soon-notice" role="status">
                 <strong>{COMING_SOON.badge[locale]}</strong>
                 <span>{COMING_SOON.notice[locale]}</span>
                 <Link href={localizedPath("/services/ai-market-intelligence", locale)} className="button button--primary">{COMING_SOON.cta[locale]}</Link>
               </div>
-            : <CheckoutButton serviceId={service.id} title={service.title} amount={isBeta ? 0 : amounts?.grossAmountKrw ?? service.price} type={service.type} availableSlots={service.availableSlots} locale={locale} betaMode={isBeta} />}
+            : <CheckoutButton serviceId={service.id} title={service.title} amount={isFree ? 0 : amounts?.grossAmountKrw ?? service.price} type={service.type} availableSlots={service.availableSlots} locale={locale} betaMode={isFree} />}
         </aside>
       </div>
     </main>

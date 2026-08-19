@@ -149,7 +149,7 @@ export async function POST(request: Request) {
         acceptedAt: now,
         sellerDisclosure: en ? "Borderless provides this AI expert service." : "Borderless가 AI 전문가 서비스를 제공합니다.",
         refundPolicy: isBeta
-          ? (en ? "Admin beta tests are not charged and are not eligible for a refund." : "관리자 베타 테스트는 결제·환불 대상이 아닙니다.")
+          ? (en ? "Beta tests are not charged and are not eligible for a refund." : "베타 테스트는 결제·환불 대상이 아닙니다.")
           : (en ? "A full refund is available before report generation begins. After generation starts, requests are reviewed using the order record." : "보고서 생성 시작 전에는 전액 환불됩니다. 보고서 생성이 시작된 뒤의 환불 요청은 주문 및 생성 기록을 기준으로 검토합니다."),
         paymentRequired: !isBeta,
         refundEligible: !isBeta,

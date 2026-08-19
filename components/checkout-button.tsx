@@ -156,7 +156,7 @@ export function CheckoutButton({
         <span>
           {type === "ai_agent"
             ? betaMode
-              ? en ? "I agree to the AI service scope and private OpenAI processing of files I attach. Admin beta tests are not charged and are not eligible for a refund." : "AI 서비스의 범위와 OpenAI의 첨부 파일 비공개 처리 방침을 확인하고 동의합니다. 관리자 베타 테스트는 결제·환불 대상이 아닙니다."
+              ? en ? "I agree to the AI service scope and private OpenAI processing of files I attach. Beta tests are not charged and are not eligible for a refund." : "AI 서비스의 범위와 OpenAI의 첨부 파일 비공개 처리 방침을 확인하고 동의합니다. 베타 테스트는 결제·환불 대상이 아닙니다."
               : en ? "I agree to the AI service scope, private OpenAI processing of files I attach, and the full-refund policy before report generation starts." : "AI 서비스의 범위, OpenAI의 첨부 파일 비공개 처리 방침, 보고서 생성 시작 전 전액 환불 정책을 확인하고 동의합니다."
             : en ? "I agree to the service scope, seller information, and full refund policy before service starts." : "서비스 범위, 판매자 정보, 서비스 시작 전 전액 환불 정책에 동의합니다."}
         </span>
@@ -169,7 +169,7 @@ export function CheckoutButton({
       >
         {loading
           ? betaMode ? (en ? "Preparing the test…" : "테스트 환경 준비 중…") : (en ? "Preparing payment…" : "결제 준비 중…")
-          : betaMode ? (en ? "Start admin beta test" : "관리자 베타 테스트 시작")
+          : betaMode ? (en ? "Start beta test" : "베타 테스트 시작")
           : type === "ai_agent" ? (en ? "Pay and start" : "결제하고 시작하기") : (en ? "Book and pay" : "예약 및 결제하기")}
       </button>
       {status && (
