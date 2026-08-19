@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { normalizeBetaEmail } from "@/lib/beta-testers";
 import {
   parseAdminRoleChange,
   roleChangeErrorMessage
@@ -202,4 +203,65 @@ export async function rollbackModelRouting(_state: ModelRoutingActionState, form
   if (!row) return { ok: false, message: en ? "That version does not exist." : "그 버전이 없습니다." };
   // 폼에 다른 필드가 실려 있어도 무시한다 — routes·overrides는 오직 저장된 버전 스냅샷에서만 온다.
   return applyRouting(row.routes, row.product_overrides ?? {}, String(formData.get("reason") ?? ""), locale);
+}
+
+// ---------------------------------------------------------------------------
+// 베타 테스터 초대. 이메일을 등록하면 그 계정은 심층 시장 조사를 max_runs(3)회 결제 없이 실행한다.
+// 판정·과금 우회는 lib/beta-testers.ts와 026 RPC가 하고, 여기는 목록 편집만 한다.
+// ---------------------------------------------------------------------------
+export interface BetaTesterActionState {
+  ok: boolean;
+  message: string;
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type AdminActor = { error: string } | { user: { id: string }; supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>> };
+async function requireAdminActor(locale: Locale): Promise<AdminActor> {
+  const en = locale === "en";
+  const user = await requireUser();
+  const supabase = await createSupabaseServerClient();
+  if (!user || !supabase) return { error: en ? "Please sign in." : "로그인이 필요합니다." };
+  const { data: actor } = await supabase.from("profiles").select("role,deleted_at").eq("id", user.id).maybeSingle();
+  if (actor?.role !== "admin" || actor.deleted_at) return { error: roleChangeErrorMessage("admin_required", locale) ?? (en ? "Administrator access is required." : "관리자 권한이 필요합니다.") };
+  return { user, supabase };
+}
+
+function revalidateBetaTesters() {
+  revalidatePath("/admin/beta-testers");
+  revalidatePath("/en/admin/beta-testers");
+}
+
+export async function addBetaTesters(_state: BetaTesterActionState, formData: FormData): Promise<BetaTesterActionState> {
+  const locale: Locale = formData.get("locale") === "en" ? "en" : "ko";
+  const en = locale === "en";
+  const emails = [...new Set(String(formData.get("emails") ?? "").split(/[\n,;]+/).map(normalizeBetaEmail).filter(Boolean))];
+  const note = String(formData.get("note") ?? "").trim().slice(0, 200) || null;
+  const maxRuns = Math.min(100, Math.max(0, Number(formData.get("maxRuns") ?? 3) || 0));
+  if (!emails.length || emails.length > 50 || emails.some((email) => !EMAIL.test(email))) {
+    return { ok: false, message: en ? "Enter one valid email per line (up to 50)." : "줄마다 올바른 이메일을 입력해 주세요(최대 50개)." };
+  }
+  const actor = await requireAdminActor(locale);
+  if ("error" in actor) return { ok: false, message: actor.error };
+  const { error } = await actor.supabase.from("beta_testers").upsert(
+    emails.map((email) => ({ email, max_runs: maxRuns, note, invited_by: actor.user.id, revoked_at: null })),
+    { onConflict: "email" }
+  );
+  if (error) return { ok: false, message: en ? "We couldn't save the testers." : "베타 테스터를 저장하지 못했습니다." };
+  revalidateBetaTesters();
+  return { ok: true, message: en ? `${emails.length} tester(s) registered. Send them the sign-up link yourself; the free runs unlock as soon as they sign in with that email.` : `${emails.length}명을 등록했습니다. 가입 안내는 직접 보내 주세요. 해당 이메일로 로그인하면 바로 무료 이용이 열립니다.` };
+}
+
+export async function setBetaTesterRevoked(_state: BetaTesterActionState, formData: FormData): Promise<BetaTesterActionState> {
+  const locale: Locale = formData.get("locale") === "en" ? "en" : "ko";
+  const en = locale === "en";
+  const email = normalizeBetaEmail(String(formData.get("email") ?? ""));
+  const revoke = formData.get("revoke") === "true";
+  if (!EMAIL.test(email)) return { ok: false, message: en ? "Invalid email." : "이메일이 올바르지 않습니다." };
+  const actor = await requireAdminActor(locale);
+  if ("error" in actor) return { ok: false, message: actor.error };
+  const { error } = await actor.supabase.from("beta_testers").update({ revoked_at: revoke ? new Date().toISOString() : null }).eq("email", email);
+  if (error) return { ok: false, message: en ? "We couldn't update the tester." : "베타 테스터를 변경하지 못했습니다." };
+  revalidateBetaTesters();
+  return { ok: true, message: revoke ? (en ? "Access revoked." : "이용을 해제했습니다.") : (en ? "Access restored." : "이용을 복구했습니다.") };
 }

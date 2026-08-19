@@ -1164,6 +1164,14 @@ main[lang="en"] .hero h1 {
   overflow-x: auto;
 }
 
+.beta-tester-form { display: grid; gap: 16px; padding: 20px; }
+.beta-tester-form__row { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; }
+.beta-tester-form input { min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-card); font: inherit; font-weight: 450; }
+.beta-tester-form textarea { min-height: 120px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-card); font: inherit; font-weight: 450; }
+.beta-tester-form .button { justify-self: start; }
+.beta-tester-revoke { display: grid; gap: 4px; }
+@media (max-width: 720px) { .beta-tester-form__row { grid-template-columns: 1fr; } }
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

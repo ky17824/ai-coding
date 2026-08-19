@@ -10,6 +10,7 @@ export function AdminNav({ locale }: { locale: Locale }) {
       <Link href={localizedPath("/admin", locale)}>{en ? "Overview" : "운영 개요"}</Link>
       <Link href={localizedPath("/admin/users", locale)}>{en ? "Users" : "사용자 관리"}</Link>
       <Link href={localizedPath("/admin/ai-models", locale)}>{en ? "AI models" : "AI 모델"}</Link>
+      <Link href={localizedPath("/admin/beta-testers", locale)}>{en ? "Beta testers" : "베타 테스터"}</Link>
     </nav>
     </>
   );
