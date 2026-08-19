@@ -12,6 +12,7 @@ import { aiExpertServicesEnabled, getAiAgentService, resolveAiQuestionCatalogVer
 import { buildAiReadinessSnapshot, getAiOrderAmounts } from "@/lib/ai-agent-report";
 import { getNewAssessmentSurveyVersion } from "@/lib/readiness-rollout";
 import { checkAdminBetaAccess } from "@/lib/admin-ai-beta";
+import { checkBetaTesterAccess } from "@/lib/beta-testers";
 
 const schema = z.object({
   serviceId: z.string().min(1).max(80),
@@ -111,9 +112,14 @@ export async function POST(request: Request) {
     const paymentId = `gtm-${orderId}`;
     const now = new Date().toISOString();
     const amounts = getAiOrderAmounts(aiService.price);
-    const isBeta = betaAccess.eligible;
-    // 출시 전 상품은 UI에서 결제 버튼을 숨기지만, 직접 호출을 막는 것은 여기다. 베타 테스트는 계속 허용.
-    if (aiService.comingSoon && !isBeta) {
+    // 무료 경로는 둘: 관리자 베타(전 상품) → 베타 테스터(심층 시장 조사, 횟수 제한). 둘 다 아니면 유료.
+    const testerAccess = !betaAccess.eligible && profile.role === "startup"
+      ? await checkBetaTesterAccess(admin, { userId: user.id, email: user.email, productId: aiService.id })
+      : { eligible: false as const };
+    const freeMode = betaAccess.eligible ? "admin_beta" : testerAccess.eligible ? "beta_tester" : null;
+    const isBeta = freeMode !== null;
+    // 출시 전 상품은 UI에서 결제 버튼을 숨기지만, 직접 호출을 막는 것은 여기다. 관리자 베타 테스트는 계속 허용.
+    if (aiService.comingSoon && freeMode !== "admin_beta") {
       return NextResponse.json({ message: en ? "This service has not launched yet." : "아직 출시 전인 서비스입니다." }, { status: 403 });
     }
     const serviceSnapshot = {
@@ -153,26 +159,30 @@ export async function POST(request: Request) {
 
     if (isBeta) {
       // 주문과 실행 레코드를 한 트랜잭션에서 만든다. 스냅샷은 위에서 유료와 똑같이 만들어 넘긴다.
-      const { error: betaError } = await admin.rpc("create_admin_beta_ai_order", {
+      const { error: betaError } = await admin.rpc("create_free_ai_order", {
         p_order_id: orderId,
         p_buyer_id: user.id,
         p_organization_id: profile.organization_id,
         p_product_key: aiService.id,
         p_locale: parsed.data.locale,
         p_service_snapshot: serviceSnapshot,
-        p_terms_snapshot: termsSnapshot
+        p_terms_snapshot: termsSnapshot,
+        p_billing_mode: freeMode
       });
       if (betaError) {
         const duplicate = betaError.code === "23505";
-        console.info("[admin-beta] create failed", { code: betaError.code });
+        const exhausted = betaError.message?.includes("beta_tester_quota_exhausted");
+        console.info("[free-order] create failed", { mode: freeMode, code: betaError.code });
         return NextResponse.json(
           { message: duplicate
               ? (en ? "A beta test for this service is already in progress. Finish or cancel it first." : "이 서비스의 베타 테스트가 이미 진행 중입니다. 마치거나 취소한 뒤 다시 시도해 주세요.")
-              : (en ? "We couldn't create the order." : "주문을 생성하지 못했습니다.") },
-          { status: duplicate ? 409 : 500 }
+              : exhausted
+                ? (en ? "You have used all of your free beta runs." : "무료 이용 횟수를 모두 사용했습니다.")
+                : (en ? "We couldn't create the order." : "주문을 생성하지 못했습니다.") },
+          { status: duplicate || exhausted ? 409 : 500 }
         );
       }
-      console.info("[admin-beta] order created", { orderId, productKey: aiService.id });
+      console.info("[free-order] order created", { mode: freeMode, orderId, productKey: aiService.id });
       // paymentId를 클라이언트에 주지 않는다. 결제창을 열 이유가 없다.
       return NextResponse.json({ orderId, amount: 0, requiresPayment: false });
     }

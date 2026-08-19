@@ -24,7 +24,8 @@ describe("admin beta order creation", () => {
   });
 
   it("creates the beta order and its run atomically through the RPC", () => {
-    expect(source).toContain('admin.rpc("create_admin_beta_ai_order"');
+    expect(source).toContain('admin.rpc("create_free_ai_order"');
+    expect(source).toContain('p_billing_mode: freeMode');
     // 스냅샷은 유료 주문과 같은 코드로 만들어 넘긴다. SQL에서 다시 만들지 않는다.
     expect(source).toContain("p_service_snapshot: serviceSnapshot");
     expect(source).toContain("p_terms_snapshot: termsSnapshot");
@@ -41,7 +42,7 @@ describe("admin beta order creation", () => {
 
   it("maps a duplicate beta order to 409 rather than a generic failure", () => {
     expect(source).toContain('betaError.code === "23505"');
-    expect(source).toContain("status: duplicate ? 409 : 500");
+    expect(source).toContain("status: duplicate || exhausted ? 409 : 500");
   });
 
   it("records the refusal reason for the operator without leaking the allowlist", () => {
@@ -53,9 +54,9 @@ describe("admin beta order creation", () => {
 
 describe("beta order boundaries", () => {
   it("cancels a beta order instead of calling the payment gateway", () => {
-    expect(refund).toContain('order.billing_mode === "admin_beta"');
+    expect(refund).toContain('isFreeBilling(order.billing_mode)');
     // 어떤 상태 변경보다 먼저여야 한다. disputed가 되면 013:56 때문에 실행 불가가 된다.
-    const betaGuard = refund.indexOf('order.billing_mode === "admin_beta"');
+    const betaGuard = refund.indexOf('isFreeBilling(order.billing_mode)');
     expect(betaGuard).toBeLessThan(refund.indexOf('status: "disputed"'));
     expect(betaGuard).toBeLessThan(refund.indexOf("refund_requested_at"));
     expect(betaGuard).toBeLessThan(refund.indexOf("api.portone.io"));
@@ -63,19 +64,34 @@ describe("beta order boundaries", () => {
   });
 
   it("never reconciles a beta order from the webhook", () => {
-    expect(webhook).toContain('order.billing_mode === "admin_beta"');
-    const betaGuard = webhook.indexOf('order.billing_mode === "admin_beta"');
+    expect(webhook).toContain('isFreeBilling(order.billing_mode)');
+    const betaGuard = webhook.indexOf('isFreeBilling(order.billing_mode)');
     expect(betaGuard).toBeLessThan(webhook.indexOf('reconcile_ai_payment'));
     expect(webhook).toContain("order_kind,billing_mode");
+  });
+});
+
+describe("beta tester free orders", () => {
+  it("opens the free path to registered testers after the admin check and unifies the free-billing checks", () => {
+    // 테스터 자격은 관리자 베타가 아닐 때만 조회하고, 둘 중 하나면 같은 RPC로 0원 주문을 만든다.
+    expect(source).toContain("checkBetaTesterAccess(admin, { userId: user.id, email: user.email, productId: aiService.id })");
+    expect(source).toContain('betaAccess.eligible ? "admin_beta" : testerAccess.eligible ? "beta_tester" : null');
+    expect(source).toContain("beta_tester_quota_exhausted");
+    expect(source).not.toContain("create_admin_beta_ai_order");
+    for (const file of ["[id]/refund/route.ts", "../portone/webhook/route.ts", "../../orders/[id]/page.tsx", "../../../lib/admin-metrics.ts"]) {
+      const text = readFileSync(new URL(file, import.meta.url), "utf8");
+      expect(text, file).toContain("isFreeBilling(");
+      expect(text, file).not.toContain('=== "admin_beta"');
+    }
   });
 });
 
 describe("coming-soon products", () => {
   it("refuses paid orders for unlaunched products but lets admin beta tests through", () => {
     // 카드·상세는 회색 표시일 뿐이고 직접 호출을 막는 것은 서버다. 베타는 출시 전 검증을 위해 계속 열어 둔다.
-    const guard = source.indexOf("aiService.comingSoon && !isBeta");
+    const guard = source.indexOf('aiService.comingSoon && freeMode !== "admin_beta"');
     expect(guard).toBeGreaterThan(0);
-    expect(guard).toBeLessThan(source.indexOf("create_admin_beta_ai_order"));
+    expect(guard).toBeLessThan(source.indexOf("create_free_ai_order"));
     expect(source).toContain("아직 출시 전인 서비스입니다");
   });
 

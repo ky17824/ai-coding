@@ -10,6 +10,7 @@ import {
   createSupabaseServerClient,
   requireUser
 } from "@/lib/supabase/server";
+import { isFreeBilling } from "@/lib/beta-testers";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "Order Details" : "주문 상세" };
@@ -80,7 +81,7 @@ export default async function OrderPage({
   const aiRun = Array.isArray(shownOrder.ai_agent_runs) ? shownOrder.ai_agent_runs[0] : shownOrder.ai_agent_runs;
   const isAiOrder = shownOrder.order_kind === "ai_agent";
   // 결제 없이 실행하는 관리자 테스트 주문. 화면에 원시 상태(paid)를 노출하지 않는다.
-  const isBetaOrder = shownOrder.billing_mode === "admin_beta";
+  const isBetaOrder = isFreeBilling(shownOrder.billing_mode);
   const listPriceKrw = Number((snapshot as { listPriceKrw?: number }).listPriceKrw ?? 0);
   const { data: readinessBaseline } = isAiOrder && admin
     ? await admin.from("assessments").select("target_country,target_customer_segment").eq("organization_id", shownOrder.organization_id).order("completed_at", { ascending: false }).limit(1).maybeSingle()
@@ -107,7 +108,7 @@ export default async function OrderPage({
         <h1 className="page-title">{snapshot.title}</h1>
         <section className="order-detail panel">
           <div className="order-status-line">
-            <span className="pill">{isBetaOrder ? (en ? "Admin beta" : "관리자 베타") : ORDER_STATUS_LABEL[shownOrder.status]?.[locale] ?? shownOrder.status}</span>
+            <span className="pill">{isBetaOrder ? (en ? "Beta test" : "베타 테스트") : ORDER_STATUS_LABEL[shownOrder.status]?.[locale] ?? shownOrder.status}</span>
             <strong>{isBetaOrder
               ? (en ? "KRW 0 charged" : "청구액 0원")
               : en ? `KRW ${won.format(shownOrder.amount_krw)}` : `${won.format(shownOrder.amount_krw)}원`}</strong>

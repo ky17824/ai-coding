@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as PortOne from "@portone/server-sdk";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { reconcilePaymentEvent } from "@/lib/payments";
+import { isFreeBilling } from "@/lib/beta-testers";
 
 export const runtime = "nodejs";
 
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
   if (!order) return new NextResponse(null, { status: 200 });
   // 관리자 베타 주문은 결제가 없으므로 조정하지 않는다. payment_id가 beta- 네임스페이스라
   // 정상적으로는 여기 도달하지 않지만, 도달하더라도 상태를 건드리지 않는다.
-  if (order.billing_mode === "admin_beta") return new NextResponse(null, { status: 200 });
+  if (isFreeBilling(order.billing_mode)) return new NextResponse(null, { status: 200 });
   if (order.order_kind === "ai_agent") {
     const { data: reconciledStatus, error } = await admin.rpc("reconcile_ai_payment", {
       p_order_id: order.id,

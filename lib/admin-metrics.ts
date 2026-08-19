@@ -1,6 +1,7 @@
 import type { OrderStatus } from "@/lib/types";
 import type { Locale } from "@/lib/i18n";
 import type { SurveyVersion } from "@/lib/intake-questions";
+import { isFreeBilling } from "@/lib/beta-testers";
 
 export interface CompanyRow {
   organizationId: string;
@@ -50,7 +51,7 @@ export function buildWorklist(rows: CompanyRow[], now: Date, locale: Locale = "k
       items.push({ ...base, kind: "gate-blocked", label: en ? "Required stage gate blocked" : "필수 단계 통과 기준(Stage Gate) 차단" });
     }
     // 관리자 베타는 결제가 없으므로 "결제 후 미시작"이 성립하지 않는다.
-    if (row.orders.some((order) => order.status === "paid" && order.billingMode !== "admin_beta")) {
+    if (row.orders.some((order) => order.status === "paid" && !isFreeBilling(order.billingMode))) {
       items.push({ ...base, kind: "paid-not-started", label: en ? "Service not started after payment" : "결제 후 서비스 미시작" });
     }
   }
