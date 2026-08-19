@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { normalizeBetaEmail } from "@/lib/beta-testers";
+import { BETA_FREE_RUNS, MAX_BETA_TESTERS, normalizeBetaEmail } from "@/lib/beta-testers";
 import {
   parseAdminRoleChange,
   roleChangeErrorMessage
@@ -232,36 +232,45 @@ function revalidateBetaTesters() {
   revalidatePath("/en/admin/beta-testers");
 }
 
-export async function addBetaTesters(_state: BetaTesterActionState, formData: FormData): Promise<BetaTesterActionState> {
-  const locale: Locale = formData.get("locale") === "en" ? "en" : "ko";
-  const en = locale === "en";
-  const emails = [...new Set(String(formData.get("emails") ?? "").split(/[\n,;]+/).map(normalizeBetaEmail).filter(Boolean))];
-  const note = String(formData.get("note") ?? "").trim().slice(0, 200) || null;
-  const maxRuns = Math.min(100, Math.max(0, Number(formData.get("maxRuns") ?? 3) || 0));
-  if (!emails.length || emails.length > 50 || emails.some((email) => !EMAIL.test(email))) {
-    return { ok: false, message: en ? "Enter one valid email per line (up to 50)." : "줄마다 올바른 이메일을 입력해 주세요(최대 50개)." };
-  }
-  const actor = await requireAdminActor(locale);
-  if ("error" in actor) return { ok: false, message: actor.error };
-  const { error } = await actor.supabase.from("beta_testers").upsert(
-    emails.map((email) => ({ email, max_runs: maxRuns, note, invited_by: actor.user.id, revoked_at: null })),
-    { onConflict: "email" }
-  );
-  if (error) return { ok: false, message: en ? "We couldn't save the testers." : "베타 테스터를 저장하지 못했습니다." };
-  revalidateBetaTesters();
-  return { ok: true, message: en ? `${emails.length} tester(s) registered. Send them the sign-up link yourself; the free runs unlock as soon as they sign in with that email.` : `${emails.length}명을 등록했습니다. 가입 안내는 직접 보내 주세요. 해당 이메일로 로그인하면 바로 무료 이용이 열립니다.` };
-}
-
-export async function setBetaTesterRevoked(_state: BetaTesterActionState, formData: FormData): Promise<BetaTesterActionState> {
+export async function inviteBetaTester(_state: BetaTesterActionState, formData: FormData): Promise<BetaTesterActionState> {
   const locale: Locale = formData.get("locale") === "en" ? "en" : "ko";
   const en = locale === "en";
   const email = normalizeBetaEmail(String(formData.get("email") ?? ""));
-  const revoke = formData.get("revoke") === "true";
+  if (!EMAIL.test(email)) return { ok: false, message: en ? "Enter a valid email." : "올바른 이메일을 입력해 주세요." };
+  const actor = await requireAdminActor(locale);
+  if ("error" in actor) return { ok: false, message: actor.error };
+  // 슬롯 상한. 삭제로 자리를 비운 뒤 다시 초대한다. RLS(is_admin)가 실제 쓰기 권한을 막는다.
+  const { count } = await actor.supabase.from("beta_testers").select("email", { count: "exact", head: true });
+  if ((count ?? 0) >= MAX_BETA_TESTERS) return { ok: false, message: en ? `All ${MAX_BETA_TESTERS} slots are in use. Delete a tester first.` : `슬롯 ${MAX_BETA_TESTERS}개가 모두 사용 중입니다. 먼저 한 명을 삭제해 주세요.` };
+  const { error } = await actor.supabase.from("beta_testers").insert({ email, max_runs: BETA_FREE_RUNS, invited_by: actor.user.id });
+  if (error) return { ok: false, message: error.code === "23505" ? (en ? "This email is already invited." : "이미 초대된 이메일입니다.") : (en ? "We couldn't save the tester." : "베타 테스터를 저장하지 못했습니다.") };
+  revalidateBetaTesters();
+  return { ok: true, message: en ? "Invited. Send them the sign-up link; free runs unlock when they sign in with this email." : "초대했습니다. 가입 안내는 직접 보내 주세요. 이 이메일로 로그인하면 무료 이용이 열립니다." };
+}
+
+export async function deleteBetaTester(_state: BetaTesterActionState, formData: FormData): Promise<BetaTesterActionState> {
+  const locale: Locale = formData.get("locale") === "en" ? "en" : "ko";
+  const en = locale === "en";
+  const email = normalizeBetaEmail(String(formData.get("email") ?? ""));
   if (!EMAIL.test(email)) return { ok: false, message: en ? "Invalid email." : "이메일이 올바르지 않습니다." };
   const actor = await requireAdminActor(locale);
   if ("error" in actor) return { ok: false, message: actor.error };
-  const { error } = await actor.supabase.from("beta_testers").update({ revoked_at: revoke ? new Date().toISOString() : null }).eq("email", email);
-  if (error) return { ok: false, message: en ? "We couldn't update the tester." : "베타 테스터를 변경하지 못했습니다." };
+  const { error } = await actor.supabase.from("beta_testers").delete().eq("email", email);
+  if (error) return { ok: false, message: en ? "We couldn't delete the tester." : "베타 테스터를 삭제하지 못했습니다." };
   revalidateBetaTesters();
-  return { ok: true, message: revoke ? (en ? "Access revoked." : "이용을 해제했습니다.") : (en ? "Access restored." : "이용을 복구했습니다.") };
+  return { ok: true, message: en ? "Deleted. The slot is free." : "삭제했습니다. 슬롯이 비었습니다." };
+}
+
+export async function resetBetaTesterRuns(_state: BetaTesterActionState, formData: FormData): Promise<BetaTesterActionState> {
+  const locale: Locale = formData.get("locale") === "en" ? "en" : "ko";
+  const en = locale === "en";
+  const email = normalizeBetaEmail(String(formData.get("email") ?? ""));
+  if (!EMAIL.test(email)) return { ok: false, message: en ? "Invalid email." : "이메일이 올바르지 않습니다." };
+  const actor = await requireAdminActor(locale);
+  if ("error" in actor) return { ok: false, message: actor.error };
+  // 사용 횟수는 주문에서 세므로 기준 시각만 옮긴다(028). 과거 주문은 남는다.
+  const { error } = await actor.supabase.from("beta_testers").update({ quota_started_at: new Date().toISOString(), max_runs: BETA_FREE_RUNS }).eq("email", email);
+  if (error) return { ok: false, message: en ? "We couldn't reset the runs." : "무료 횟수를 리셋하지 못했습니다." };
+  revalidateBetaTesters();
+  return { ok: true, message: en ? `Free runs reset to ${BETA_FREE_RUNS}.` : `무료 횟수를 ${BETA_FREE_RUNS}회로 리셋했습니다.` };
 }

@@ -9,6 +9,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * - 관리자 베타(lib/admin-ai-beta.ts, admin_beta)와 별개 계층이다.
  */
 export const BETA_TESTER_PRODUCT_ID = "ai-market-intelligence";
+/** 관리자 화면의 슬롯 수 = 동시에 초대할 수 있는 테스터 수. 다른 사람을 넣으려면 하나를 삭제한다. */
+export const MAX_BETA_TESTERS = 10;
+/** 1인 무료 실행 횟수. 리셋하면 quota_started_at 이후부터 다시 이 횟수. */
+export const BETA_FREE_RUNS = 3;
 
 /** 0원·매출 지표 제외·환불 대신 취소로 다루는 결제 모드. */
 export function isFreeBilling(mode: string | null | undefined) {
@@ -45,10 +49,12 @@ export async function checkBetaTesterAccess(
 ): Promise<BetaTesterAccess> {
   const email = normalizeBetaEmail(input.email ?? "");
   if (!email) return { eligible: false, denial: "not_registered" };
-  const { data: tester } = await admin.from("beta_testers").select("max_runs,revoked_at").eq("email", email).maybeSingle();
+  const { data: tester } = await admin.from("beta_testers").select("max_runs,revoked_at,quota_started_at").eq("email", email).maybeSingle();
   if (!tester) return { eligible: false, denial: "not_registered" };
+  // 리셋(028) 이후의 주문만 센다. RPC·관리자 화면과 같은 규칙.
   const { count } = await admin.from("orders").select("id", { count: "exact", head: true })
-    .eq("buyer_id", input.userId).eq("billing_mode", "beta_tester").neq("status", "cancelled");
+    .eq("buyer_id", input.userId).eq("billing_mode", "beta_tester").neq("status", "cancelled")
+    .gte("created_at", tester.quota_started_at ?? "1970-01-01");
   return resolveBetaTesterAccess({
     registered: true,
     revoked: Boolean(tester.revoked_at),

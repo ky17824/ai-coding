@@ -1164,13 +1164,19 @@ main[lang="en"] .hero h1 {
   overflow-x: auto;
 }
 
-.beta-tester-form { display: grid; gap: 16px; padding: 20px; }
-.beta-tester-form__row { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; }
-.beta-tester-form input { min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-card); font: inherit; font-weight: 450; }
-.beta-tester-form textarea { min-height: 120px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-card); font: inherit; font-weight: 450; }
-.beta-tester-form .button { justify-self: start; }
-.beta-tester-revoke { display: grid; gap: 4px; }
-@media (max-width: 720px) { .beta-tester-form__row { grid-template-columns: 1fr; } }
+/* 베타 테스터 슬롯: 2열 × 5행. 슬롯 하나 = 이메일 하나. */
+.beta-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.beta-slot { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px 12px; align-items: center; padding: 16px; }
+.beta-slot--empty { grid-template-columns: 28px minmax(0, 1fr) auto; }
+.beta-slot__index { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-pill); background: var(--mint); color: var(--green-deep); font-size: 12px; font-weight: 800; }
+.beta-slot__field input { width: 100%; min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-field); font: inherit; font-weight: 450; }
+.beta-slot__body { display: grid; gap: 4px; min-width: 0; }
+.beta-slot__body strong { overflow-wrap: anywhere; }
+.beta-slot__body small { color: var(--muted); }
+.beta-slot__body .pill { justify-self: start; }
+.beta-slot__actions { grid-column: 2; display: flex; gap: 8px; flex-wrap: wrap; }
+.beta-slot .checkout-status { grid-column: 1 / -1; margin: 0; }
+@media (max-width: 720px) { .beta-slots { grid-template-columns: 1fr; } }
 
 .admin-table {
   width: 100%;

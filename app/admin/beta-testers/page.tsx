@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AdminNav } from "@/components/admin-nav";
 import { SiteHeader } from "@/components/site-header";
-import { BetaTesterInviteForm, BetaTesterRevokeButton } from "@/components/beta-tester-admin";
-import { BETA_TESTER_PRODUCT_ID } from "@/lib/beta-testers";
+import { BetaTesterEmptySlot, BetaTesterFilledSlot, type BetaTesterSlotData } from "@/components/beta-tester-admin";
+import { BETA_FREE_RUNS, BETA_TESTER_PRODUCT_ID, MAX_BETA_TESTERS } from "@/lib/beta-testers";
 import { PRODUCT_COPY } from "@/lib/catalog/copy";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "Beta testers" : "베타 테스터 관리" };
 }
 
-type TesterRow = { email: string; max_runs: number; note: string | null; created_at: string; revoked_at: string | null };
+type TesterRow = { email: string; max_runs: number; created_at: string; quota_started_at: string | null };
 
 /**
  * 창업자 초대 목록. 등록된 이메일로 로그인한 계정은 심층 시장 조사를 max_runs회 결제 없이 실행한다
@@ -27,19 +27,23 @@ export default async function AdminBetaTestersPage() {
   if (!admin) throw new Error("Supabase admin client is not configured");
 
   const [testersResult, profilesResult, ordersResult] = await Promise.all([
-    admin.from("beta_testers").select("email,max_runs,note,created_at,revoked_at").order("created_at", { ascending: false }),
+    admin.from("beta_testers").select("email,max_runs,created_at,quota_started_at").order("created_at", { ascending: true }),
     admin.from("profiles").select("id,email,deleted_at"),
-    admin.from("orders").select("buyer_id,status").eq("billing_mode", "beta_tester").neq("status", "cancelled")
+    admin.from("orders").select("buyer_id,created_at").eq("billing_mode", "beta_tester").neq("status", "cancelled")
   ]);
   if (testersResult.error) throw new Error("Unable to load beta testers");
   const testers = (testersResult.data ?? []) as TesterRow[];
   const profileByEmail = new Map((profilesResult.data ?? []).map((row) => [String(row.email ?? "").toLowerCase(), row]));
-  const usedByBuyer = new Map<string, number>();
-  for (const order of ordersResult.data ?? []) usedByBuyer.set(order.buyer_id, (usedByBuyer.get(order.buyer_id) ?? 0) + 1);
-  const dateLocale = en ? "en-US" : "ko-KR";
+  const orders = ordersResult.data ?? [];
   const productTitle = PRODUCT_COPY[BETA_TESTER_PRODUCT_ID].title[locale];
-  const active = testers.filter((tester) => !tester.revoked_at);
-  const signedUp = active.filter((tester) => profileByEmail.has(tester.email));
+  // 슬롯 데이터. 사용 횟수는 리셋 기준 시각(quota_started_at) 이후 주문만 센다 — 라우트·RPC와 같은 규칙.
+  const slots: BetaTesterSlotData[] = testers.slice(0, MAX_BETA_TESTERS).map((tester) => {
+    const account = profileByEmail.get(tester.email);
+    const since = Date.parse(tester.quota_started_at ?? "1970-01-01");
+    const usedRuns = account ? orders.filter((order) => order.buyer_id === account.id && Date.parse(order.created_at) >= since).length : 0;
+    return { email: tester.email, createdAt: tester.created_at, maxRuns: tester.max_runs, usedRuns, account: account ? (account.deleted_at ? "closed" : "active") : "none" };
+  });
+  const totalUsed = slots.reduce((sum, slot) => sum + slot.usedRuns, 0);
 
   return (
     <main className="app-page">
@@ -54,36 +58,21 @@ export default async function AdminBetaTestersPage() {
 
         <div className="admin-metrics">
           {[
-            [en ? "Invited" : "초대", active.length],
-            [en ? "Signed up" : "가입 완료", signedUp.length],
-            [en ? "Free runs used" : "무료 실행 사용", [...usedByBuyer.values()].reduce((sum, count) => sum + count, 0)],
-            [en ? "Revoked" : "해제", testers.length - active.length]
+            [en ? "Slots in use" : "사용 중인 슬롯", `${slots.length} / ${MAX_BETA_TESTERS}`],
+            [en ? "Signed up" : "가입 완료", slots.filter((slot) => slot.account === "active").length],
+            [en ? "Free runs used" : "무료 실행 사용", totalUsed],
+            [en ? "Free runs each" : "1인 무료 횟수", BETA_FREE_RUNS]
           ].map(([label, value]) => <div className="panel" key={label}><span>{label}</span><strong>{value}</strong></div>)}
         </div>
 
         <section className="admin-section">
-          <div className="section-heading"><h2>{en ? "Invite" : "초대 등록"}</h2></div>
-          <BetaTesterInviteForm locale={locale} />
-        </section>
-
-        <section className="admin-section">
-          <div className="section-heading section-heading--row"><span><h2>{en ? "Testers" : "테스터 목록"}</h2></span><span>{testers.length}</span></div>
-          {!testers.length ? <div className="empty-state panel"><strong>{en ? "No testers yet." : "등록된 테스터가 없습니다."}</strong></div>
-            : <div className="table-scroll panel"><table className="admin-table"><thead><tr>
-                <th>{en ? "Email" : "이메일"}</th><th>{en ? "Note" : "메모"}</th><th>{en ? "Registered" : "등록일"}</th><th>{en ? "Account" : "가입"}</th><th>{en ? "Used / free" : "사용 / 무료"}</th><th>{en ? "Status" : "상태"}</th><th>{en ? "Action" : "작업"}</th>
-              </tr></thead><tbody>{testers.map((tester) => {
-                const account = profileByEmail.get(tester.email);
-                const used = account ? usedByBuyer.get(account.id) ?? 0 : 0;
-                return <tr key={tester.email}>
-                  <td><strong>{tester.email}</strong></td>
-                  <td>{tester.note ?? "-"}</td>
-                  <td>{new Date(tester.created_at).toLocaleDateString(dateLocale)}</td>
-                  <td>{account ? (account.deleted_at ? (en ? "Closed" : "탈퇴") : (en ? "Signed up" : "가입 완료")) : (en ? "Not yet" : "미가입")}</td>
-                  <td>{used} / {tester.max_runs}</td>
-                  <td>{tester.revoked_at ? (en ? "Revoked" : "해제됨") : used >= tester.max_runs ? (en ? "Exhausted" : "소진") : (en ? "Active" : "이용 가능")}</td>
-                  <td><BetaTesterRevokeButton locale={locale} email={tester.email} revoked={Boolean(tester.revoked_at)} /></td>
-                </tr>;
-              })}</tbody></table></div>}
+          <div className="section-heading"><h2>{en ? "Invite slots" : "초대 슬롯"}</h2></div>
+          <p className="page-description">{en ? "One email per slot. Delete a tester to free the slot for someone else; reset returns their free runs to the full count." : "슬롯마다 이메일 하나. 다른 사람을 초대하려면 삭제해 슬롯을 비우고, 리셋하면 무료 횟수가 처음부터 다시 시작됩니다."}</p>
+          <div className="beta-slots">
+            {Array.from({ length: MAX_BETA_TESTERS }, (_, index) => slots[index]
+              ? <BetaTesterFilledSlot key={slots[index].email} locale={locale} index={index} tester={slots[index]} />
+              : <BetaTesterEmptySlot key={`empty-${index}`} locale={locale} index={index} />)}
+          </div>
         </section>
       </div>
     </main>

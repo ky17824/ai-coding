@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BETA_TESTER_PRODUCT_ID, isFreeBilling, normalizeBetaEmail, resolveBetaTesterAccess } from "@/lib/beta-testers";
+import { BETA_FREE_RUNS, BETA_TESTER_PRODUCT_ID, MAX_BETA_TESTERS, isFreeBilling, normalizeBetaEmail, resolveBetaTesterAccess } from "@/lib/beta-testers";
 
 describe("beta tester access", () => {
   const base = { registered: true, revoked: false, maxRuns: 3, usedRuns: 1, productId: BETA_TESTER_PRODUCT_ID };
@@ -19,5 +19,7 @@ describe("beta tester access", () => {
     expect(isFreeBilling("paid")).toBe(false);
     expect(isFreeBilling(null)).toBe(false);
     expect(normalizeBetaEmail("  Foo@Bar.COM ")).toBe("foo@bar.com");
+    expect(MAX_BETA_TESTERS).toBe(10);
+    expect(BETA_FREE_RUNS).toBe(3);
   });
 });
