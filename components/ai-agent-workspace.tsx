@@ -4,8 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AiAgentReport } from "@/lib/ai-agent-report";
 import { AiGenerationFlow, type GenerationStage } from "@/components/ai-generation-flow";
-// 순수 데이터 모듈이라 서버 전용 의존성이 없다 — 클라이언트 번들에 넣어도 안전하다.
-import { modelLabel } from "@/lib/ai-models/catalog";
 import { marketSizingHtml } from "@/lib/market-sizing-view";
 import { ATTACHMENT_PDF_TIP, INPUT_AUDIT_LABEL, INTAKE_FIELD_LABEL } from "@/lib/catalog/copy";
 
@@ -104,7 +102,7 @@ export type ServiceInputSpec = { id: string; title: string; label: string; fileH
 const serviceField = (id: string) => `service:${id}`;
 const serviceAgentId = (field: string) => field.startsWith("service:") ? field.slice("service:".length) : null;
 
-export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {}, serviceInputs = [] }: { initialRun: Run; locale?: "ko" | "en"; questionLabels?: Record<string, string>; serviceInputs?: ServiceInputSpec[] }) {
+export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {}, serviceInputs = [], feedbackFormUrl = null }: { initialRun: Run; locale?: "ko" | "en"; questionLabels?: Record<string, string>; serviceInputs?: ServiceInputSpec[]; /** 베타 테스터 주문일 때만 넘어온다. 보고서 완료 화면에 설문 안내를 띄운다. */ feedbackFormUrl?: string | null }) {
   const c = copy[locale];
   const L = reportLabels[locale];
   const questionLabel = (id: string) => questionLabels[id] ?? id;
@@ -277,7 +275,12 @@ export function AiAgentWorkspace({ initialRun, locale = "ko", questionLabels = {
     const report = normalizeReportText(run.report);
     return <section className="ai-workspace ai-report panel">
       {message && <p className="notice-banner" role="alert">{message}</p>}
-      <header className="ai-workspace__header"><span><small>{locale === "en" ? "Written by" : "작성 모델"} · {modelLabel(run.model ?? "")}</small><h2>{report.title}</h2></span><div><button type="button" className="button button--soft button--small" onClick={downloadReport}>{c.download}</button>{run.generation_count < 2 && <button type="button" className="button button--primary button--small" onClick={() => setEditing(true)}>{c.correction}</button>}</div></header>
+      {feedbackFormUrl && <div className="notice-banner notice-banner--warning beta-feedback" role="status">
+        <strong>{locale === "en" ? "Beta tester survey · 5 minutes" : "베타 테스터 설문 · 5분"}</strong>
+        <span>{locale === "en" ? "Tell us what was useful, what was off, and whether it is worth paying for — it shapes the next version." : "무엇이 유용했고 무엇이 아쉬웠는지, 돈을 내고 쓸 만한지 알려 주세요. 다음 버전에 반영됩니다."}</span>
+        <a className="button button--primary button--small" href={feedbackFormUrl} target="_blank" rel="noreferrer">{locale === "en" ? "Open survey" : "설문 열기"}</a>
+      </div>}
+      <header className="ai-workspace__header"><span><small>{locale === "en" ? "Written by AI" : "AI 작성"}</small><h2>{report.title}</h2></span><div><button type="button" className="button button--soft button--small" onClick={downloadReport}>{c.download}</button>{run.generation_count < 2 && <button type="button" className="button button--primary button--small" onClick={() => setEditing(true)}>{c.correction}</button>}</div></header>
       <p className="ai-report__summary">{report.executiveSummary}</p>
       <div className="ai-report__grid">{report.findings.map((finding) => <article key={finding.title}>
         <span className={`pill ai-report__status ai-report__status--${finding.status}`}>{L.status[finding.status]} · {L.confidence[finding.confidence]}</span>

@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AdminNav } from "@/components/admin-nav";
 import { SiteHeader } from "@/components/site-header";
-import { BetaTesterEmptySlot, BetaTesterFilledSlot, type BetaTesterSlotData } from "@/components/beta-tester-admin";
-import { BETA_FREE_RUNS, BETA_TESTER_PRODUCT_ID, MAX_BETA_TESTERS } from "@/lib/beta-testers";
+import { BetaInvitationCard, BetaTesterEmptySlot, BetaTesterFilledSlot, type BetaTesterSlotData } from "@/components/beta-tester-admin";
+import { BETA_FREE_RUNS, BETA_TESTER_PRODUCT_ID, MAX_BETA_TESTERS, betaFeedbackFormUrl, buildBetaInvitation } from "@/lib/beta-testers";
+import { appOrigin } from "@/lib/auth";
 import { PRODUCT_COPY } from "@/lib/catalog/copy";
 import { localizedPath } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
@@ -44,6 +45,8 @@ export default async function AdminBetaTestersPage() {
     return { email: tester.email, createdAt: tester.created_at, maxRuns: tester.max_runs, usedRuns, account: account ? (account.deleted_at ? "closed" : "active") : "none" };
   });
   const totalUsed = slots.reduce((sum, slot) => sum + slot.usedRuns, 0);
+  const formUrl = betaFeedbackFormUrl();
+  const invitation = buildBetaInvitation({ serviceUrl: `${appOrigin()}${localizedPath("/services/ai-market-intelligence", locale)}`, formUrl, locale });
 
   return (
     <main className="app-page">
@@ -64,6 +67,11 @@ export default async function AdminBetaTestersPage() {
             [en ? "Free runs each" : "1인 무료 횟수", BETA_FREE_RUNS]
           ].map(([label, value]) => <div className="panel" key={label}><span>{label}</span><strong>{value}</strong></div>)}
         </div>
+
+        <section className="admin-section">
+          <div className="section-heading"><h2>{en ? "Invitation" : "초대장"}</h2></div>
+          <BetaInvitationCard locale={locale} text={invitation} formUrl={formUrl} />
+        </section>
 
         <section className="admin-section">
           <div className="section-heading"><h2>{en ? "Invite slots" : "초대 슬롯"}</h2></div>

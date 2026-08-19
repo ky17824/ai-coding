@@ -101,4 +101,10 @@ describe("AI 전문가 입력 화면의 상품별 특화 칸", () => {
     expect(html).toContain("전문가 검증 필요: 규제");
     expect(html).toContain("FDA 확인(전문가 검증)");
   });
+  it("베타 테스터 주문의 완료 화면에는 설문 배너를, 그 외에는 아무것도 띄우지 않는다", () => {
+    const report = { title: "t", executiveSummary: "s", findings: [], actionPlan: [], sources: [], humanVerification: [], limitations: [], assumptions: [], evidenceGaps: [], contradictions: [], questionCoverage: [], marketSizing: null };
+    const done = { ...baseRun, status: "completed", report } as never;
+    expect(renderToStaticMarkup(<AiAgentWorkspace initialRun={done} feedbackFormUrl="https://forms.gle/x" />)).toContain('href="https://forms.gle/x"');
+    expect(renderToStaticMarkup(<AiAgentWorkspace initialRun={done} />)).not.toContain("beta-feedback");
+  });
 });

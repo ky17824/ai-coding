@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { deleteBetaTester, inviteBetaTester, resetBetaTesterRuns, type BetaTesterActionState } from "@/app/admin/actions";
 import type { Locale } from "@/lib/i18n";
 
@@ -65,5 +65,26 @@ export function BetaTesterFilledSlot({ locale, index, tester }: { locale: Locale
       </div>
       <Status state={resetState.message ? resetState : deleteState} />
     </article>
+  );
+}
+
+/** 초대장 미리보기 + 복사. 발송은 관리자가 메일·메신저로 직접 한다. */
+export function BetaInvitationCard({ locale, text, formUrl }: { locale: Locale; text: string; formUrl: string | null }) {
+  const en = locale === "en";
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { setCopied(false); }
+  }
+  return (
+    <section className="beta-invite panel">
+      <div className="beta-invite__head">
+        <div>
+          <strong>{en ? "Invitation message" : "초대장"}</strong>
+          <small>{en ? "Paste into email or messenger. Not sent automatically." : "메일·메신저에 붙여 넣어 보내 주세요. 자동 발송은 하지 않습니다."}{formUrl ? "" : en ? " · Survey link missing (set NEXT_PUBLIC_BETA_FEEDBACK_FORM_URL)." : " · 설문 링크가 없습니다(NEXT_PUBLIC_BETA_FEEDBACK_FORM_URL 설정 필요)."}</small>
+        </div>
+        <button type="button" className="button button--primary button--small" onClick={() => void copy()}>{copied ? (en ? "Copied" : "복사됨") : (en ? "Copy" : "복사")}</button>
+      </div>
+      <pre className="beta-invite__text">{text}</pre>
+    </section>
   );
 }

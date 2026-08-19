@@ -1155,6 +1155,14 @@ main[lang="en"] .hero h1 {
   overflow-x: auto;
 }
 
+.beta-invite { display: grid; gap: 12px; padding: 20px; margin-top: 16px; }
+.beta-invite__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.beta-invite__head > div { display: grid; gap: 4px; }
+.beta-invite__head small { color: var(--muted); }
+.beta-invite__text { margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--mint-soft); font: inherit; font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.beta-feedback { display: grid; gap: 8px; }
+.beta-feedback .button { justify-self: start; }
+
 /* 베타 테스터 슬롯: 2열 × 5행. 슬롯 하나 = 이메일 하나. */
 .beta-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
 .beta-slot { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px 12px; align-items: center; padding: 16px; }

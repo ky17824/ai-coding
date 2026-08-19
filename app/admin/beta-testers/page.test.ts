@@ -11,6 +11,9 @@ describe("admin beta tester management", () => {
     expect(nav).toContain('localizedPath("/admin/beta-testers", locale)');
     expect(page).toContain('profile?.role !== "admin" || profile.deleted_at) redirect(');
     expect(page).toContain("베타 테스터 관리");
+    // 초대장 카드: 감사·3회·설문 링크가 든 문구를 관리자가 복사해 보낸다.
+    expect(page).toContain("BetaInvitationCard");
+    expect(page).toContain("buildBetaInvitation({");
   });
 
   it("renders MAX_BETA_TESTERS slots — filled ones with used/free runs, empty ones with a single-email invite", () => {

@@ -10,7 +10,7 @@ import {
   createSupabaseServerClient,
   requireUser
 } from "@/lib/supabase/server";
-import { isFreeBilling } from "@/lib/beta-testers";
+import { betaFeedbackFormUrl, isFreeBilling } from "@/lib/beta-testers";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestLocale()) === "en" ? "Order Details" : "주문 상세" };
@@ -153,6 +153,7 @@ export default async function OrderPage({
             locale={locale}
             initialRun={hydratedAiRun as never}
             serviceInputs={serviceInputs}
+            feedbackFormUrl={shownOrder.billing_mode === "beta_tester" ? betaFeedbackFormUrl() : null}
             // 보고서는 준비도 문항 ID로 근거를 추적한다. 화면에는 ID 대신 문항 문장을 보여 준다.
             questionLabels={Object.fromEntries(getIntakeQuestions(locale, "5.0").map((question) => [question.id, question.question]))}
           />
