@@ -7,7 +7,8 @@ import { getAiPriceWithVat } from "@/lib/ai-agent-report";
 import { getRequestLocale } from "@/lib/i18n-server";
 import Link from "next/link";
 import { COMING_SOON, TIER_FIRST_STEP } from "@/lib/catalog";
-import { localizedPath } from "@/lib/i18n";
+import { localizedPath, t } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
 import { checkAdminBetaAccess } from "@/lib/admin-ai-beta";
 import { checkBetaTesterAccess } from "@/lib/beta-testers";
 import { createSupabaseAdminClient, createSupabaseServerClient, requireUser } from "@/lib/supabase/server";
@@ -18,7 +19,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const locale = await getRequestLocale();
   const service = await getPublishedService(id, locale);
-  return { title: service?.title ?? (locale === "en" ? "Expert Service" : "전문가 서비스") };
+  return pageMetadata({
+    title: service?.title ?? (locale === "en" ? "Expert Service" : "전문가 서비스"),
+    description: service?.description ?? t(locale).meta.description,
+    locale,
+    path: localizedPath(`/services/${id}`, locale)
+  });
 }
 
 export default async function ServiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
