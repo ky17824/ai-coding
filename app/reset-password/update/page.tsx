@@ -1,3 +1,4 @@
+import { BrandMark } from "@/components/brand-mark";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -19,7 +20,7 @@ export default async function UpdatePasswordPage() {
   return (
     <main className="signin-page">
       <title>{c.title}</title>
-      <Link href={localizedPath("/", locale)} className="brand"><span className="brand-mark">B</span><span>Borderless</span></Link>
+      <Link href={localizedPath("/", locale)} className="brand"><BrandMark className="brand-mark" /><span>Borderless</span></Link>
       <section className="signin-panel panel">
         <span className="page-kicker">NEW PASSWORD</span>
         <h1>{c.heading}</h1>

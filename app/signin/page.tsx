@@ -1,3 +1,4 @@
+import { BrandMark } from "@/components/brand-mark";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SignInForm } from "@/components/signin-form";
@@ -33,7 +34,7 @@ export default async function SignInPage({
       <title>{copy.title}</title>
       {authOrigin && <link rel="preconnect" href={authOrigin} crossOrigin="anonymous" />}
       <Link href={localizedPath("/", locale)} className="brand">
-        <span className="brand-mark">B</span>
+        <BrandMark className="brand-mark" />
         <span>Borderless</span>
       </Link>
       <section className="signin-panel panel">

@@ -1,3 +1,4 @@
+import { BrandMark } from "@/components/brand-mark";
 import { Suspense } from "react";
 import Link from "next/link";
 import { signOut } from "@/app/signin/actions";
@@ -48,7 +49,7 @@ export function SiteHeader({
   return (
     <header className={`site-header ${compact ? "site-header--compact" : ""}`}>
       <Link href={localizedPath("/", locale)} className="brand" aria-label={m.header.brandHome}>
-        <span className="brand-mark">B</span>
+        <BrandMark className="brand-mark" />
         <span>Borderless</span>
       </Link>
       <nav className="main-nav" aria-label={m.header.mainNav}>

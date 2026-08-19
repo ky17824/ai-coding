@@ -1,3 +1,4 @@
+import { BrandMark } from "@/components/brand-mark";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SignupForm } from "@/components/signup-form";
@@ -32,7 +33,7 @@ export default async function SignupPage({
   return (
     <main className="signin-page">
       <title>{c.title}</title>
-      <Link href={localizedPath("/", locale)} className="brand"><span className="brand-mark">B</span><span>Borderless</span></Link>
+      <Link href={localizedPath("/", locale)} className="brand"><BrandMark className="brand-mark" /><span>Borderless</span></Link>
       <section className="signin-panel panel signup-panel">
         <span className="page-kicker">START YOUR JOURNEY</span>
         <h1>{c.heading}</h1>

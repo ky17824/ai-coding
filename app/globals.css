@@ -171,16 +171,12 @@ svg {
   letter-spacing: var(--tracking-display);
 }
 
+/* 마스코트 로고(components/brand-mark.tsx). 워드마크 20px/800과 균형이 맞는 32px. */
 .brand-mark {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px 9px 2px 9px;
-  background: var(--green-dark);
-  color: var(--mint);
-  display: grid;
-  place-items: center;
-  font-family: var(--font-sans);
-  font-style: italic;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: block;
 }
 
 .main-nav {
@@ -233,11 +229,6 @@ svg {
 .landing-shell .preview-title small,
 .landing-shell .preview-score {
   color: var(--green);
-}
-
-.landing-shell .brand-mark {
-  background: var(--green-dark);
-  color: var(--mint);
 }
 
 .main-nav a:hover,
